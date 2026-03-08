@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { theme } from "../../theme";
 
 type SuccessModalProps = {
     visible: boolean;
@@ -37,13 +38,13 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
                 <View style={styles.modalContainer}>
                     {isLoading ? (
                         <>
-                            <ActivityIndicator size="large" color="#16a34a" />
+                            <ActivityIndicator size="large" color={theme.accent} />
                             <Text style={styles.loadingText}>{loadingMessage}</Text>
                         </>
                     ) : (
                         <>
                             <View style={styles.iconContainer}>
-                                <MaterialIcons name="check-circle" size={64} color="#16a34a" />
+                                <MaterialIcons name="check-circle" size={64} color={theme.accent} />
                             </View>
                             <Text style={styles.title}>{title}</Text>
                             <Text style={styles.message}>{message}</Text>

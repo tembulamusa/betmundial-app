@@ -293,8 +293,8 @@ export default function LoginScreen({ navigation }: any) {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                <Text style={[globalStyles.title, { color: "#fff", marginBottom: 24 }]}>
-                    {isOfflineMode &&
+                <View style={{ marginBottom: 24 }}>
+                    {isOfflineMode && (
                         <View style={styles.offlineLinkContent}>
                             <Icon
                                 name="cloud-off"
@@ -302,10 +302,12 @@ export default function LoginScreen({ navigation }: any) {
                                 color="#ffffff"
                                 marginRight={8}
                             />
-
-                        </View>}
-                    {isOnline ? "Sign In" : isOfflineMode ? "Offline Login" : "Login Required"}
-                </Text>
+                        </View>
+                    )}
+                    <Text style={[globalStyles.title, { color: "#fff" }]}>
+                        {isOnline ? "Sign In" : isOfflineMode ? "Offline Login" : "Login Required"}
+                    </Text>
+                </View>
 
                 {/* Always show login form */}
                 <>

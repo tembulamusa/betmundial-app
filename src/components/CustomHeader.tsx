@@ -6,6 +6,9 @@ import { AuthContext } from '../AuthContext';
 import { useSync } from '../context/SyncContext';
 import { syncWithConfirmation } from '../services/offlineSync';
 import { getUnsyncedCollections } from '../services/offlineDatabase';
+import HeaderLogin from './header/HeaderLogin';
+import Search from './header/Search';
+import { theme } from '../theme';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -75,106 +78,15 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
     return (
         <View style={styles.header}>
-            {/* Profile Image */}
             <Image
-                source={require('../assets/images/profile.png')} // Replace with your image path
-                style={styles.profileImage}
+                source={require('../assets/images/logo.png')}
+                style={styles.logo}
             />
 
-            {/* Text */}
-            <View style={{ flex: 1 }}>
-                <Text style={{ opacity: 0.7, color: '#FFFFFF' }}>Goodmorning</Text>
-                <Text style={styles.headerText}>Maziwai Dairy</Text>
+            <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <Search />
+                <HeaderLogin />
             </View>
-
-            {/* Sync Status Indicator */}
-            <TouchableOpacity
-                style={[styles.iconContainer, isSyncing && styles.iconContainerDisabled]}
-                onPress={handleSyncPress}
-                disabled={isSyncing}
-            >
-                {isSyncing ? (
-                    <ActivityIndicator size={20} color="#FFFFFF" />
-                ) : (
-                    <Icon name="refresh" size={20} color="#FFFFFF" />
-                )}
-                {hasPendingSync && !isSyncing && (
-                    <View style={styles.pendingSyncBadge}>
-                        <Text style={styles.pendingSyncBadgeText}>!</Text>
-                    </View>
-                )}
-                {lastSyncResult && (lastSyncResult.success > 0 || lastSyncResult.failed > 0) && !isSyncing && !hasPendingSync && (
-                    <View style={[
-                        styles.syncBadge,
-                        lastSyncResult.failed > 0 && styles.syncBadgeError
-                    ]}>
-                        <Text style={styles.syncBadgeText}>
-                            {lastSyncResult.success > 0 && lastSyncResult.failed === 0 ? '✓' :
-                             lastSyncResult.failed > 0 ? '!' : ''}
-                        </Text>
-                    </View>
-                )}
-            </TouchableOpacity>
-
-            {/* Bell Icon with Badge */}
-            <TouchableOpacity
-                ref={bellIconRef}
-                style={styles.iconContainer}
-                onPress={toggleDropdown}
-            >
-                <Icon name="bell" size={20} color="#FFFFFF" />
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>1</Text>
-                </View>
-            </TouchableOpacity>
-
-            {/* Dropdown Modal */}
-            <Modal
-                visible={dropdownVisible}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setDropdownVisible(false)}
-            >
-                <TouchableOpacity 
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setDropdownVisible(false)}
-                >
-                    <View style={styles.dropdownContainer}>
-                        <View style={styles.dropdownHeader}>
-                            <Text style={styles.dropdownTitle}>Notifications</Text>
-                            <TouchableOpacity onPress={() => setDropdownVisible(false)}>
-                                <Icon name="times" size={20} color="#333" />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <ScrollView style={styles.notificationsList}>
-                            {/* Sample notification - replace with actual notifications */}
-                            <View style={styles.notificationItem}>
-                                <Icon name="info-circle" size={16} color="#26A69A" style={styles.notificationIcon} />
-                                <View style={styles.notificationContent}>
-                                    <Text style={styles.notificationText}>You have a new update</Text>
-                                    <Text style={styles.notificationTime}>2 hours ago</Text>
-                                </View>
-                            </View>
-                            
-                            {/* Add more notifications here */}
-                            <View style={styles.emptyNotifications}>
-                                <Text style={styles.emptyText}>No more notifications</Text>
-                            </View>
-                        </ScrollView>
-
-                        {/* Logout Button at Bottom */}
-                        <TouchableOpacity 
-                            style={styles.logoutButton}
-                            onPress={handleLogout}
-                        >
-                            <Icon name="sign-out" size={18} color="#F44336" />
-                            <Text style={styles.logoutText}>Logout</Text>
-                        </TouchableOpacity>
-                    </View>
-                </TouchableOpacity>
-            </Modal>
         </View >
     );
 };
@@ -183,16 +95,16 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#26A69A', // Teal/green shade from the image
+        backgroundColor: theme.background,
         paddingHorizontal: 10,
         paddingVertical: 20,
         // height: 60, // Adjust height as needed
     },
-    profileImage: {
-        width: 40,
-        height: 40,
-        borderRadius: 20, // Circular image
-        marginRight: 10,
+    logo: {
+        width: 120,
+        height: 60,
+        // borderRadius: 20, // Circular image
+        // marginRight: 10,
     },
     headerText: {
         flex: 1,

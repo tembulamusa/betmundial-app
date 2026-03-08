@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import DropDownPicker from "react-native-dropdown-picker";
 import NetInfo from "@react-native-community/netinfo";
 import fetchCommonData, { clearCommonDataCache } from "../../components/utils/fetchCommonData";
+import { theme } from "../../theme";
 import {
     saveMeasuringCan,
     getMeasuringCan,
@@ -438,7 +439,7 @@ const SettingsScreen: React.FC = () => {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#16a34a" />
+                <ActivityIndicator size="large" color={theme.accent} />
                 <Text style={styles.loadingText}>Loading settings...</Text>
             </View>
         );
@@ -466,7 +467,7 @@ const SettingsScreen: React.FC = () => {
             {(syncingData || syncStatus) && (
                 <View style={[
                     styles.syncBanner,
-                    syncStatus.includes('✓') && { backgroundColor: '#DEF7EC', borderColor: '#16a34a' },
+                    syncStatus.includes('✓') && { backgroundColor: '#DEF7EC', borderColor: theme.accent },
                     syncStatus.includes('failed') && { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }
                 ]}>
                     {syncingData && <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />}
@@ -641,7 +642,7 @@ const SettingsScreen: React.FC = () => {
                             </Text>
                             {loadingMeasuringCans ? (
                                 <View style={{ padding: 16, alignItems: 'center' }}>
-                                    <ActivityIndicator size="small" color="#16a34a" />
+                                    <ActivityIndicator size="small" color={theme.accent} />
                                     <Text style={{ marginTop: 8, color: '#64748b', fontSize: 12 }}>
                                         Loading measuring cans...
                                     </Text>
@@ -664,13 +665,13 @@ const SettingsScreen: React.FC = () => {
                                         placeholder="Select measuring can"
                                         style={{
                                             marginTop: 8,
-                                            borderColor: '#16a34a',
+                                            borderColor: theme.accent,
                                             borderWidth: 2,
                                             borderRadius: 8,
                                             backgroundColor: '#f8fafc'
                                         }}
                                         dropDownContainerStyle={{
-                                            borderColor: '#16a34a',
+                                            borderColor: theme.accent,
                                             borderWidth: 2,
                                             borderRadius: 8,
                                             backgroundColor: '#ffffff'
@@ -770,9 +771,9 @@ const SettingsScreen: React.FC = () => {
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f1f5f9" },
+    container: { flex: 1, backgroundColor: theme.background },
     contentContainer: { padding: 16, paddingBottom: 48 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.background },
     loadingText: { marginTop: 12, color: "#475569", fontSize: 14 },
     headerCard: {
         backgroundColor: "#fff",

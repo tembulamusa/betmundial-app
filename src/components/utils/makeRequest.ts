@@ -1,179 +1,169 @@
-import { Alert } from "react-native";
-import { getItem } from "./local-storage";
-import NetInfo from '@react-native-community/netinfo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Config from "react-native-config";
 
-// Network alert state management - prevents multiple alerts when offline
-let hasShownNetworkAlert = false;
-let networkAlertCount = 0; // Track how many times we've alerted about network issues
+export type ApiVersion =
+    | 1
+    | 2
+    | 3
+    | "sureCoin"
+    | "sureBox"
+    | "casinoGames"
+    | "CasinoGameLaunch"
+    | "casinoJackpots";
 
-// Default fallback URL
-const DEFAULT_BASE_URL = "https://dev.edairy.africa";
+export interface MakeRequestParams<T = any> {
+    url: string;
+    method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+    data?: any;
+    useJwt?: boolean;
+    apiVersion?: ApiVersion;
+    responseType?: "json" | "text";
+    timeout?: number;
+}
 
-// Get dynamic server URL
-const getServerUrl = async (): Promise<string> => {
-    try {
-        const serverConfig = await AsyncStorage.getItem('@edairyApp:server_config');
-        if (serverConfig) {
-            const config = JSON.parse(serverConfig);
-            if (config.domain && config.domain.trim()) {
-                // Ensure the domain has a protocol
-                let domain = config.domain.trim();
-                if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
-                    domain = `https://${domain}`;
-                }
-                // Remove trailing slash if present
-                domain = domain.replace(/\/$/, '');
-                return `${domain}/api/`;
-            }
-        }
-    } catch (error) {
-        console.warn('Failed to load server config, using default:', error);
-    }
-    return `${DEFAULT_BASE_URL}/api/`;
+export interface ApiResponse<T = any> {
+    status: number;
+    data: T | null;
+    error?: string;
+}
+
+/**
+ * 🔥 Centralized API Base Map
+ *
+ * Mirrors the React web project logic (process.env.REACT_APP_*)
+ * and provides safe fallbacks so apiVersion is never missing.
+ */
+const API_DEFAULTS: Record<ApiVersion, string> = {
+    1: "https://apistaging.betmundial.com/",
+    2: "https://apistaging.betmundial.com/v2",
+    3: "https://api.betmundial.com/api/accounts/",
+    sureCoin: "https://apistaging.betmundial.com/v1/surecoin/user/",
+    sureBox: "https://apistaging.betmundial.com/v1/surebox/",
+    casinoGames: "https://apistaging.betmundial.com/api/casino/",
+    CasinoGameLaunch: "https://apistaging.betmundial.com/api/",
+    casinoJackpots: "https://apistaging.betmundial.com/pragmatic",
 };
 
-const makeRequest = async ({
-    url,
-    method,
-    data = null,
-    use_jwt = false,
-    responseType = "json",
-    isFormData = false,
-}) => {
-    // Check internet connectivity before making request
-    const netInfo = await NetInfo.fetch();
-    const isCurrentlyConnected = netInfo.isConnected && netInfo.isInternetReachable;
+const API_MAP: Record<ApiVersion, string> = {
+    // Support both RN-style keys and existing REACT_APP_* keys (from web envs),
+    // and finally fall back to known-good defaults from the React project.
+    1: (Config.BASE_URL ?? (Config as any).REACT_APP_BASE_URL ?? API_DEFAULTS[1]) as string,
+    2: (Config.BASE2_URL ?? (Config as any).REACT_APP_BASE2_URL ?? API_DEFAULTS[2]) as string,
+    3: (Config.ACCOUNTS_URL ?? (Config as any).REACT_APP_ACCOUNTS_URL ?? API_DEFAULTS[3]) as string,
+    sureCoin: (Config.SURECOIN_URL ?? (Config as any).REACT_APP_SURECOIN_URL ?? API_DEFAULTS.sureCoin) as string,
+    sureBox: (Config.SUREBOX_URL ?? (Config as any).REACT_APP_SUREBOX_URL ?? API_DEFAULTS.sureBox) as string,
+    casinoGames: (Config.CASINOGAMES ?? (Config as any).REACT_APP_CASINO_URL ?? API_DEFAULTS.casinoGames) as string,
+    CasinoGameLaunch: (Config.CASINOGAMELaunch ?? (Config as any).REACT_APP_CASINO_LAUNCH_URL ?? API_DEFAULTS.CasinoGameLaunch) as string,
+    casinoJackpots: (Config.PRAGMATIC_JACKPOT_URL ?? (Config as any).REACT_APP_PRAGMATIC_JACKPOT_URL ?? API_DEFAULTS.casinoJackpots) as string,
+};
 
-    if (!isCurrentlyConnected) {
-        // Only show alert once when connection is lost - increment counter to prevent multiple alerts
-        if (!hasShownNetworkAlert) {
-            hasShownNetworkAlert = true;
-            networkAlertCount++;
-            Alert.alert(
-                "No Internet Connection",
-                "Please check your internet connection and try again.",
-                [
-                    { text: "OK", style: "default" },
-                    {
-                        text: "Retry",
-                        onPress: () => {
-                            // Retry the request after user confirms
-                            setTimeout(() => {
-                                makeRequest({ url, method, data, use_jwt, responseType, isFormData });
-                            }, 10000);
-                        },
-                    },
-                ]
-            );
-        }
-        return [503, { message: "No internet connection" }];
-    } else {
-        // Reset alert flag when connection is restored - allow new alerts when offline again
-        hasShownNetworkAlert = false;
-        networkAlertCount = 0;
-    }
-
-    // Get dynamic server URL
-    const baseUrl = await getServerUrl();
-    url = baseUrl + url;
-    let headers: any = {
-        accept: "application/json",
-    };
-
-    if (!isFormData) {
-        headers["content-type"] = "application/json";
-    }
-
-    const user = await getItem("user");
-    const token = user?.access_token;
-    // Alert.alert(token);
-    // if (use_jwt && token) {
-    headers.Authorization = `Bearer ${token}`;
-    // }
-
+/**
+ * 🔥 Helper: Get Stored Token
+ */
+const getAuthToken = async (): Promise<string | null> => {
     try {
-        const request: any = {
+        const userString = await AsyncStorage.getItem("user");
+        if (!userString) return null;
+
+        const user = JSON.parse(userString);
+        return user?.token ?? null;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * 🔥 Helper: Timeout Wrapper
+ */
+const fetchWithTimeout = async (
+    resource: RequestInfo,
+    options: RequestInit,
+    timeout = 15000
+): Promise<Response> => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal,
+    });
+
+    clearTimeout(id);
+    return response;
+};
+
+/**
+ * 🚀 Production-Ready Request Function
+ */
+export const makeRequest = async <T = any>({
+    url,
+    method = "GET",
+    data,
+    useJwt = true,
+    apiVersion = 1,
+    responseType = "json",
+    timeout = 15000,
+}: MakeRequestParams): Promise<ApiResponse<T>> => {
+    try {
+        const baseUrl = API_MAP[apiVersion];
+
+        const fullUrl = `${baseUrl}${url}`;
+
+        const headers: Record<string, string> = {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+        };
+
+        if (useJwt) {
+            const token = await getAuthToken();
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+        }
+
+        const requestOptions: RequestInit = {
             method,
             headers,
         };
 
         if (data) {
-            request.body = isFormData ? data : JSON.stringify(data);
+            requestOptions.body = JSON.stringify(data);
         }
 
-        const response = await fetch(url, request);
-        let result;
-        try {
-            result =
-                responseType === "text"
-                    ? await response.text()
-                    : await response.json();
-        } catch {
-            result = {};
-        }
+        const response = await fetchWithTimeout(fullUrl, requestOptions, timeout);
 
-        return [response.status, result];
-    } catch (err: any) {
+        let parsedData: any = null;
 
-        console.error("Fetch error:", err);
-
-        // Check if it's a network error
-        const isNetworkError = err.message?.includes('Network request failed') ||
-            err.message?.includes('fetch') ||
-            err.code === 'NETWORK_ERROR';
-
-        if (isNetworkError) {
-            // Only show network error alert if we haven't already alerted about connectivity issues
-            if (!hasShownNetworkAlert) {
-                hasShownNetworkAlert = true;
-                networkAlertCount++;
-                Alert.alert(
-                    "Network Error",
-                    "Unable to connect to the server. Please check your internet connection.",
-                    [
-                        { text: "OK", style: "default" },
-                        {
-                            text: "Retry",
-                            onPress: () => {
-                                setTimeout(() => {
-                                    makeRequest({ url, method, data, use_jwt, responseType, isFormData });
-                                }, 1000);
-                            },
-                        },
-                    ]
-                );
-            }
+        if (responseType === "text") {
+            parsedData = await response.text();
         } else {
-            // Non-network errors should always show alerts (these are different from connectivity issues)
-            Alert.alert("Error", "An unexpected error occurred. Please try again.");
+            const text = await response.text();
+            parsedData = text ? JSON.parse(text) : null;
         }
 
-        return [500, { message: "Network error" }];
-    }
-};
-
-export default makeRequest;
-
-/**
- * Fetches user profile data from the API
- * @returns Promise with profile data or null if error
- */
-export const fetchUserProfile = async () => {
-    try {
-        const [status, response] = await makeRequest({
-            url: 'user-profile',
-            method: 'GET',
-        });
-
-        if ([200, 201].includes(status)) {
-            return response?.data || response || null;
-        } else {
-            console.error('Failed to fetch profile:', response?.message || 'Unknown error');
-            return null;
+        if (!response.ok) {
+            return {
+                status: response.status,
+                data: null,
+                error:
+                    parsedData?.message ||
+                    parsedData?.error ||
+                    "Something went wrong",
+            };
         }
-    } catch (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
+
+        return {
+            status: response.status,
+            data: parsedData as T,
+        };
+    } catch (error: any) {
+        return {
+            status: 0,
+            data: null,
+            error:
+                error?.name === "AbortError"
+                    ? "Request timeout"
+                    : error?.message || "Network error",
+        };
     }
 };

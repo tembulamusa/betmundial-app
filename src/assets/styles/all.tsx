@@ -25,4 +25,48 @@ export const renderDropdownItem = (props: DropdownItemProps) => {
   );
 };
 
+export const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+
+  depositButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 16,
+  },
+
+  depositText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  loginButton: {
+    marginRight: 16,
+  },
+
+  loginText: {
+    color: "#fff",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+
+  registerButton: {
+    backgroundColor: "#E53935",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+
+  registerText: {
+    color: "#fff",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+});
+
 // export default renderDropdownItem;

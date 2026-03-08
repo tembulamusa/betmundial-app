@@ -30,7 +30,7 @@ function AppNavigator() {
 
                         return <Icon name={iconName} size={size} color={color} />;
                     },
-                    tabBarActiveTintColor: '#26A69A', // Active tab color (teal from header)
+                    tabBarActiveTintColor: 'rgba(0, 12, 36, 1)', // Active tab color (teal from header)
                     tabBarInactiveTintColor: '#666',
                     tabBarStyle: { backgroundColor: '#FFFFFF', height: 60 },
                     header: (props) => <CustomHeader {...props} />, // Use your custom header

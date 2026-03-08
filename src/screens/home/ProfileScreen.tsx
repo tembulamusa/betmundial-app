@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import fetchCommonData from '../../components/utils/fetchCommonData';
 import { fetchUserProfile } from '../../components/utils/makeRequest';
+import { theme } from '../../theme';
 
 const ProfileScreen: React.FC = () => {
     const navigation = useNavigation();
@@ -208,7 +209,7 @@ const ProfileScreen: React.FC = () => {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#16a34a" />
+                <ActivityIndicator size="large" color={theme.accent} />
                 <Text style={styles.loadingText}>Loading profile...</Text>
             </View>
         );
@@ -414,13 +415,13 @@ const ProfileScreen: React.FC = () => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f1f5f9' },
+    container: { flex: 1, backgroundColor: theme.background },
     contentContainer: { padding: 12, paddingBottom: 48 },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: theme.background,
     },
     loadingText: {
         marginTop: 12,

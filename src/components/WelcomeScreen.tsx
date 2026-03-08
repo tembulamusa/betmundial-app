@@ -45,7 +45,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ visible, onComplete }) =>
 
   return (
     <>
-      <StatusBar backgroundColor="#26A69A" barStyle="light-content" />
+      <StatusBar backgroundColor="#000C24" barStyle="light-content" />
       <Animated.View
         style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}
         onTouchEnd={onComplete}
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#26A69A',
+    backgroundColor: 'rgba(0, 12, 36, 1)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9998,
