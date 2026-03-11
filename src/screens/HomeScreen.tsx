@@ -132,11 +132,11 @@ const HomeScreen: React.FC = () => {
 
         try {
             const res = await makeRequest<any>({
-            url: endpoint,
-            method,
-            data,
-            apiVersion: 2,
-        });
+                url: endpoint,
+                method,
+                data,
+                apiVersion: 2,
+            });
 
             setFetchingCount(fetchcount);
 
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     },
 
     highlightsBoard: {
-        marginVertical: 10,
+        marginVertical: 5,
     },
 
 });

@@ -46,6 +46,7 @@
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.16.0",
+    "react-native-shimmer-placeholder": "^2.0.9",
     "react-native-sms-retriever": "^1.1.1",
     "react-native-sqlite-storage": "^6.0.1",
     "react-native-svg": "^15.13.0",

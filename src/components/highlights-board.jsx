@@ -11,9 +11,7 @@ const HighlightsBoard: React.FC = () => {
                 <FreeBet />
             </View>
 
-            <View style={styles.highlights}>
-                <PopularGames />
-            </View>
+            <PopularGames />
         </View>
     );
 };
@@ -23,11 +21,7 @@ export default React.memo(HighlightsBoard);
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
+        alignItems: "flex-start",
     },
-    freeBet: {
-        flex: 1,
-    },
-    highlights: {
-        flex: 1,
-    },
+
 });

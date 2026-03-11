@@ -3,9 +3,11 @@ import {
     View,
     Text,
     FlatList,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from "react-native";
 import MatchRow from "./MatchRow";
+import { Context } from "../../context/store";
 
 interface Match {
     match_id: string;
@@ -22,6 +24,12 @@ interface Props {
 }
 
 const MatchList: React.FC<Props> = ({ matches, live }) => {
+    const [state, dispatch] = React.useContext(Context);
+
+    useEffect(() => {
+        Alert.alert("the betslip", JSON.stringify(state?.betslip));
+    }, [state?.betslip, state?.jackpotbetslip]);
+
 
     const renderItem = ({ item }: { item: Match }) => (
         <MatchRow match={item} live={live} />

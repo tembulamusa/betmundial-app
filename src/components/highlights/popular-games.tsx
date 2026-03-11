@@ -4,7 +4,10 @@ import {
     Image,
     TouchableOpacity,
     StyleSheet,
-    Platform
+    Platform,
+    FlatList,
+    Text,
+    ActivityIndicator
 } from "react-native";
 
 import { useNavigation } from "@react-navigation/native";
@@ -28,22 +31,24 @@ const PopularGames: React.FC = () => {
     const navigation: any = useNavigation();
 
     const [state, dispatch] = useContext<any>(Context);
-    const [fetching, setFetching] = useState<boolean>(false);
-    const [alertMessage, setAlertMessage] = useState<any>({});
+    const [fetching, setFetching] = useState(false);
 
     const isMobile = Platform.OS !== "web";
 
     const fetchTopCasino = async () => {
 
-        const endpoint = "top-games-list";
+        setFetching(true);
 
         const res = await makeRequest<any>({
-            url: endpoint,
+            url: "top-games-list",
             method: "GET",
             apiVersion: "casinoGames"
         });
 
+        setFetching(false);
+
         if (res.status === 200) {
+
             await setItem("toppopularcasino", res.data);
 
             dispatch({
@@ -51,6 +56,7 @@ const PopularGames: React.FC = () => {
                 key: "toppopularcasino",
                 payload: res.data
             });
+
         }
 
     };
@@ -58,17 +64,19 @@ const PopularGames: React.FC = () => {
     useEffect(() => {
 
         (async () => {
-            const getTopCasino = await getItem("toppopularcasino");
 
-            if (!getTopCasino) {
+            const cached = await getItem("toppopularcasino");
+
+            if (!cached) {
                 fetchTopCasino();
             } else {
                 dispatch({
                     type: "SET",
                     key: "toppopularcasino",
-                    payload: getTopCasino
+                    payload: cached
                 });
             }
+
         })();
 
     }, []);
@@ -83,117 +91,56 @@ const PopularGames: React.FC = () => {
 
     };
 
-    const launchGame = async (game: Game, moneyType: number = 1) => {
+    const launchGame = async (game: Game) => {
 
-        if (game?.aggregator?.toLowerCase() === "suregames") {
-
-            navigation.navigate(game?.game_id.toLowerCase());
-
-            return;
-        }
-
-        setFetching(true);
-
-        let endpoint =
-            `${game?.aggregator ? game?.aggregator : game?.provider_name}` +
-            `/casino/game-url/${isMobile ? "mobile" : "desktop"}/${moneyType}/${game.game_id}`;
-
-        if (game?.aggregator?.toLowerCase() === "intouchvas") {
-            endpoint = endpoint + `-${game?.provider_name}`;
-        }
-
-        const user = await getItem("user");
-        if (moneyType === 1 && !user?.token) {
-
-            dispatch({
-                type: "SET",
-                key: "showloginmodal",
-                payload: true
-            });
-
-            return;
-        }
-
-        const res = await makeRequest<any>({
-            url: endpoint,
-            method: "GET",
-            apiVersion: "CasinoGameLaunch"
+        navigation.navigate("CasinoGame", {
+            provider: game.provider_name,
+            game: game.game_name
         });
-
-        if (res.status === 200 && (res.data as any)?.tea_pot == null) {
-
-            const result: any = res.data;
-            const launchUrl = result?.game_url || result?.gameUrl;
-
-            dispatch({
-                type: "SET",
-                key: "casinolaunch",
-                payload: { game, url: launchUrl }
-            });
-
-            await setItem("casinolaunch", { game, url: launchUrl });
-
-            if (game?.aggregator?.toLowerCase() === "bitville") {
-                dispatch({
-                    type: "SET",
-                    key: "bitvilleGame",
-                    payload: result
-                });
-            }
-
-            setTimeout(() => {
-
-                navigation.navigate("CasinoGame", {
-                    provider: game?.provider_name
-                        .split(" ")
-                        .join("-")
-                        .toLowerCase(),
-                    game: game?.game_name
-                        .split(" ")
-                        .join("-")
-                        .toLowerCase()
-                });
-
-            }, 100);
-
-        } else {
-
-            setAlertMessage({
-                status: 400,
-                message: "Unable to launch Game"
-            });
-
-        }
 
     };
 
+    const renderGame = ({ item }: { item: Game }) => (
+
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => launchGame(item)}
+        >
+
+            <Image
+                source={
+                    item?.provider_name.toLowerCase() === "unicraft"
+                        ? MundialLeagueImg
+                        : getCasinoImageIcon(item.image_url)
+                }
+                style={styles.image}
+            />
+
+        </TouchableOpacity>
+
+    );
+
+    const games = state?.toppopularcasino?.[0]?.gameList || [];
+
+    if (fetching) {
+        return (
+            <View style={styles.loader}>
+                <ActivityIndicator size="small" color="#469866" />
+            </View>
+        );
+    }
+
     return (
-        <View style={styles.container}>
 
-            {state?.toppopularcasino &&
-                state?.toppopularcasino[0]?.gameList?.map((game: Game) => (
+        <FlatList
+            data={games}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.game_id}
+            renderItem={renderGame}
+            contentContainerStyle={styles.list}
+        />
 
-                    <TouchableOpacity
-                        key={game.game_id}
-                        style={styles.game}
-                        onPress={() => launchGame(game, 1)}
-                    >
-
-                        <Image
-                            source={
-                                game?.provider_name.toLowerCase() === "unicraft"
-                                    ? MundialLeagueImg
-                                    : getCasinoImageIcon(game.image_url)
-                            }
-                            style={styles.image}
-                            resizeMode="cover"
-                        />
-
-                    </TouchableOpacity>
-
-                ))}
-
-        </View>
     );
 
 };
@@ -202,19 +149,33 @@ export default React.memo(PopularGames);
 
 const styles = StyleSheet.create({
 
-    container: {
-        flexDirection: "row",
-        flexWrap: "wrap",
+    list: {
+        paddingLeft: 10,
     },
 
-    game: {
-        margin: 6,
+    card: {
+        marginRight: 6,
+        width: 120,
     },
 
     image: {
-        width: 140,
-        height: 100,
+        width: 120,
+        height: 80,
         borderRadius: 8,
+    },
+
+    gameName: {
+        marginTop: 4,
+        fontSize: 12,
+        textAlign: "center",
+        color: "#333",
+        fontWeight: "500",
+    },
+
+    loader: {
+        height: 80,
+        justifyContent: "center",
+        alignItems: "center",
     },
 
 });

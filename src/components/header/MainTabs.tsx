@@ -12,42 +12,59 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { Context } from "../../context/store";
 import { getItem } from "../utils/local-storage";
 import { flagMap } from "../utils/FlagMap";
-import { theme } from "../../theme";
 
-type MainTabsProps = {
-    tab: "highlights" | "today" | "tomorrow" | (string & {});
-};
+interface Competition {
+    competition_id: number;
+    competition_name: string;
+    flag_icon: string;
+}
 
-const MainTabs: React.FC<MainTabsProps> = ({ tab }) => {
+interface Props {
+    tab: string;
+}
+
+const MainTabs: React.FC<Props> = ({ tab }) => {
 
     const navigation: any = useNavigation();
     const route = useRoute();
 
-    const [state, dispatch] = useContext<any>(Context);
+    const [state, dispatch] = useContext(Context);
 
-    const [activeTab, setActiveTab] = useState(tab);
+    const [activeTab, setActiveTab] = useState<string>(tab);
+    const [topCompetitions, setTopCompetitions] = useState<Competition[]>([]);
 
-    const [topCompetitions, setTopCompetitions] = useState<any[]>([]);
-    const [localSport, setLocalSport] = useState<any | null>(null);
+    const localSport = getItem("filtersport");
 
     useEffect(() => {
-        (async () => {
-            const top = await getItem("topcompetitions");
-            const sport = await getItem("filtersport");
-            setLocalSport(sport);
 
-            const list = Array.isArray(top) ? top : [];
-            if (!state?.topcompetitions && list.length > 0) {
-                dispatch({
-                    type: "SET",
-                    key: "topcompetitions",
-                    payload: list
-                });
-                setTopCompetitions(list);
-            } else {
-                setTopCompetitions(Array.isArray(state?.topcompetitions) ? state.topcompetitions : []);
+        let top: any = getItem("topcompetitions");
+
+        // Handle JSON string from storage
+        if (typeof top === "string") {
+            try {
+                top = JSON.parse(top);
+            } catch {
+                top = [];
             }
-        })();
+        }
+
+        // Ensure it's always an array
+        if (!Array.isArray(top)) {
+            top = [];
+        }
+
+        if (!state?.topcompetitions && top.length) {
+            dispatch({
+                type: "SET",
+                key: "topcompetitions",
+                payload: top
+            });
+
+            setTopCompetitions(top);
+        } else {
+            setTopCompetitions(state?.topcompetitions || []);
+        }
+
     }, []);
 
     const setActiveTabSpace = (selectedTab: string) => {
@@ -61,7 +78,7 @@ const MainTabs: React.FC<MainTabsProps> = ({ tab }) => {
         setActiveTab(selectedTab);
     };
 
-    const handleCompetitionSelect = (competition: any) => {
+    const handleCompetitionSelect = (competition: Competition) => {
 
         dispatch({
             type: "SET",
@@ -124,6 +141,7 @@ const MainTabs: React.FC<MainTabsProps> = ({ tab }) => {
                 style={styles.competitionScroll}
             >
 
+                {/* All competitions */}
                 <TouchableOpacity
                     style={styles.competitionItem}
                     onPress={() =>
@@ -138,32 +156,33 @@ const MainTabs: React.FC<MainTabsProps> = ({ tab }) => {
                     <Text style={styles.competitionText}>All</Text>
                 </TouchableOpacity>
 
-                {(Array.isArray(topCompetitions) ? topCompetitions : []).slice(0, 5).map((competition) => (
+                {Array.isArray(topCompetitions) &&
+                    topCompetitions.slice(0, 5).map((competition) => (
 
-                    <TouchableOpacity
-                        key={competition?.competition_id}
-                        style={styles.competitionItem}
-                        onPress={() => handleCompetitionSelect(competition)}
-                    >
+                        <TouchableOpacity
+                            key={competition?.competition_id}
+                            style={styles.competitionItem}
+                            onPress={() => handleCompetitionSelect(competition)}
+                        >
 
-                        <Image
-                            source={getSportImageIcon(competition?.flag_icon)}
-                            style={styles.flag}
-                        />
+                            <Image
+                                source={getSportImageIcon(competition?.flag_icon)}
+                                style={styles.flag}
+                            />
 
-                        <Text style={styles.competitionText}>
-                            {competition?.competition_name}
-                        </Text>
+                            <Text style={styles.competitionText}>
+                                {competition?.competition_name}
+                            </Text>
 
-                    </TouchableOpacity>
+                        </TouchableOpacity>
 
-                ))}
+                    ))
+                }
 
             </ScrollView>
 
         </View>
     );
-
 };
 
 export default MainTabs;
@@ -171,7 +190,7 @@ export default MainTabs;
 const styles = StyleSheet.create({
 
     container: {
-        backgroundColor: theme.mainTabsBackground,
+        backgroundColor: "#1e1e1e",
         paddingVertical: 10
     },
 
@@ -188,7 +207,7 @@ const styles = StyleSheet.create({
 
     activeTab: {
         borderBottomWidth: 2,
-        borderBottomColor: theme.accent
+        borderBottomColor: "#00ffcc"
     },
 
     tabText: {
