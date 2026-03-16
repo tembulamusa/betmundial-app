@@ -4,15 +4,24 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
+    Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { Context } from "../../context/store";
-// import { styles } from "../../assets/styles/all";
 
 const HeaderLogin = () => {
     const navigation = useNavigation();
     const [, dispatch] = useContext(Context);
+
+    const handleLogin = () => {
+
+        dispatch({
+            type: "SET",
+            key: "showloginmodal",
+            payload: true,
+        });
+    };
 
     return (
         <View style={styles.container}>
@@ -28,13 +37,7 @@ const HeaderLogin = () => {
             {/* Login Button */}
             <TouchableOpacity
                 style={styles.loginButton}
-                onPress={() =>
-                    dispatch({
-                        type: "SET",
-                        key: "showloginmodal",
-                        payload: true,
-                    })
-                }
+                onPress={() => handleLogin()} // call your login function here
             >
                 <Text style={styles.loginText}>Login</Text>
             </TouchableOpacity>
@@ -46,7 +49,7 @@ const HeaderLogin = () => {
             >
                 <Text style={styles.registerText}>Register</Text>
             </TouchableOpacity>
-        </View>
+        </View >
     );
 };
 

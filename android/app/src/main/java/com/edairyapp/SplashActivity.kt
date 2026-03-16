@@ -1,4 +1,4 @@
-package com.edairyapp
+package com.betmundialapp
 
 import android.content.Intent
 import android.os.Bundle

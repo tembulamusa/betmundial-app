@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
-    TouchableOpacity
+    TouchableOpacity,
+    Alert
 } from "react-native";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
-
 import CasinoGame from "./CasinoGame";
 
 interface Props {
@@ -27,8 +27,8 @@ const CategoryListing: React.FC<Props> = ({
     const route: any = useRoute();
 
     const { filterType } = route.params || {};
-
     const isShowingAll = route?.params?.showAll === true;
+
 
     const fetchAllCategoryGames = (gameType: string) => {
 
@@ -40,9 +40,7 @@ const CategoryListing: React.FC<Props> = ({
                 showAll: true
             });
 
-        }
-
-        else if (filterType === "providercategory") {
+        } else if (filterType === "providercategory") {
 
             if (gamesprovider?.id) {
 
@@ -55,9 +53,7 @@ const CategoryListing: React.FC<Props> = ({
 
             }
 
-        }
-
-        else {
+        } else {
 
             navigation.navigate("Casino", {
                 filterType: "categories",
@@ -69,8 +65,10 @@ const CategoryListing: React.FC<Props> = ({
 
     };
 
-    const renderGame = ({ item, index }: any) => (
-        <View key={"casino-" + index} style={styles.gameItem}>
+    if (!Array.isArray(games)) return null;
+
+    const renderGame = ({ item }: any) => (
+        <View style={styles.gameItem}>
             <CasinoGame game={item} />
         </View>
     );
@@ -101,7 +99,9 @@ const CategoryListing: React.FC<Props> = ({
             <FlatList
                 data={games}
                 renderItem={renderGame}
-                keyExtractor={(item, index) => "casino-" + index}
+                keyExtractor={(item, index) =>
+                    item?.id?.toString() || "casino-" + index
+                }
                 numColumns={3}
                 scrollEnabled={false}
             />

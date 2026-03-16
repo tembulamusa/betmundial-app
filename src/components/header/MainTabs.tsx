@@ -190,8 +190,9 @@ export default MainTabs;
 const styles = StyleSheet.create({
 
     container: {
-        backgroundColor: "#1e1e1e",
-        paddingVertical: 10
+        backgroundColor: "rgba(255,255,255,0.2)",
+        paddingVertical: 10,
+        marginBottom: 10
     },
 
     tabsRow: {
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     },
 
     activeTab: {
-        borderBottomWidth: 2,
-        borderBottomColor: "#00ffcc"
+        borderBottomWidth: 3,
+        borderBottomColor: "#a71f66"
     },
 
     tabText: {

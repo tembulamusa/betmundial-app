@@ -111,7 +111,7 @@ export default function LoginScreen({ navigation }: any) {
             // Offline authentication successful
             await login(validation.token!);
             await AsyncStorage.setItem("user", JSON.stringify(validation.userData));
-            await AsyncStorage.setItem("@edairyApp:user_phone_number", phoneNumber);
+            await AsyncStorage.setItem("@betmundialApp:user_phone_number", phoneNumber);
 
             // Check if sync is pending
             const isSyncPending = isSyncPendingAfterLogin();
@@ -219,7 +219,7 @@ export default function LoginScreen({ navigation }: any) {
                 }, 100); // Small delay to ensure login completes first
 
                 // Store phone number for offline sync
-                await AsyncStorage.setItem("@edairyApp:user_phone_number", phoneNumber);
+                await AsyncStorage.setItem("@betmundialApp:user_phone_number", phoneNumber);
 
                 // Check if this is first login (no shifts/measuring cans in database)
                 await initDatabase();

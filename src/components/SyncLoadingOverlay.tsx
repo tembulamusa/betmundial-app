@@ -63,7 +63,7 @@ const SyncLoadingOverlay: React.FC<SyncLoadingOverlayProps> = ({
         <View style={styles.contentContainer}>
           <View style={styles.container}>
             <Image
-              source={require('../assets/images/profile.png')}
+              source={require('../assets/images/logo.svg')}
               style={styles.logo}
               resizeMode="contain"
             />

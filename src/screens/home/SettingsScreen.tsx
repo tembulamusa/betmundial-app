@@ -78,8 +78,8 @@ const SettingsScreen: React.FC = () => {
     // Data clearing states
     const [clearingData, setClearingData] = useState(false);
 
-    const preferenceStorageKey = "@edairyApp:user_preferences";
-    const serverConfigStorageKey = "@edairyApp:server_config";
+    const preferenceStorageKey = "@betmundialApp:user_preferences";
+    const serverConfigStorageKey = "@betmundialApp:server_config";
 
     const loadSettings = useCallback(async () => {
         try {
@@ -346,7 +346,7 @@ const SettingsScreen: React.FC = () => {
             await AsyncStorage.multiRemove([
                 "user",
                 "token",
-                "@edairyApp:user_phone_number"
+                "@betmundialApp:user_phone_number"
             ]);
 
             Alert.alert("Signed Out", "You have been signed out. Your offline login credentials are preserved.");
@@ -458,9 +458,7 @@ const SettingsScreen: React.FC = () => {
                 <Text style={styles.headerSubtitle}>
                     Manage your profile, preferences, and app experience.
                 </Text>
-                <Text style={styles.headerSlogan}>
-                    Where milk farming gives you wings
-                </Text>
+
             </View>
 
             {/* Sync Status Banner */}
@@ -471,10 +469,10 @@ const SettingsScreen: React.FC = () => {
                     syncStatus.includes('failed') && { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }
                 ]}>
                     {syncingData && <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />}
-                    <Icon 
-                        name={syncStatus.includes('✓') ? "check-circle" : syncStatus.includes('failed') ? "error" : "sync"} 
-                        size={20} 
-                        color={syncStatus.includes('✓') ? "#16a34a" : syncStatus.includes('failed') ? "#EF4444" : "#2563eb"} 
+                    <Icon
+                        name={syncStatus.includes('✓') ? "check-circle" : syncStatus.includes('failed') ? "error" : "sync"}
+                        size={20}
+                        color={syncStatus.includes('✓') ? "#16a34a" : syncStatus.includes('failed') ? "#EF4444" : "#2563eb"}
                     />
                     <Text style={[
                         styles.syncText,
@@ -680,11 +678,11 @@ const SettingsScreen: React.FC = () => {
                                         zIndexInverse={3100}
                                     />
                                     {measuringCanValue && (
-                                        <View style={{ 
-                                            marginTop: 8, 
-                                            padding: 8, 
-                                            backgroundColor: '#DEF7EC', 
-                                            borderRadius: 6 
+                                        <View style={{
+                                            marginTop: 8,
+                                            padding: 8,
+                                            backgroundColor: '#DEF7EC',
+                                            borderRadius: 6
                                         }}>
                                             <Text style={{ fontSize: 11, color: '#166534', fontWeight: '600' }}>
                                                 ✓ Tare Weight: {measuringCans.find((c: any) => c.id === measuringCanValue)?.tare_weight || 0} KG
@@ -696,11 +694,11 @@ const SettingsScreen: React.FC = () => {
                                     )}
                                 </>
                             ) : (
-                                <View style={{ 
-                                    marginTop: 8, 
-                                    padding: 12, 
-                                    backgroundColor: '#FEF3C7', 
-                                    borderRadius: 6 
+                                <View style={{
+                                    marginTop: 8,
+                                    padding: 12,
+                                    backgroundColor: '#FEF3C7',
+                                    borderRadius: 6
                                 }}>
                                     <Text style={{ fontSize: 12, color: '#92400E' }}>
                                         No measuring cans found. Please contact your administrator.
@@ -728,11 +726,11 @@ const SettingsScreen: React.FC = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.listRow}
-                        onPress={() => Alert.alert("About", "eDairy App v1.0. Powering dairy digitization.")}
+                        onPress={() => Alert.alert("About", "betMundial App v1.0. Powering dairy digitization.")}
                     >
                         <Icon name="info" size={20} color="#64748b" />
                         <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={styles.listTitle}>About eDairy</Text>
+                            <Text style={styles.listTitle}>About betMundial</Text>
                             <Text style={styles.listSubtitle}>Learn more about this application.</Text>
                         </View>
                         <Icon name="chevron-right" size={20} color="#cbd5f5" />

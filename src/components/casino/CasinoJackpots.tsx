@@ -7,9 +7,9 @@ import {
   Modal,
   Pressable
 } from "react-native";
+import { makeRequest } from "../utils/makeRequest";
+import { Context } from "../../context/store";
 
-import makeRequest from "../../utils/fetch-request";
-import { Context } from "../../../context/store";
 
 interface Jackpot {
   id: string;
@@ -31,10 +31,10 @@ const CasinoJackpots: React.FC = () => {
 
   const [state, dispatch] = useContext(Context);
 
-  const [jackpots, setJackpots] = useState < Jackpot[] > ([]);
+  const [jackpots, setJackpots] = useState<Jackpot[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const [selectedJackpot, setSelectedJackpot] = useState < Jackpot | null > (null);
+  const [selectedJackpot, setSelectedJackpot] = useState<Jackpot | null>(null);
 
   const fetchCasinoJackpots = async () => {
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "bold",
     color: "#f97316",
-    marginBottom: 12
+    // marginBottom: 
   },
 
   cardsContainer: {

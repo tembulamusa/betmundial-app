@@ -101,7 +101,6 @@ export const GlobalProvider = ({ children }) => {
     console.log('Clock-out time update skipped');
   };
 
-  // Format time for display
   const formatTime = time => {
     // Simple time formatter instead of using NotificationService
     const { hours, minutes } = time;

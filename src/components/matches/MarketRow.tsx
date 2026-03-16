@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import OddButton from "./OddButton";
 import socket from "../utils/SocketConnect";
 import { Context } from "../../context/store";
@@ -65,7 +65,6 @@ const MarketRow: React.FC<MarketRowProps> = ({
         }
     }, [markets, producers, marketDetail]);
 
-    // Handle betstop message
     useEffect(() => {
         if (betstopMessage) {
             const affectedMarkets = betstopMessage.markets?.split(",") || [];
@@ -86,7 +85,6 @@ const MarketRow: React.FC<MarketRowProps> = ({
         }
     }, [betstopMessage]);
 
-    // Handle socket updates
     const handleGameSocket = useCallback(
         (type: string, gameId: string, sub_type_id: string) => {
             if (type === "listen" && socketRef.current?.connected) {
@@ -162,16 +160,23 @@ const MarketRow: React.FC<MarketRowProps> = ({
 
             socketRef.current?.on(socketEvent, handleSocketData);
 
-            // Handle producer status
             socket.on("PRODUCER_STATUS_CHANNEL", (data: any) => {
                 if (data.producer_id === producerId) {
                     setPdown(data.disabled);
                 }
             });
         }
-    }, [socket.connected, match?.parent_match_id, marketDetail?.sub_type_id, socketEvent, handleGameSocket, marketStatus, producerId, pdown]);
+    }, [
+        socket.connected,
+        match?.parent_match_id,
+        marketDetail?.sub_type_id,
+        socketEvent,
+        handleGameSocket,
+        marketStatus,
+        producerId,
+        pdown,
+    ]);
 
-    // Determine if market should be displayed
     const isMarketActive =
         ["active", "suspended", "handedover"].includes(
             marketStatus?.toLowerCase() || ""
@@ -192,17 +197,8 @@ const MarketRow: React.FC<MarketRowProps> = ({
                 <Text style={styles.marketName}>{marketDetail?.name}</Text>
             </View>
 
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.scrollContainer}
-            >
-                <View
-                    style={[
-                        styles.buttonGrid,
-                        { flexDirection: rowItems === 3 ? "row" : "row" },
-                    ]}
-                >
+            <View style={styles.scrollContainer}>
+                <View style={styles.buttonGrid}>
                     {mutableMkts &&
                         mutableMkts.map((mkt_odds, idx) => {
                             if (
@@ -222,7 +218,6 @@ const MarketRow: React.FC<MarketRowProps> = ({
 
                             delete fullMatch.odds;
 
-                            // Generate unique key based on match, market, and outcome
                             const uniqueKey = `market-row-${match.match_id}-${market_id}-${mkt_odds.outcome_id}-${mkt_odds.special_bet_value || idx}`;
 
                             const shouldRender =
@@ -233,14 +228,30 @@ const MarketRow: React.FC<MarketRowProps> = ({
 
                             if (!shouldRender) {
                                 return (
-                                    <View key={uniqueKey} style={styles.emptyButton}>
+                                    <View
+                                        key={uniqueKey}
+                                        style={[
+                                            styles.emptyButton,
+                                            rowItems === 3
+                                                ? styles.threeItems
+                                                : styles.twoItems,
+                                        ]}
+                                    >
                                         <Text style={styles.disabledText}>🔒</Text>
                                     </View>
                                 );
                             }
 
                             return (
-                                <View key={uniqueKey} style={styles.buttonWrapper}>
+                                <View
+                                    key={uniqueKey}
+                                    style={[
+                                        styles.buttonWrapper,
+                                        rowItems === 3
+                                            ? styles.threeItems
+                                            : styles.twoItems,
+                                    ]}
+                                >
                                     <OddButton
                                         match={fullMatch}
                                         mkt={market_id}
@@ -250,7 +261,7 @@ const MarketRow: React.FC<MarketRowProps> = ({
                             );
                         })}
                 </View>
-            </ScrollView>
+            </View>
         </View>
     );
 };
@@ -259,10 +270,9 @@ export default MarketRow;
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 12,
-        marginHorizontal: 8,
-        backgroundColor: "#0a0a0a",
-        borderRadius: 8,
+        marginVertical: 4,
+        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        borderRadius: 4,
         overflow: "hidden",
     },
     marketHeader: {
@@ -282,22 +292,26 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     buttonGrid: {
+        flexDirection: "row",
         flexWrap: "wrap",
-        gap: 8,
+        justifyContent: "space-between",
     },
     buttonWrapper: {
-        flex: 1,
-        minWidth: 80,
+        marginBottom: 8,
+    },
+    twoItems: {
+        width: "48%",
+    },
+    threeItems: {
+        width: "32%",
     },
     emptyButton: {
         backgroundColor: "#1f1f1f",
         borderRadius: 8,
         paddingVertical: 8,
-        paddingHorizontal: 12,
         alignItems: "center",
         justifyContent: "center",
-        minWidth: 70,
-        margin: 4,
+        marginBottom: 8,
     },
     disabledText: {
         fontSize: 16,

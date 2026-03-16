@@ -10,8 +10,8 @@ import {
 
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import { Context } from "../../../context/store";
+import { Context } from "../../context/store";
+import { CasinoIcons } from "./Icons";
 
 interface Category {
     id: number;
@@ -28,13 +28,7 @@ const MobileCategoriesMenu: React.FC = () => {
     const navigation: any = useNavigation();
 
     const getSportImageIcon = (sportName: string) => {
-
-        try {
-            return require(`../../../assets/img/casino/icons/${sportName}.png`);
-        } catch {
-            return require(`../../../assets/img/casino/icons/SetDefault.png`);
-        }
-
+        return CasinoIcons[sportName] || CasinoIcons.SetDefault;
     };
 
     useEffect(() => {
@@ -157,7 +151,7 @@ const MobileCategoriesMenu: React.FC = () => {
                 >
 
                     <Image
-                        source={getSportImageIcon(category.name)}
+                        source={getSportImageIcon(category?.name)}
                         style={styles.icon}
                     />
 
@@ -190,8 +184,8 @@ export default React.memo(MobileCategoriesMenu);
 const styles = StyleSheet.create({
 
     container: {
-        backgroundColor: "#020617",
-        paddingVertical: 10
+        backgroundColor: "rgba(255,255,255,0.1)",
+        paddingVertical: 4
     },
 
     scroll: {

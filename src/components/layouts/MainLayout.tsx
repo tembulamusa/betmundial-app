@@ -28,8 +28,8 @@ export default function MainLayout({ children }: Props) {
                     bottom: 0, // at bottom of screen
                     left: 0,
                     width: SCREEN_WIDTH,
-                    height: BETSLIP_HEIGHT,
-                    zIndex: 999,
+                    // height: BETSLIP_HEIGHT,
+                    // zIndex: 999,
                 }}
             >
                 <BetslipIndex />

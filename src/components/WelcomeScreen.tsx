@@ -53,16 +53,16 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ visible, onComplete }) =>
         <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/images/profile.png')}
+              source={require('../assets/images/logo.png')}
               style={styles.logo}
               resizeMode="cover"
             />
           </View>
 
           <Animated.View style={[styles.textContainer, { opacity: textAnim }]}>
-            <Text style={styles.welcomeText}>Welcome to eDairy</Text>
+            <Text style={styles.welcomeText}>Welcome to betMundial</Text>
             <Text style={styles.taglineText}>
-              Where milk farming{'\n'}gives you wings
+              where the world bets.
             </Text>
           </Animated.View>
 

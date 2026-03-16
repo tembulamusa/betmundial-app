@@ -12,12 +12,27 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
     const betslipKey = state?.isjackpot ? 'jackpotbetslip' : 'betslip';
 
     useEffect(() => {
-        const b = state?.isjackpot ? getJackpotBetslip() : getBetslip();
-        setBetslipsData(b || {});
-    }, [state?.betslip, state?.jackpotbetslip, state?.isjackpot]);
+        const loadSlip = async () => {
+            const b = state?.isjackpot
+                ? await getJackpotBetslip()
+                : await getBetslip();
+
+            const slip = b || {};
+
+            setBetslipsData(slip);
+
+            // Update state so the component has the latest slip on load
+            dispatch({
+                type: "SET",
+                key: betslipKey,
+                payload: slip
+            });
+        };
+
+        loadSlip();
+    }, [state?.isjackpot]);
 
     const handleRemove = (item: any) => {
-
         if (!item) return;
 
         const betslip =
@@ -32,17 +47,11 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
         });
     };
 
-
-
-    // FILTER NULL ITEMS
+    // Filter out any null/undefined items
     const data = Object.values(betslipsData || {}).filter(Boolean);
 
     return (
         <View style={styles.container}>
-
-            <Text style={styles.header}>
-                {state?.isjackpot ? 'Jackpot' : 'Betslip'} ({data.length})
-            </Text>
 
             {data.length === 0 ? (
                 <Text style={styles.empty}>No selections yet</Text>
@@ -51,7 +60,6 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
                     data={data}
                     keyExtractor={(item) => String(item?.match_id)}
                     renderItem={({ item }) => {
-
                         if (!item) return null;
 
                         return (
@@ -61,10 +69,19 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
                                     <Text style={styles.teams}>
                                         {item.home_team} VS {item.away_team}
                                     </Text>
-
-                                    <Text style={styles.pick}>
-                                        {item.odd_type} — {item.bet_pick} • {Number(item.odd_value).toFixed(2)}
+                                    <Text style={{ paddingVertical: 4, color: '#aaa', fontSize: 12 }}>
+                                        {item?.bet_type === 1 ? 'Live' : 'Pre-match'}
                                     </Text>
+
+                                    <View style={styles.pickRow}>
+                                        <Text style={styles.pick}>
+                                            Pick — {item.bet_pick}
+                                        </Text>
+
+                                        <Text style={styles.oddValue}>
+                                            {Number(item.odd_value).toFixed(2)}
+                                        </Text>
+                                    </View>
                                 </View>
 
                                 <TouchableOpacity
@@ -90,16 +107,9 @@ export default Betslip;
 
 const styles = StyleSheet.create({
     container: {
-        padding: 12,
-        backgroundColor: '#07070a',
-        borderRadius: 8
-    },
-
-    header: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 16,
-        marginBottom: 8
+        borderRadius: 8,
+        // padding: 12,
+        // backgroundColor: '#07070a'
     },
 
     empty: {
@@ -111,9 +121,11 @@ const styles = StyleSheet.create({
     item: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#111'
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 6,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.2)'
     },
 
     teams: {
@@ -121,18 +133,34 @@ const styles = StyleSheet.create({
         fontWeight: '600'
     },
 
+    pickRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 4
+    },
+
     pick: {
         color: '#ccc',
-        marginTop: 4
+        fontSize: 14
+    },
+
+    oddValue: {
+        color: '#ffcc00',
+        fontWeight: '700',
+        fontSize: 16
     },
 
     removeBtn: {
         padding: 8,
-        backgroundColor: '#222',
-        borderRadius: 6
+        // backgroundColor: '#222',
+        borderRadius: 6,
+        fontWeight: '700',
+        marginLeft: 10
     },
 
     removeText: {
-        color: '#fff'
+        color: '#de0808',
+        fontWeight: '700'
     }
 });

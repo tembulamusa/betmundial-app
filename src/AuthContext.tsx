@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // NOTE: Keep offline credentials in SQLite for offline login capability
         // Only clear user_phone_number as it's session-specific
-        await AsyncStorage.removeItem("@edairyApp:user_phone_number");
+        await AsyncStorage.removeItem("@betmundialApp:user_phone_number");
 
         setUserToken(null);
         console.log('User token set to null');

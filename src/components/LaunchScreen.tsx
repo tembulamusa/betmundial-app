@@ -82,31 +82,18 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ visible }) => {
       <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
         <View style={styles.container}>
           <Image
-            source={require('../assets/images/profile.png')}
+            source={require('../assets/images/logo.svg')}
             style={styles.logo}
             resizeMode="cover"
           />
           <ActivityIndicator size="large" color="#FFFFFF" style={styles.spinner} />
           <Animated.Text style={[styles.mainMessage, { transform: [{ translateY: bounceAnim }] }]}>
-            Launching eDairy App
+            Launching betMundial App
           </Animated.Text>
           <Text style={styles.subMessage}>
             Please wait while we prepare your experience
           </Text>
-          <View style={styles.featuresContainer}>
-            <Animated.Text style={[styles.featureText, { opacity: featureAnim1 }]}>
-              • Track milk collections
-            </Animated.Text>
-            <Animated.Text style={[styles.featureText, { opacity: featureAnim2 }]}>
-              • Manage member payments
-            </Animated.Text>
-            <Animated.Text style={[styles.featureText, { opacity: featureAnim3 }]}>
-              • Monitor farm performance
-            </Animated.Text>
-          </View>
-          <Text style={styles.instruction}>
-            Setting up your dairy management system...
-          </Text>
+
         </View>
       </Animated.View>
     </>

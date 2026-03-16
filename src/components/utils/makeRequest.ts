@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 import Config from "react-native-config";
 
 export type ApiVersion =
@@ -34,14 +35,14 @@ export interface ApiResponse<T = any> {
  * and provides safe fallbacks so apiVersion is never missing.
  */
 const API_DEFAULTS: Record<ApiVersion, string> = {
-    1: "https://apistaging.betmundial.com/",
-    2: "https://apistaging.betmundial.com/v2",
+    1: "https://api.betmundial.com/",
+    2: "https://api.betmundial.com/v2",
     3: "https://api.betmundial.com/api/accounts/",
-    sureCoin: "https://apistaging.betmundial.com/v1/surecoin/user/",
-    sureBox: "https://apistaging.betmundial.com/v1/surebox/",
-    casinoGames: "https://apistaging.betmundial.com/api/casino/",
-    CasinoGameLaunch: "https://apistaging.betmundial.com/api/",
-    casinoJackpots: "https://apistaging.betmundial.com/pragmatic",
+    sureCoin: "https://api.betmundial.com/v1/surecoin/user/",
+    sureBox: "https://api.betmundial.com/v1/surebox/",
+    casinoGames: "https://api.betmundial.com/api/casino/",
+    CasinoGameLaunch: "https://api.betmundial.com/api/",
+    casinoJackpots: "https://api.betmundial.com/pragmatic",
 };
 
 const API_MAP: Record<ApiVersion, string> = {
@@ -108,7 +109,6 @@ export const makeRequest = async <T = any>({
         const baseUrl = API_MAP[apiVersion];
 
         const fullUrl = `${baseUrl}${url}`;
-
         const headers: Record<string, string> = {
             Accept: "application/json",
             "Content-Type": "application/json",
@@ -131,7 +131,6 @@ export const makeRequest = async <T = any>({
         }
 
         const response = await fetchWithTimeout(fullUrl, requestOptions, timeout);
-
         let parsedData: any = null;
 
         if (responseType === "text") {

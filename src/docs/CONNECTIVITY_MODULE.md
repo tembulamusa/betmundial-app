@@ -1,6 +1,6 @@
 # Internet Connectivity Module
 
-This module provides comprehensive internet connectivity monitoring and management for the eDairyApp.
+This module provides comprehensive internet connectivity monitoring and management for the betMundialApp.
 
 ## Features
 

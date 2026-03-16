@@ -139,7 +139,7 @@ The app automatically syncs offline collections in the following scenarios:
 The sync service uses stored credentials from the Settings screen to automatically log in when syncing. Ensure that:
 
 1. User has saved their credentials in Settings
-2. Credentials are stored in `@edairyApp:user_preferences`
+2. Credentials are stored in `@betmundialApp:user_preferences`
 3. Credentials include `username` and `password`
 
 If credentials are not available or login fails, sync will be skipped until the user logs in manually.
@@ -273,7 +273,7 @@ startAutoSync(1);
 ### Database Location
 
 SQLite database is stored at:
-- **Database Name**: `edairy_offline.db`
+- **Database Name**: `betmundial_offline.db`
 - **Location**: App's document directory (iOS) / internal storage (Android)
 
 ## Troubleshooting

@@ -28,7 +28,7 @@
                                     <constraint firstAttribute="width" constant="120" id="logoWidth"/>
                                     <constraint firstAttribute="height" constant="120" id="logoHeight"/>
                                     <constraint firstItem="logoImage" firstAttribute="leading" secondItem="logoContainer" secondAttribute="leading" id="logoLeading"/>
-                                    <constraint firstItem="logoImage" firstAttribute="trailing" secondItem="logoContainer" secondAttribute="trailing" id="logoTrailing"/>
+                                    <constraint firstItem="Image" firstAttribute="trailing" secondItem="Container" secondAttribute="trailing" id="logoTrailing"/>
                                     <constraint firstItem="logoImage" firstAttribute="top" secondItem="logoContainer" secondAttribute="top" id="logoTop"/>
                                     <constraint firstItem="logoImage" firstAttribute="bottom" secondItem="logoContainer" secondAttribute="bottom" id="logoBottom"/>
                                 </constraints>
@@ -37,7 +37,7 @@
                                     <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius" value="60"/>
                                 </userDefinedRuntimeAttributes>
                             </view>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Welcome to eDairy" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Welcome to betMundial" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
                                 <rect key="frame" x="0.0" y="180" width="375" height="43"/>
                                 <fontDescription key="fontDescription" type="boldSystem" pointSize="32"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>

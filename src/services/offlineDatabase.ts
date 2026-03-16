@@ -4,9 +4,9 @@ import SQLite from 'react-native-sqlite-storage';
 SQLite.DEBUG(true);
 SQLite.enablePromise(true);
 
-const DATABASE_NAME = 'edairy_offline.db';
+const DATABASE_NAME = 'betmundial_offline.db';
 const DATABASE_VERSION = '1.1';
-const DATABASE_DISPLAY_NAME = 'eDairy Offline Database';
+const DATABASE_DISPLAY_NAME = 'betMundial Offline Database';
 const DATABASE_SIZE = 200000;
 
 let database: SQLite.SQLiteDatabase | null = null;

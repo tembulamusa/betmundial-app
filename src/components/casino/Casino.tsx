@@ -2,7 +2,8 @@ import React, { useContext, useEffect, useState } from "react";
 import {
     View,
     ScrollView,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,6 +14,7 @@ import MobileCategoriesMenu from "./MobileCategoriesMenu";
 import CategoryListing from "./CategoryListing";
 import NoEvents from "../utils/no-events";
 import { makeRequest } from "../utils/makeRequest";
+import CasinoCarousel from "../carousel/CasinoCarousel";
 
 interface CasinoProps {
     filterType?: string;
@@ -26,136 +28,160 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
     const [games, setGames] = useState<any[] | null>(null);
     const [fetching, setFetching] = useState(false);
 
-    const fetchCasinoGames = async () => {
 
+    useEffect(() => {
+        fetchCasinoGames();
+    }, []);
+    const fetchCasinoGames = async () => {
         setFetching(true);
 
-        let endpoint = "games-list";
+        try {
+            let endpoint = "games-list";
 
-        if (filterType === "categories") {
+            /* ================= FILTER TYPES ================= */
 
-            const categoryId =
-                state?.casinogamesfilter?.category?.id || filterName;
+            if (filterType === "categories") {
+                const categoryId =
+                    state?.casinogamesfilter?.category?.id || filterName;
 
-            endpoint = `game-type/games-list/${categoryId}`;
+                endpoint = `game-type/games-list/${categoryId}`;
+            }
 
-        }
+            else if (filterType === "providers") {
+                const providerId =
+                    state?.casinogamesfilter?.provider?.id || filterName;
 
-        else if (filterType === "providers") {
+                endpoint = `provider/games-list/${providerId}`;
+            }
 
-            const providerId =
-                state?.casinogamesfilter?.provider?.id || filterName;
+            else if (filterType === "combinedprovidercategory") {
+                endpoint =
+                    `provider/games-list/${state?.casinogamesfilter?.provider?.id}/` +
+                    `${state?.casinogamesfilter?.category?.id}/` +
+                    `${state?.casinogamesfilter?.page || 1}/100`;
+            }
 
-            endpoint = `provider/games-list/${providerId}`;
+            else if (filterType === "providercategory") {
+                const providerId = state?.casinogamesfilter?.provider?.id;
+                const categoryId = state?.casinogamesfilter?.category?.id;
+                const page = state?.casinogamesfilter?.page || 1;
+                const limit = 100;
 
-        }
+                endpoint =
+                    `provider/games-list/${providerId}/${categoryId}?page=${page}&limit=${limit}`;
+            }
 
-        else if (filterType === "combinedprovidercategory") {
+            /* ================= SEARCH ================= */
 
-            endpoint =
-                `provider/games-list/${state?.casinogamesfilter?.provider?.id}/`
-                + `${state?.casinogamesfilter?.category?.id}/`
-                + `${state?.casinogamesfilter?.page || 1}/100`;
+            let searchTerm = state?.searchterm || "";
 
-        }
+            let method: "GET" | "POST" = "GET";
+            let data: any = null;
 
-        else if (filterType === "providercategory") {
+            if (searchTerm && searchTerm.length >= 3) {
+                method = "POST";
+                data = { search: searchTerm };
+                endpoint = "games/search";
+            }
 
-            const providerId =
-                state?.casinogamesfilter?.provider?.id;
+            /* ================= REQUEST ================= */
 
-            const categoryId =
-                state?.casinogamesfilter?.category?.id;
+            const res = await makeRequest<any>({
+                url: endpoint,
+                method,
+                data,
+                apiVersion: "casinoGames",
+            });
 
-            const page =
-                state?.casinogamesfilter?.page || 1;
 
-            const limit = 100;
+            if ([200, 201].includes(res.status)) {
 
-            endpoint =
-                `provider/games-list/${providerId}/${categoryId}?page=${page}&limit=${limit}`;
+                const result = res.data;
 
-        }
+                let fetchedGames: any = [];
 
-        let searchTerm = state?.searchterm || "";
+                /* ================= CATEGORY RESPONSE ================= */
 
-        let method: "GET" | "POST" = "GET";
-        let data: any = null;
+                if (endpoint.includes("game-type")) {
 
-        if (searchTerm && searchTerm.length >= 3) {
+                    const gamesData = [{ gameList: result?.content || [] }];
 
-            method = "POST";
-            data = { search: searchTerm };
+                    const { content, ...rest } = result;
 
-            endpoint = "games/search";
+                    const response = {
+                        ...rest,
+                        games: gamesData,
+                        isCategory: true
+                    };
 
-        }
+                    fetchedGames = gamesData;
 
-        const [status, result] = await makeRequest({
-            url: endpoint,
-            method,
-            data,
-            api_version: "casinoGames"
-        });
+                    dispatch({
+                        type: "SET",
+                        key: "category-filters",
+                        payload: response
+                    });
 
-        if ([200, 201].includes(status)) {
+                }
 
-            let fetchedGames;
+                /* ================= NORMAL RESPONSE ================= */
 
-            if (endpoint.includes("game-type")) {
+                else {
+                    fetchedGames = result?.games || [];
+                }
 
-                let res = result;
+                setGames(fetchedGames);
 
-                let gamesData = [{ gameList: result?.content }];
+                /* ================= SAVE FILTERS ================= */
 
-                delete res?.content;
+                if (result?.games) {
 
-                res = { ...res, games: gamesData, isCategory: true };
+                    dispatch({
+                        type: "SET",
+                        key: "casinofilters",
+                        payload: result
+                    });
 
-                fetchedGames = gamesData;
-
-                dispatch({
-                    type: "SET",
-                    key: "category-filters",
-                    payload: res
-                });
+                    await AsyncStorage.setItem(
+                        "casinofilters",
+                        JSON.stringify(result)
+                    );
+                }
 
             }
+
+            /* ================= ERROR ================= */
 
             else {
 
-                fetchedGames = result?.games;
+                setGames([]);
 
-            }
-
-            setGames(fetchedGames);
-
-            if (result?.games) {
-
-                dispatch({
-                    type: "SET",
-                    key: "casinofilters",
-                    payload: result
-                });
-
-                await AsyncStorage.setItem(
-                    "casinofilters",
-                    JSON.stringify(result)
+                Alert.alert(
+                    "Error",
+                    res.error || `Request failed (status ${res.status})`
                 );
-
             }
+
+        } catch (error) {
+
+            console.error("Casino fetch error:", error);
+
+            setGames([]);
+
+            Alert.alert("Error", "Failed to fetch casino games");
+
+        } finally {
+
+            setFetching(false);
 
         }
-
-        setFetching(false);
-
     };
 
     useEffect(() => {
 
         fetchCasinoGames();
 
-    }, [state?.casinogamesfilter, state?.searchterm]);
+    }, []);
 
     useEffect(() => {
 
@@ -200,7 +226,6 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
         <ScrollView style={styles.container}>
 
             <CasinoCarousel />
-
             <CasinoJackpots />
 
             <View style={styles.mobileCategories}>
@@ -208,7 +233,6 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
             </View>
 
             <View style={styles.gamesList}>
-
                 {fetching && (
                     <View style={styles.loading} />
                 )}
@@ -217,17 +241,16 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
                     <NoEvents message="Casino Games not found" />
                 )}
 
-                {games?.map((category, idx) => (
+                {Array.isArray(games) && games.map((category, idx) => (
 
-                    category?.gameList?.length > 0 && (
-
+                    category?.gameList?.length > 0 && (<>
                         <CategoryListing
                             key={idx}
                             games={category?.gameList}
                             gamestype={category?.game_type}
                             gamesCategory={state?.casinofilters?.gameTypes}
                             gamesprovider={state?.casinogamesfilter?.provider}
-                        />
+                        /></>
 
                     )
 
@@ -247,16 +270,16 @@ const styles = StyleSheet.create({
 
     container: {
         flex: 1,
-        backgroundColor: "#0f172a"
+        backgroundColor: "rgba(255,255,255,0.1)"
     },
 
     mobileCategories: {
-        paddingHorizontal: 10,
+        // paddingHorizontal: 10,
         marginTop: 10
     },
 
     gamesList: {
-        padding: 10
+        // padding: 10
     },
 
     loading: {

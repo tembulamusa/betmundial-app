@@ -7,7 +7,8 @@ import React, {
 import {
     View,
     ActivityIndicator,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from "react-native";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -24,12 +25,14 @@ import { makeRequest } from "../../components/utils/makeRequest";
 import socket from "../../components/utils/SocketConnect";
 
 import { theme } from "../../theme";
+import MoreMarketsHeader from "../../components/matches/MoreMarketsHeader";
 
 interface Props {
     live?: boolean;
 }
 
 const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
+
     const [page, setPage] = useState(1);
     const [producers, setProducers] = useState<any[]>([]);
     const [matchwithmarkets, setMatchWithMarkets] = useState<any>();
@@ -37,22 +40,23 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
     const [betstopMessage, setBetstopMessage] = useState<any>();
     const [socketIsConnected, setSocketIsConnected] = useState(socket.connected);
 
-    // clear when id changes
-    useEffect(() => {
-        setMatchWithMarkets(undefined);
-        setProducers([]);
-    }, [matchId, live]);
-
     const [, dispatch] = useContext(Context);
 
     const navigation: any = useNavigation();
     const route: any = useRoute();
 
     const { id, match_id } = route.params || {};
-    const matchId = id ?? match_id; // some callers might use match_id
+    const matchId = id ?? match_id;
 
-    const findPostableSlip = () => {
-        let betslips = getBetslip() || {};
+    // clear when id changes
+    useEffect(() => {
+        setMatchWithMarkets(undefined);
+        setProducers([]);
+    }, [matchId, live]);
+
+    const findPostableSlip = async () => {
+
+        let betslips = await getBetslip() || {};
 
         const values = Object.keys(betslips).map((key) => {
             return betslips[key];
@@ -72,52 +76,61 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
 
     }, [matchId, live]);
 
-    const fetchPagedData = () => {
+    const fetchPagedData = async () => {
 
         if (!isLoading && !isNaN(+matchId)) {
 
             setIsLoading(true);
 
-            let betslip = findPostableSlip();
+            try {
 
-            let endpoint = live
-                ? `/sports/match/live/${matchId}`
-                : `/sports/match/${matchId}`;
+                let betslip = await findPostableSlip();
 
-            makeRequest({
-                url: endpoint,
-                method: "GET",
-                api_version: 2,
-            })
-                .then((response) => {
-                    // makeRequest returns an object, not an array
-                    const status = response.status;
-                    const result = response.data;
+                let endpoint = live
+                    ? `/sports/match/live/${matchId}`
+                    : `/sports/match/${matchId}`;
 
-                    if (status && [200, 201].includes(status)) {
-                        setMatchWithMarkets(result?.data);
-                        setProducers(result?.producer_statuses);
-                    } else {
-                        // clear or show unavailable if request fails
-                        setMatchWithMarkets(undefined);
-                        setProducers([]);
-                    }
-                })
-                .catch((err) => {
-                    console.warn("MatchAllMarkets fetch error:", err);
+                const response = await makeRequest({
+                    url: endpoint,
+                    method: "GET",
+                    apiVersion: 2,
+                });
+
+                const status = response?.status;
+                const result = response?.data;
+                if (status && [200, 201].includes(status)) {
+
+                    setMatchWithMarkets(result?.data);
+                    setProducers(result?.producer_statuses);
+
+                } else {
+
                     setMatchWithMarkets(undefined);
                     setProducers([]);
-                })
-                .finally(() => {
-                    setIsLoading(false);
-                });
+
+                }
+
+            } catch (err) {
+
+                console.warn("MatchAllMarkets fetch error:", err);
+                setMatchWithMarkets(undefined);
+                setProducers([]);
+
+            } finally {
+
+                setIsLoading(false);
+
+            }
+
         } else {
-            // protect against invalid id
+
             if (!matchwithmarkets) {
                 setMatchWithMarkets(undefined);
                 setProducers([]);
             }
+
         }
+
     };
 
     const handleGameSocket = () => {
@@ -151,7 +164,9 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
             (data: any) => {
 
                 if (data.message_type === "betstop") {
+
                     setBetstopMessage(data);
+
                 } else {
 
                     if (
@@ -159,9 +174,7 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
                             data.match_status?.toLowerCase()
                         )
                     ) {
-
                         fetchPagedData();
-
                     }
 
                 }
@@ -184,14 +197,18 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
     return (
 
         <View style={styles.container}>
+
             {matchwithmarkets && (
-                <MarketList
-                    live={live}
-                    initialMatchwithmarkets={matchwithmarkets}
-                    producers={producers}
-                    betstopMessage={betstopMessage}
-                    setBetstopMessage={setBetstopMessage}
-                />
+                <>
+                    <MoreMarketsHeader match={matchwithmarkets} live={live} />
+                    <MarketList
+                        live={live}
+                        initialMatchwithmarkets={matchwithmarkets}
+                        producers={producers}
+                        betstopMessage={betstopMessage}
+                        setBetstopMessage={setBetstopMessage}
+                    />
+                </>
             )}
 
             {(!matchwithmarkets && !isLoading) &&
@@ -204,10 +221,10 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
             {isLoading && (
                 <ActivityIndicator size="large" />
             )}
+
         </View>
 
     );
-
 
 };
 

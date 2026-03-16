@@ -18,18 +18,20 @@ import SyncLoadingOverlay from "./src/components/SyncLoadingOverlay";
 import LaunchScreen from "./src/components/LaunchScreen";
 import CustomHeader from "./src/components/CustomHeader";
 import MainLayout from "./src/components/layouts/MainLayout";
-
 import { initDatabase } from "./src/services/offlineDatabase";
-
-import {
-  LoginScreen,
-  RegisterScreen,
-  HomeScreen,
-  MatchAllMarketsScreen,
-  SettingsScreen,
-  ProfileScreen,
-  CasinoScreen
-} from "./src/screens";
+import LoginScreen from "./src/screens/auth/LoginScreen";
+import RegisterScreen from "./src/screens/auth/RegisterScreen";
+import HomeScreen from "./src/screens/HomeScreen";
+import MatchAllMarketsScreen from "./src/screens/home/MatchAllMarketsScreen";
+import SettingsScreen from "./src/screens/home/SettingsScreen";
+import ProfileScreen from "./src/screens/home/ProfileScreen";
+import CasinoScreen from "./src/screens/home/CasinoScreen";
+import DepositScreen from "./src/screens/home/DepositScreen";
+import WithdrawScreen from "./src/screens/home/WithdrawScreen";
+import MyBetsScreen from "./src/screens/home/MyBetsScreen";
+import SelfExcludeScreen from "./src/screens/home/SelfExcludeScreen";
+import JackpotScreen from "./src/screens/home/JackpotScreen";
+import LiveScreen from "./src/screens/home/LiveScreen";
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,6 +44,12 @@ function HomeStackScreen() {
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
       <HomeStack.Screen name="MatchAllMarketsScreen" component={MatchAllMarketsScreen} />
+      <HomeStack.Screen name="DepositScreen" component={DepositScreen} />
+      <HomeStack.Screen name="WithdrawScreen" component={WithdrawScreen} />
+      <HomeStack.Screen name="MyBetsScreen" component={MyBetsScreen} />
+      <HomeStack.Screen name="SelfExcludeScreen" component={SelfExcludeScreen} />
+      <HomeStack.Screen name="JackpotScreen" component={JackpotScreen} />
+      <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
     </HomeStack.Navigator>
   );
 }
@@ -65,7 +73,7 @@ function MainTabs() {
       >
         <Tab.Screen name="Sports" component={HomeStackScreen} />
         <Tab.Screen name="Casino" component={CasinoScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
     </MainLayout>

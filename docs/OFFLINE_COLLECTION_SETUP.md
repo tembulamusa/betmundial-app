@@ -105,7 +105,7 @@ startAutoSync(5);
 
 For auto-sync to work, users must save their credentials in the Settings screen. The sync service looks for:
 
-- **Storage Key**: `@edairyApp:user_preferences`
+- **Storage Key**: `@betmundialApp:user_preferences`
 - **Expected Fields**: `username`, `password`
 
 Ensure your Settings screen saves these values correctly.

@@ -4,30 +4,28 @@ import {
     Text,
     Image,
     StyleSheet,
-    TouchableOpacity
+    TouchableOpacity,
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import { Context } from "../../../context/store";
-import makeRequest from "../../utils/fetch-request";
-import Notify from "../../utils/Notify";
-import Alert from "../../utils/alert";
+import { Context } from "../../context/store";
+import makeRequest from "../utils/makeRequest";
+import Alert from "../utils/Alert";
 
 interface Props {
     game: any;
 }
 
 const CasinoGame: React.FC<Props> = ({ game }) => {
-
     const [state, dispatch] = useContext(Context);
-    const [alertMessage, setAlertMessage] = useState < any > (null);
+    const [alertMessage, setAlertMessage] = useState<any>(null);
     const [fetching, setFetching] = useState(false);
+    const [showButtons, setShowButtons] = useState(false);
 
     const navigation: any = useNavigation();
     const route: any = useRoute();
-
     const params = route?.params || {};
     const filterType = params?.filterType;
     const filterName = params?.filterName;
@@ -36,16 +34,13 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
         filterType?.toLowerCase() === "providers" && filterName !== null;
 
     /* GET USER */
-
     const getUser = async () => {
         const user = await AsyncStorage.getItem("user");
         return user ? JSON.parse(user) : null;
     };
 
     /* LAUNCH GAME */
-
     const launchGame = async (game: any, moneyType = 1) => {
-
         if (game?.aggregator?.toLowerCase() === "suregames") {
             navigation.navigate(game?.game_id.toLowerCase());
             return;
@@ -70,7 +65,7 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
             dispatch({
                 type: "SET",
                 key: "showloginmodal",
-                payload: true
+                payload: true,
             });
             return;
         }
@@ -78,17 +73,16 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
         const [status, result] = await makeRequest({
             url: endpoint,
             method: "GET",
-            api_version: "CasinoGameLaunch"
+            api_version: "CasinoGameLaunch",
         });
 
         if (status === 200 && result?.tea_pot == null) {
-
             const launchUrl = result?.game_url || result?.gameUrl;
 
             dispatch({
                 type: "SET",
                 key: "casinolaunch",
-                payload: { game: game, url: launchUrl }
+                payload: { game: game, url: launchUrl },
             });
 
             await AsyncStorage.setItem(
@@ -100,76 +94,58 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                 dispatch({
                     type: "SET",
                     key: "bitvilleGame",
-                    payload: result
+                    payload: result,
                 });
             }
 
-            navigation.navigate(
-                "CasinoGameScreen",
-                {
-                    provider: game?.provider_name
-                        .split(" ")
-                        .join("-")
-                        .toLowerCase(),
-                    game: game?.game_name
-                        .split(" ")
-                        .join("-")
-                        .toLowerCase()
-                }
-            );
-
+            navigation.navigate("CasinoGameScreen", {
+                provider: game?.provider_name.split(" ").join("-").toLowerCase(),
+                game: game?.game_name.split(" ").join("-").toLowerCase(),
+            });
         } else {
             setAlertMessage({
                 status: 400,
-                message: "Unable to launch Game"
+                message: "Unable to launch Game",
             });
         }
     };
 
     /* AUTO HIDE ALERT */
-
     useEffect(() => {
-
         if (alertMessage) {
             setTimeout(() => {
                 setAlertMessage(null);
             }, 3000);
         }
-
     }, [alertMessage]);
 
     /* IMAGE FALLBACK */
-
     const getCasinoImageIcon = (imgUrl: string) => {
-
         let sport_image: any;
-
         try {
-
             sport_image = { uri: imgUrl };
 
             if (!imgUrl || imgUrl.trim() === "") {
-                sport_image = require("../../../assets/img/casino/casino-default-thumbnail.jpeg");
+                sport_image = require("../../assets/images/casino/casino-default-thumbnail.jpg");
             }
 
             if (game?.provider_name?.toLowerCase() === "aviatrix") {
-                sport_image = require("../../../assets/img/casino/aviatrix/aviatrix.jpg");
+                sport_image = require("../../assets/images/casino/aviatrix.jpg");
             }
-
         } catch (error) {
-            sport_image = require("../../../assets/img/casino/casino-default-thumbnail.jpeg");
+            sport_image = require("../../assets/images/casino/casino-default-thumbnail.jpg");
         }
-
         return sport_image;
     };
 
-    if (!shouldShowGame) return null;
+    // if (!shouldShowGame) return null;
 
     return (
         <View style={styles.container}>
-
-            <View style={styles.imageWrapper}>
-
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setShowButtons(!showButtons)}
+            >
                 <Image
                     source={getCasinoImageIcon(game.image_url)}
                     style={styles.image}
@@ -181,65 +157,28 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                     </View>
                 )}
 
-                {game?.game_type?.toLowerCase() === "live games" && (
-                    <View style={styles.pragmatic}>
+                {showButtons && (
+                    <View style={styles.buttons}>
+                        <TouchableOpacity
+                            style={[styles.button, styles.playBtn]}
+                            onPress={() => launchGame(game, 1)}
+                        >
+                            <Text style={styles.buttonText}>Play</Text>
+                        </TouchableOpacity>
 
-                        <View style={styles.betLimits}>
-                            <Text style={styles.betText}>
-                                Kshs.10 - Kshs.20000
-                            </Text>
-                        </View>
-
-                        <View style={styles.table}>
-                            <Image
-                                source={require("../../../assets/img/lock-red.png")}
-                                style={styles.lock}
-                            />
-                        </View>
-
-                        <View style={styles.players}>
-                            <Image
-                                source={require("../../../assets/img/casino/pragmatic/user.svg")}
-                                style={styles.playerIcon}
-                            />
-                            <Text></Text>
-                        </View>
-
-                        <View style={styles.results} />
-
+                        {game?.aggregator?.toLowerCase() !== "suregames" && (
+                            <TouchableOpacity
+                                style={[styles.button, styles.demoBtn]}
+                                onPress={() => launchGame(game, 0)}
+                            >
+                                <Text style={styles.buttonText}>Demo</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
+            </TouchableOpacity>
 
-            </View>
-
-            <Text style={styles.title}>
-                {game?.game_name}
-            </Text>
-
-            <View style={styles.buttons}>
-
-                <TouchableOpacity
-                    style={[styles.button, styles.playBtn]}
-                    onPress={() => launchGame(game, 1)}
-                >
-                    <Text style={styles.buttonText}>
-                        Play
-                    </Text>
-                </TouchableOpacity>
-
-                {game?.aggregator?.toLowerCase() !== "suregames" && (
-                    <TouchableOpacity
-                        style={[styles.button, styles.demoBtn]}
-                        onPress={() => launchGame(game, 0)}
-                    >
-                        <Text style={styles.buttonText}>
-                            Demo
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-            </View>
-
+            <Text style={styles.title}>{game?.game_name}</Text>
         </View>
     );
 };
@@ -247,97 +186,48 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
 export default React.memo(CasinoGame);
 
 const styles = StyleSheet.create({
-
     container: {
-        marginBottom: 20
+        marginBottom: 20,
     },
-
-    imageWrapper: {
-        position: "relative"
-    },
-
     image: {
         width: "100%",
-        height: 160,
-        borderRadius: 8
+        height: 100,
+        borderRadius: 8,
     },
-
     alert: {
         position: "absolute",
         bottom: 10,
-        left: 10
+        left: 10,
     },
-
-    pragmatic: {
+    buttons: {
         position: "absolute",
-        bottom: 10,
-        left: 10
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: "column",
+        backgroundColor: "rgba(0,0,0,0.5)",
     },
-
-    betLimits: {
-        backgroundColor: "#000",
-        padding: 4
-    },
-
-    betText: {
-        color: "#fff",
-        fontSize: 10
-    },
-
-    table: {
-        marginTop: 5
-    },
-
-    lock: {
-        width: 18,
-        height: 18
-    },
-
-    players: {
-        flexDirection: "row",
+    button: {
+        width: "90%",
+        marginHorizontal: "auto",
+        marginBottom: 8,
+        paddingVertical: 8,
         alignItems: "center",
-        marginTop: 5
     },
-
-    playerIcon: {
-        width: 16,
-        height: 16,
-        marginRight: 4
+    playBtn: {
+        backgroundColor: "#c62828",
     },
-
-    results: {
-        flexDirection: "row"
+    demoBtn: {
+        backgroundColor: "#444",
     },
-
+    buttonText: {
+        color: "#fff",
+        fontWeight: "600",
+        fontSize: 12,
+    },
     title: {
         color: "#fff",
         fontWeight: "600",
-        marginTop: 8
+        marginTop: 8,
     },
-
-    buttons: {
-        flexDirection: "row",
-        marginTop: 10
-    },
-
-    button: {
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 6,
-        marginRight: 10
-    },
-
-    playBtn: {
-        backgroundColor: "#c62828"
-    },
-
-    demoBtn: {
-        backgroundColor: "#444"
-    },
-
-    buttonText: {
-        color: "#fff",
-        fontWeight: "600"
-    }
-
 });

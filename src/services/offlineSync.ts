@@ -98,7 +98,7 @@ const syncCollection = async (collection: any): Promise<boolean> => {
         console.log('[SYNC] Syncing collection ID:', collection.id);
 
         // Get stored phone number
-        const phoneNumber = await AsyncStorage.getItem("@edairyApp:user_phone_number");
+        const phoneNumber = await AsyncStorage.getItem("@betmundialApp:user_phone_number");
         console.log('[SYNC] Using phone number:', phoneNumber);
 
         // Prepare payload
@@ -274,9 +274,9 @@ export const syncWithConfirmation = async (): Promise<void> => {
                     onPress: async () => {
                         // Show progress indicator through context
                         const result = await syncAllCollections(
-                            () => {}, // onSyncStart - handled by context
-                            () => {}, // onSyncComplete - handled by context
-                            () => {}, // onSyncError - handled by context
+                            () => { }, // onSyncStart - handled by context
+                            () => { }, // onSyncComplete - handled by context
+                            () => { }, // onSyncError - handled by context
                             true // forceLogin - user is already logged in
                         );
 

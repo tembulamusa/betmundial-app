@@ -10,7 +10,6 @@ import {
     TouchableOpacity,
     Text,
     StyleSheet,
-    Alert,
 } from "react-native";
 
 import {
@@ -158,7 +157,7 @@ const OddButton: React.FC<Props> = ({
 
     /* BUTTON CLICK */
 
-    const handlePress = () => {
+    const handlePress = async () => {
 
         const mid = match.match_id;
         const pmid = match.parent_match_id;
@@ -204,8 +203,8 @@ const OddButton: React.FC<Props> = ({
 
                 betslip =
                     jackpot !== true
-                        ? removeFromSlip(mid)
-                        : removeFromJackpotSlip(mid);
+                        ? await removeFromSlip(mid)
+                        : await removeFromJackpotSlip(mid);
 
                 dispatch({
                     type: "SET",
@@ -217,8 +216,8 @@ const OddButton: React.FC<Props> = ({
 
                 betslip =
                     jackpot !== true
-                        ? addToSlip(slip)
-                        : addToJackpotSlip(slip);
+                        ? await addToSlip(slip)
+                        : await addToJackpotSlip(slip);
 
                 dispatch({
                     type: "SET",
@@ -233,6 +232,7 @@ const OddButton: React.FC<Props> = ({
                 payload: betslip,
             });
 
+
         }
     };
 
@@ -242,43 +242,15 @@ const OddButton: React.FC<Props> = ({
         <TouchableOpacity
             activeOpacity={0.9}
             onPress={handlePress}
-            style={[
-                styles.button,
-                picked === "picked" && styles.picked,
-            ]}
+            style={[styles.button, picked === "picked" && styles.picked]}
         >
-            {!detail && (
-                <Text
-                    style={[
-                        styles.value,
-                        picked === "picked" && styles.pickedText,
-                    ]}
-                >
-                    {oddValue ? Number(oddValue).toFixed(2) : "-"}
-                </Text>
-            )}
+            <Text style={styles.label}>
+                {match.odd_key}
+            </Text>
 
-            {detail && (
-                <>
-                    <Text
-                        style={[
-                            styles.label,
-                            picked === "picked" && styles.pickedText,
-                        ]}
-                    >
-                        {match.odd_key}
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.value,
-                            picked === "picked" && styles.pickedText,
-                        ]}
-                    >
-                        {Number(match?.odd_value).toFixed(2)}
-                    </Text>
-                </>
-            )}
+            <Text style={styles.value}>
+                {oddValue ? Number(oddValue).toFixed(2) : "-"}
+            </Text>
         </TouchableOpacity>
     );
 };
@@ -286,33 +258,32 @@ const OddButton: React.FC<Props> = ({
 export default OddButton;
 
 const styles = StyleSheet.create({
-
     button: {
-        backgroundColor: "#1f1f1f",
+        flex: 1,
+        minHeight: 40,
+        backgroundColor: "rgba(255,255,255,0.2)",
         borderRadius: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 10,
+        paddingVertical: 4,
         alignItems: "center",
-        minWidth: 60,
+        justifyContent: "center",
+        marginHorizontal: 2,
+        paddingHorizontal: 4,
+
     },
 
     picked: {
-        backgroundColor: "#ffcc00",
-    },
-
-    pickedText: {
-        color: "#000",
-        fontWeight: "700",
+        backgroundColor: "#a71f66",
     },
 
     label: {
-        fontSize: 11,
-        color: "#bbb",
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: "600",
     },
 
     value: {
+        color: "#ffcc00",
         fontSize: 14,
-        color: "#fff",
         fontWeight: "700",
     },
 });

@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdkVersion 36
 
-    namespace "com.edairyapp"
+    namespace "com.betmundialapp"
     defaultConfig {
-        applicationId "com.edairyapp"
+        applicationId "com.betmundialapp"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 1

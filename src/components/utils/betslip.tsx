@@ -11,66 +11,47 @@ type Slip = {
     [key: string]: any;
 };
 
-export const addToSlip = (slip: Slip) => {
-    let current_slip = getItem('betslip');
-    let liveCount = getItem("liveCount");
+export const addToSlip = async (slip: Slip) => {
 
-    if (current_slip) {
-        current_slip[slip.match_id] = slip;
-    } else {
-        current_slip = { [slip.match_id]: slip };
+    let current_slip = await getItem('betslip');
 
-        if (slip?.bet_type == 1) {
-            let liveCount = getItem("liveCount");
-
-            if (liveCount) {
-                liveCount += 1;
-            } else {
-                liveCount = 1;
-            }
-
-            setItem("liveCount", liveCount);
-        }
+    if (!current_slip) {
+        current_slip = {};
     }
 
-    setItem('betslip', current_slip, 1 * 60 * 60 * 1000);
+    current_slip[slip.match_id] = slip;
+
+    await setItem('betslip', current_slip);
     return current_slip;
 };
 
-export const removeFromSlip = (match_id: string) => {
-    let current_slip = getItem('betslip');
+export const removeFromSlip = async (match_id: string) => {
 
-    if (current_slip) {
-        let liveCount = getItem("liveCount");
+    let current_slip = await getItem('betslip');
 
-        if (current_slip[match_id]?.bet_type == 1) {
-            if (liveCount > 0) {
-                liveCount--;
-                setItem("liveCount", liveCount);
-            }
-        }
+    if (!current_slip) return {};
 
-        delete current_slip[match_id];
-        setItem('betslip', current_slip, 1 * 60 * 60 * 1000);
-    }
+    delete current_slip[match_id];
+
+    await setItem('betslip', current_slip);
 
     return current_slip;
 };
 
-export const clearSlip = () => {
-    removeItem('betslip');
+export const clearSlip = async () => {
+    await removeItem('betslip');
 };
 
-export const getBetslip = () => {
-    return getItem('betslip');
+export const getBetslip = async () => {
+    return await getItem('betslip');
 };
 
-export const getJackpotBetslip = () => {
-    return getItem('jackpotbetslip');
+export const getJackpotBetslip = async () => {
+    return await getItem('jackpotbetslip');
 };
 
-export const addToJackpotSlip = (slip: Slip) => {
-    let current_slip = getItem('jackpotbetslip');
+export const addToJackpotSlip = async (slip: Slip) => {
+    let current_slip = await getItem('jackpotbetslip');
 
     if (current_slip) {
         current_slip[slip.match_id] = slip;
@@ -78,24 +59,24 @@ export const addToJackpotSlip = (slip: Slip) => {
         current_slip = { [slip.match_id]: slip };
     }
 
-    setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
+    await setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
 
     return current_slip;
 };
 
-export const removeFromJackpotSlip = (match_id: string) => {
-    let current_slip = getItem('jackpotbetslip');
+export const removeFromJackpotSlip = async (match_id: string) => {
+    let current_slip = await getItem('jackpotbetslip');
 
     if (current_slip) {
         delete current_slip[match_id];
-        setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
+        await setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
     }
 
     return current_slip;
 };
 
-export const clearJackpotSlip = () => {
-    removeItem('jackpotbetslip');
+export const clearJackpotSlip = async () => {
+    await removeItem('jackpotbetslip');
 };
 
 export const formatNumber = (number: number | undefined) => {

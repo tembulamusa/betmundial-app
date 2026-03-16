@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   StyleSheet,
   ScrollView,
+  Alert,
 } from "react-native";
 import { Context } from "../../context/store";
 import BetSlip from "./Betslip";
@@ -22,7 +23,7 @@ interface Props {
 const BetslipIndex: React.FC<Props> = ({
   betslipValidationData,
   jackpotData,
-  footerOffset = 0,
+  footerOffset = 60,
 }) => {
   const [state, dispatch] = useContext(Context);
   const [bongeBonusMessage] = useState("Select 3 or more games to win big bonus");
@@ -47,7 +48,7 @@ const BetslipIndex: React.FC<Props> = ({
     <View style={styles.modalHeader}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Text style={styles.modalTitle}>{state?.isjackpot ? "Jackpot" : "Betslip"}</Text>
-        {!state?.isjackpot && <Text style={styles.counter}>({Object.keys(state?.betslip || {}).length})</Text>}
+        {!state?.isjackpot && <Text style={styles.counter}>({Object?.keys(state?.betslip || {})?.length})</Text>}
       </View>
       <View style={styles.headerActions}>
         {Object.keys(state?.betslip || {}).length > 0 && (
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   modalBody: { flex: 1 },
   betslipContainer: { padding: 10 },
   bonusBox: { padding: 8, backgroundColor: "#fbd702", marginBottom: 10 },
-  footer: { position: "absolute", left: 0, right: 0, backgroundColor: "#111", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 10, zIndex: 9999 },
+  footer: { position: "absolute", left: 0, right: 0, backgroundColor: "#111", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 10 },
   footerItem: { flex: 1, alignItems: "center" },
   footerText: { color: "#fff" },
   input: { backgroundColor: "#fff", padding: 5, width: 70, textAlign: "center" },
