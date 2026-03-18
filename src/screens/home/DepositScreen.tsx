@@ -15,6 +15,7 @@ import { Formik } from "formik";
 import { getItem } from "../../components/utils/local-storage";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { Context } from "../../context/store";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 const mpesa = require("../../assets/images/mpesa.png");
 
@@ -26,7 +27,6 @@ const DepositScreen = () => {
     const app = promoName ? `${app_name}:${promoName}` : app_name;
 
     const user = state?.user || getItem("user") || null;
-
     const [isLoading, setIsLoading] = useState(false);
 
     const initialValues = {
@@ -63,7 +63,7 @@ const DepositScreen = () => {
                 data: requestData,
                 apiVersion: 3
             });
-
+            // Alert.alert("Processing Deposit", JSON.stringify(response));
             dispatch({
                 type: "SET",
                 key: "toggleuserbalance",
@@ -71,7 +71,6 @@ const DepositScreen = () => {
                     ? !state?.toggleuserbalance
                     : true
             });
-
             if (response?.status === 200 || response?.status === 201) {
                 Alert.alert(
                     "Deposit Started",
@@ -92,10 +91,10 @@ const DepositScreen = () => {
                     clearInterval(pollBalID);
                 }, 60000);
             } else {
-                Alert.alert(
-                    "Deposit Failed",
-                    "STK Push not available. Please use Paybill deposit."
-                );
+                // Alert.alert(
+                //     "Deposit Failed",
+                //     "STK Push not available. Please use Paybill deposit."
+                // );
             }
         } catch (err) {
             Alert.alert("Error", "Error making deposit. Contact support.");

@@ -55,13 +55,13 @@ const MyBetsScreen = () => {
 
         try {
             const response = await makeRequest({
-                url: "user/bets?size=20&page=1",
+                url: "/user/bets?size=20&page=1",
                 method: "GET",
                 apiVersion: 2,
             });
-            Alert.alert("Bets Response", JSON.stringify(response));
+            // Alert.alert("Bets Response", JSON.stringify(response));
             if ([200, 201].includes(response.status)) {
-                setBets(response.result?.data || []);
+                setBets(response?.data?.data || []);
             }
         } catch (e) {
             console.log("Error fetching bets", e);
@@ -97,7 +97,7 @@ const MyBetsScreen = () => {
     const renderStatusIcon = (status: string) => {
         switch (status?.toLowerCase()) {
             case "pending":
-                return <Ionicons name="ellipse-outline" size={18} color="#00A8FA" />;
+                return <Ionicons name="time" size={18} color="#00A8FA" />;
 
             case "won":
                 return <FontAwesome name="check-circle" size={18} color="#2ecc71" />;
@@ -249,12 +249,14 @@ const styles = StyleSheet.create({
         color: "white",
         textAlign: "center",
         padding: 16,
+        marginBottom: 8,
+        backgroundColor: "rgba(255,255,255,0.1)",
     },
 
     card: {
         backgroundColor: "#1e293b",
-        margin: 10,
-        borderRadius: 10,
+        margin: 4,
+        borderRadius: 4,
         padding: 12,
     },
 

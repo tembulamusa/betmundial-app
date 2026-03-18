@@ -21,6 +21,7 @@ import { AuthContext } from "../../AuthContext";
 import { useSync } from "../../context/SyncContext";
 import { initDatabase, hasShifts, hasMeasuringCans, saveOfflineCredentials, validateOfflineCredentials, hasOfflineCredentials as hasSQLiteOfflineCredentials } from "../../services/offlineDatabase";
 import { isSyncPendingAfterLogin, clearSyncPendingAfterLogin } from "../../services/offlineSync";
+import { setItem } from "../../components/utils/local-storage";
 
 export default function LoginScreen({ navigation }: any) {
     const [phoneNumber, setPhoneNumber] = useState("");
@@ -177,11 +178,12 @@ export default function LoginScreen({ navigation }: any) {
                 method: "POST",
                 data,
             });
+
             if ([200, 201].includes(status) && response?.access_token) {
                 const token = response.access_token;
 
                 await login(token);
-                await AsyncStorage.setItem("user", JSON.stringify(response));
+                await setItem("user", response);
 
                 // CRITICAL: Always save/update credentials in SQLite after successful API login
                 // This ensures offline access is available and credentials stay current

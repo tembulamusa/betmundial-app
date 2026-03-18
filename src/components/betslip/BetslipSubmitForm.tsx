@@ -5,8 +5,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     TextInput,
-    Alert,
-    ScrollView
+    ScrollView,
+    Alert
 } from "react-native";
 
 import { Context } from "../../context/store";
@@ -16,13 +16,12 @@ import {
     getBetslip,
     clearSlip,
     removeFromJackpotSlip,
-    addToJackpotSlip,
     getJackpotBetslip,
     clearJackpotSlip,
     formatNumber
 } from "../utils/betslip";
 
-import { getItem, setItem, removeItem } from "../utils/local-storage";
+import { getItem, setItem } from "../utils/local-storage";
 import { makeRequest } from "../utils/makeRequest";
 
 interface Props {
@@ -37,8 +36,7 @@ const Float = (equation: number, precision = 4) => {
 
 const BetslipSubmitForm: React.FC<Props> = ({
     jackpot,
-    jackpotData,
-    bonusBet
+    jackpotData
 }) => {
 
     const [state, dispatch] = useContext(Context);
@@ -53,15 +51,13 @@ const BetslipSubmitForm: React.FC<Props> = ({
     const [totalOdds, setTotalOdds] = useState(1);
     const [message, setMessage] = useState<any>(null);
 
-    const [betslipkey, setBetslipKey] = useState(
+    const [betslipkey] = useState(
         jackpot ? "jackpotbetslip" : "betslip"
     );
 
     const [ipInfo, setIpInfo] = useState<any>(null);
 
-    const [dbWinMatrix, setDbWinMatrix] = useState<any>({});
-
-    // --- Load IP info ---
+    // --- Load IP ---
     useEffect(() => {
         fetch("https://api64.ipify.org?format=json")
             .then(res => res.json())
@@ -69,30 +65,51 @@ const BetslipSubmitForm: React.FC<Props> = ({
             .catch(() => setIpInfo(null));
     }, []);
 
-    // --- Load betslip from storage on mount and update Context state ---
+    // --- Load betslip ---
     useEffect(() => {
         const loadBetslip = async () => {
             const storedSlip = jackpot
                 ? await getJackpotBetslip()
                 : await getBetslip();
 
-            const slip = storedSlip || {};
-
-            // Update context so we always have the current slip in state
             dispatch({
                 type: "SET",
                 key: betslipkey,
-                payload: slip
+                payload: storedSlip || {}
             });
         };
 
         loadBetslip();
-    }, [jackpot, betslipkey]);
+    }, [jackpot]);
+
+    // --- Rebet ---
+    const rebet = async () => {
+        if (state?.jackpotrebetslip) {
+            dispatch({
+                type: "SET",
+                key: "jackpotbetslip",
+                payload: state?.jackpotrebetslip
+            });
+
+            await setItem("jackpotbetslip", state?.jackpotrebetslip);
+
+            dispatch({ type: "DEL", key: "jackpotrebetslip" });
+
+        } else {
+            dispatch({
+                type: "SET",
+                key: "betslip",
+                payload: state?.rebetslip
+            });
+
+            await setItem("betslip", state?.rebetslip);
+
+            dispatch({ type: "DEL", key: "rebetslip" });
+        }
+    };
 
     // --- Calculate winnings ---
     const updateWinnings = useCallback(() => {
-        if (!state?.[betslipkey]) return;
-
         const slips = Object.values(state?.[betslipkey] || {});
 
         const odds = slips.reduce(
@@ -105,143 +122,198 @@ const BetslipSubmitForm: React.FC<Props> = ({
         let rawWin = Float(stake * odds);
 
         if (jackpot) rawWin = jackpotData?.jackpot_amount;
-
         if (rawWin > 500000 && !jackpot) rawWin = 500000;
 
         setPossibleWin(Float(rawWin, 2));
         setNetWin(Float(rawWin, 2));
 
-        dispatch({
-            type: "SET",
-            key: "totalodds",
-            payload: Float(odds)
-        });
     }, [state?.[betslipkey], stake]);
 
     useEffect(() => {
         updateWinnings();
     }, [updateWinnings]);
 
-    // --- Remove all bets ---
+    // --- Remove all ---
     const handleRemoveAll = async () => {
         const betslips = state?.[betslipkey] || {};
 
-        if (!betslips || !Object.keys(betslips).length) return;
-
         for (const match_id of Object.keys(betslips)) {
-            if (jackpot) {
-                await removeFromJackpotSlip(match_id);
-            } else {
-                await removeFromSlip(match_id);
-            }
+            jackpot
+                ? await removeFromJackpotSlip(match_id)
+                : await removeFromSlip(match_id);
         }
 
         jackpot ? await clearJackpotSlip() : await clearSlip();
 
-        dispatch({
-            type: "DEL",
-            key: betslipkey
-        });
+        dispatch({ type: "DEL", key: betslipkey });
     };
 
     // --- Place bet ---
     const handlePlaceBet = async () => {
+        try {
+            const user = await getItem("user");
 
-        const user = await getItem("user");
+            if (!user) {
+                setMessage({ status: 400, message: "Login required" });
+                return;
+            }
 
-        if (!user) {
-            Alert.alert("Login required");
-            return;
-        }
+            let bs: any[] = Object.values(state?.[betslipkey] || {});
 
-        const bs = Object.values(state?.[betslipkey] || {});
+            if (!bs.length) {
+                setMessage({ status: 400, message: "No bet selected" });
+                return;
+            }
 
-        if (!bs.length) {
-            Alert.alert("No bet selected");
-            return;
-        }
+            let slipHasOddsChange = false;
+            let slipHasUnbettableEvents = false;
 
-        const payload = {
-            bet_string: "mobile",
-            app_name: "mobile",
-            possible_win: possibleWin,
-            stake_amount: stake,
-            amount: stake,
-            bet_total_odds: Float(totalOdds, 2),
-            ip_address: ipInfo,
-            slip: bs,
-            profile_id: user?.profile_id,
-            msisdn: user?.msisdn
-        };
+            const cleanedSlip = bs.map((slip: any) => {
 
-        const endpoint = jackpot
-            ? "/user/jackpot/place-bet"
-            : "/user/place-bet";
+                if (slip.disable === true) {
+                    slipHasUnbettableEvents = true;
+                }
 
-        const [status, response] = await makeRequest({
-            url: endpoint,
-            method: "POST",
-            data: payload,
-            api_version: 2
-        });
+                if (slip.prev_odds && slip.prev_odds !== slip.odd_value) {
+                    slipHasOddsChange = true;
+                }
 
-        if (status === 200 || status === 201) {
+                const {
+                    start_time,
+                    disable,
+                    comment,
+                    prev_odds,
+                    changeOrigin,
+                    event_status,
+                    ...rest
+                } = slip;
 
-            Alert.alert("Success", "Bet placed successfully");
-
-            dispatch({
-                type: "SET",
-                key: "rebetslip",
-                payload: state?.betslip
+                return rest;
             });
 
-            await clearSlip();
+            if (slipHasUnbettableEvents || slipHasOddsChange) {
+                let msg = "";
+                if (slipHasUnbettableEvents)
+                    msg += "Some events are disabled.\n";
+                if (slipHasOddsChange)
+                    msg += "Odds have changed.\n";
 
-            dispatch({ type: "DEL", key: betslipkey });
+                setMessage({ status: 400, message: msg });
+                return;
+            }
 
-        } else {
+            const payload = {
+                bet_string: "mobile",
+                app_name: "mobile",
+                possible_win: possibleWin,
+                stake_amount: stake,
+                amount: stake,
+                bet_total_odds: Float(totalOdds, 2),
+                ip_address: ipInfo,
+                slip: cleanedSlip,
+                profile_id: user?.profile_id,
+                msisdn: user?.msisdn,
+                bet_type: "3"
+            };
 
-            Alert.alert(
-                "Bet Error",
-                response?.message || "Error placing bet"
-            );
+            const endpoint = jackpot
+                ? "/user/jackpot/place-bet"
+                : "/user/place-bet";
+
+            const res = await makeRequest({
+                url: endpoint,
+                method: "POST",
+                data: payload,
+                apiVersion: 2
+            });
+
+            const { status, data, error } = res;
+            // Alert.alert("Place Bet Response", JSON.stringify(res));
+            if (status === 200 || status === 201) {
+
+                if (res?.data?.status == 200) {
+                    dispatch({
+                        type: "SET",
+                        key: jackpot ? "jackpotrebetslip" : "rebetslip",
+                        payload: state?.[betslipkey]
+                    });
+
+                    await clearSlip();
+                    dispatch({ type: "DEL", key: betslipkey });
+
+                    setMessage({
+                        status: 200,
+                        message: "Your place bet request received successfully"
+                    });
+                } else {
+                    setMessage({
+                        status: 400,
+                        message: res?.data?.message || res?.data?.result || "Error placing bet"
+                    });
+                }
+
+            } else {
+                setMessage({
+                    status: 400,
+                    message: error || data?.message || "Error placing bet"
+                });
+            }
+
+        } catch (err: any) {
+            setMessage({
+                status: 500,
+                message: err?.message || "Something went wrong"
+            });
         }
     };
 
     return (
         <ScrollView style={styles.container}>
 
-            {message && (
-                <View style={styles.alert}>
-                    <Text>{message.message}</Text>
-                </View>
-            )}
+            {message?.status && (
+                <View style={[
+                    styles.alert,
+                    message.status === 200 ? styles.success : styles.error
+                ]}>
+                    <TouchableOpacity
+                        style={styles.closeBtn}
+                        onPress={() => setMessage(null)}
+                    >
+                        <Text style={styles.closeText}>×</Text>
+                    </TouchableOpacity>
 
-            {!jackpot && (
-                <View style={styles.row}>
-                    <Text style={styles.label}>TOTAL ODDS</Text>
-                    <Text style={styles.value}>
-                        {parseFloat(totalOdds.toString()).toFixed(2)}
+                    <Text style={styles.alertText}>
+                        {message.message}
                     </Text>
+
+                    {message.status === 200 && (
+                        <TouchableOpacity
+                            style={styles.rebetBtn}
+                            onPress={rebet}
+                        >
+                            <Text style={styles.btnText}>REBET</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
 
             <View style={styles.row}>
-                <Text style={styles.label}>AMOUNT (KSH)</Text>
+                <Text style={styles.label}>TOTAL ODDS</Text>
+                <Text style={styles.value}>
+                    {totalOdds.toFixed(2)}
+                </Text>
+            </View>
 
-                {jackpot ? (
-                    <Text>{jackpotData?.bet_amount}</Text>
-                ) : (
-                    <TextInput
-                        style={styles.input}
-                        keyboardType="numeric"
-                        value={stake.toString()}
-                        onChangeText={(text) => {
-                            const value = parseInt(text || "0");
-                            setStake(value);
-                        }}
-                    />
-                )}
+            <View style={styles.row}>
+                <Text style={styles.label}>AMOUNT (KSH)</Text>
+                <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={stake.toString()}
+                    onChangeText={(text) =>
+                        setStake(parseInt(text || "0"))
+                    }
+                />
             </View>
 
             <View style={styles.row}>
@@ -273,6 +345,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                     <Text style={styles.btnText}>PLACE BET</Text>
                 </TouchableOpacity>
             </View>
+
         </ScrollView>
     );
 };
@@ -280,54 +353,21 @@ const BetslipSubmitForm: React.FC<Props> = ({
 export default React.memo(BetslipSubmitForm);
 
 const styles = StyleSheet.create({
-    container: {
-        padding: 15,
-        backgroundColor: "rgba(255,255,255,0.15)",
-        borderRadius: 8
-    },
-    row: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 15
-    },
-    label: {
-        color: "#aaa",
-        fontSize: 14
-    },
-    value: {
-        color: "#fff",
-        fontWeight: "bold"
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#333",
-        padding: 8,
-        width: 100,
-        color: "#fff",
-        textAlign: "right"
-    },
-    buttons: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 20
-    },
-    removeBtn: {
-        backgroundColor: "#444",
-        padding: 12,
-        borderRadius: 6
-    },
-    placeBtn: {
-        backgroundColor: "#e70654",
-        padding: 12,
-        borderRadius: 6
-    },
-    btnText: {
-        color: "#fff",
-        fontWeight: "bold"
-    },
-    alert: {
-        padding: 10,
-        backgroundColor: "#222",
-        marginBottom: 10
-    }
+    container: { padding: 15, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8 },
+    row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
+    label: { color: "#aaa" },
+    value: { color: "#fff", fontWeight: "bold" },
+    input: { borderWidth: 1, borderColor: "#333", padding: 8, width: 100, color: "#fff", textAlign: "right" },
+    buttons: { flexDirection: "row", justifyContent: "space-between" },
+    removeBtn: { backgroundColor: "#444", padding: 12, borderRadius: 6 },
+    placeBtn: { backgroundColor: "#e70654", padding: 12, borderRadius: 6 },
+    btnText: { color: "#fff", fontWeight: "bold" },
+
+    alert: { padding: 12, borderRadius: 8, marginBottom: 10 },
+    success: { backgroundColor: "#1b5e20" },
+    error: { backgroundColor: "#b71c1c" },
+    alertText: { color: "#fff", marginBottom: 10 },
+    rebetBtn: { backgroundColor: "#e70654", padding: 10, borderRadius: 6, alignItems: "center" },
+    closeBtn: { position: "absolute", right: 10, top: 5 },
+    closeText: { color: "#fff", fontSize: 18 }
 });

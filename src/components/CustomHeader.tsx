@@ -7,6 +7,7 @@ import HeaderLogin from './header/HeaderLogin';
 import Search from './header/Search';
 import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
+import { setItem } from './utils/local-storage';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
@@ -43,6 +44,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             if (response?.status === 200 || response.status === 201) {
                 if (response.data && response?.data?.data) {
                     // Dispatch user to global state
+                    await setItem("user", response.data.data); // Save user data to local storage
                     dispatch({ type: 'SET', key: 'user', payload: response.data?.data });
                     // Close login modal
                     dispatch({ type: 'DEL', key: 'showloginmodal' });

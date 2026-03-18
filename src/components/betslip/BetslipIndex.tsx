@@ -69,7 +69,7 @@ const BetslipIndex: React.FC<Props> = ({
     <View style={{ flex: 1 }}>
       {/* MODAL */}
       <Modal
-        visible={state?.showmobileslip}
+        visible={!!state?.showmobileslip}
         animationType="slide"
         transparent={false}>
         <View style={styles.modalContainer}>

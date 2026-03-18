@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 import Config from "react-native-config";
+import { getItem } from "./local-storage";
 
 export type ApiVersion =
     | 1
@@ -16,7 +17,7 @@ export interface MakeRequestParams<T = any> {
     url: string;
     method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
     data?: any;
-    useJwt?: boolean;
+    token?: string; // ✅ allow override from context
     apiVersion?: ApiVersion;
     responseType?: "json" | "text";
     timeout?: number;
@@ -29,10 +30,7 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * 🔥 Centralized API Base Map
- *
- * Mirrors the React web project logic (process.env.REACT_APP_*)
- * and provides safe fallbacks so apiVersion is never missing.
+ * 🔥 Default API Fallbacks
  */
 const API_DEFAULTS: Record<ApiVersion, string> = {
     1: "https://api.betmundial.com/",
@@ -45,9 +43,10 @@ const API_DEFAULTS: Record<ApiVersion, string> = {
     casinoJackpots: "https://api.betmundial.com/pragmatic",
 };
 
+/**
+ * 🔥 Environment Map (RN + Web compatible)
+ */
 const API_MAP: Record<ApiVersion, string> = {
-    // Support both RN-style keys and existing REACT_APP_* keys (from web envs),
-    // and finally fall back to known-good defaults from the React project.
     1: (Config.BASE_URL ?? (Config as any).REACT_APP_BASE_URL ?? API_DEFAULTS[1]) as string,
     2: (Config.BASE2_URL ?? (Config as any).REACT_APP_BASE2_URL ?? API_DEFAULTS[2]) as string,
     3: (Config.ACCOUNTS_URL ?? (Config as any).REACT_APP_ACCOUNTS_URL ?? API_DEFAULTS[3]) as string,
@@ -59,22 +58,19 @@ const API_MAP: Record<ApiVersion, string> = {
 };
 
 /**
- * 🔥 Helper: Get Stored Token
+ * 🔐 Get token from AsyncStorage
  */
 const getAuthToken = async (): Promise<string | null> => {
     try {
-        const userString = await AsyncStorage.getItem("user");
-        if (!userString) return null;
-
-        const user = JSON.parse(userString);
-        return user?.token ?? null;
+        const user = await getItem("user");
+        return user?.access_token || null; // ✅ FIXED
     } catch {
         return null;
     }
 };
 
 /**
- * 🔥 Helper: Timeout Wrapper
+ * ⏱ Fetch with timeout
  */
 const fetchWithTimeout = async (
     resource: RequestInfo,
@@ -84,41 +80,43 @@ const fetchWithTimeout = async (
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
-    const response = await fetch(resource, {
-        ...options,
-        signal: controller.signal,
-    });
-
-    clearTimeout(id);
-    return response;
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal,
+        });
+        return response;
+    } finally {
+        clearTimeout(id);
+    }
 };
 
 /**
- * 🚀 Production-Ready Request Function
+ * 🚀 MAIN REQUEST FUNCTION
  */
 export const makeRequest = async <T = any>({
     url,
     method = "GET",
     data,
-    useJwt = true,
+    token, // optional override
     apiVersion = 1,
     responseType = "json",
     timeout = 15000,
 }: MakeRequestParams): Promise<ApiResponse<T>> => {
     try {
         const baseUrl = API_MAP[apiVersion];
-
         const fullUrl = `${baseUrl}${url}`;
+
+        // 🔐 Get token (priority: passed token > storage)
+        const user = await getItem("user");
+
         const headers: Record<string, string> = {
             Accept: "application/json",
             "Content-Type": "application/json",
         };
 
-        if (useJwt) {
-            const token = await getAuthToken();
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
+        if (user?.token) {
+            headers.Authorization = `Bearer ${user.token}`;
         }
 
         const requestOptions: RequestInit = {
@@ -131,6 +129,7 @@ export const makeRequest = async <T = any>({
         }
 
         const response = await fetchWithTimeout(fullUrl, requestOptions, timeout);
+
         let parsedData: any = null;
 
         if (responseType === "text") {

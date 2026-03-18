@@ -57,8 +57,7 @@ const WithdrawScreen = () => {
                 },
                 apiVersion: 3
             });
-
-            if (response?.status === 200 || response?.status === 201) {
+            if (response?.status == 200 || response?.status == 201) {
                 Alert.alert(
                     "Withdrawal Request Sent",
                     "Your withdrawal request has been submitted successfully."
@@ -74,6 +73,7 @@ const WithdrawScreen = () => {
                     "Withdrawal Failed",
                     response?.message ||
                     response?.data?.message ||
+                    response?.error ||
                     "Error sending withdrawal request"
                 );
             }
