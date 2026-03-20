@@ -1,53 +1,76 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    Pressable
+} from 'react-native';
+
 import BetslipSubmitForm from './BetslipSubmitForm';
 import { Context } from '../../context/store';
-import { removeFromSlip, removeFromJackpotSlip, getBetslip, getJackpotBetslip } from '../utils/betslip';
 
-const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, jackpotData }) => {
+import {
+    removeFromSlip,
+    removeFromJackpotSlip,
+    getBetslip,
+    getJackpotBetslip
+} from '../utils/betslip';
+
+const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
+    jackpot,
+    jackpotData
+}) => {
 
     const [state, dispatch] = useContext(Context);
     const [betslipsData, setBetslipsData] = useState<any>({});
 
-    const betslipKey = state?.isjackpot ? 'jackpotbetslip' : 'betslip';
+    const betslipKey = jackpot ? 'jackpotbetslip' : 'betslip';
+
+    const loadSlip = async () => {
+        const slip = jackpot
+            ? await getJackpotBetslip()
+            : await getBetslip();
+
+        const cleanSlip = slip || {};
+
+        setBetslipsData(cleanSlip);
+
+        dispatch({
+            type: "SET",
+            key: betslipKey,
+            payload: cleanSlip
+        });
+    };
 
     useEffect(() => {
-        const loadSlip = async () => {
-            const b = state?.isjackpot
-                ? await getJackpotBetslip()
-                : await getBetslip();
-
-            const slip = b || {};
-
-            setBetslipsData(slip);
-
-            // Update state so the component has the latest slip on load
-            dispatch({
-                type: "SET",
-                key: betslipKey,
-                payload: slip
-            });
-        };
-
         loadSlip();
-    }, [state?.isjackpot]);
+    }, [jackpot]);
 
-    const handleRemove = (item: any) => {
+    const handleRemove = async (item: any) => {
         if (!item) return;
 
-        const betslip =
-            betslipKey === 'betslip'
-                ? removeFromSlip(item.match_id)
-                : removeFromJackpotSlip(item.match_id);
+        if (jackpot) {
+            await removeFromJackpotSlip(item.match_id);
+        } else {
+            await removeFromSlip(item.match_id);
+        }
+
+        const updatedSlip = jackpot
+            ? await getJackpotBetslip()
+            : await getBetslip();
+
+        const cleanSlip = updatedSlip || {};
+
+        setBetslipsData(cleanSlip);
 
         dispatch({
             type: 'SET',
             key: betslipKey,
-            payload: betslip
+            payload: cleanSlip
         });
     };
 
-    // Filter out any null/undefined items
     const data = Object.values(betslipsData || {}).filter(Boolean);
 
     return (
@@ -58,6 +81,7 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
             ) : (
                 <FlatList
                     data={data}
+                    extraData={betslipsData}
                     keyExtractor={(item) => String(item?.match_id)}
                     renderItem={({ item }) => {
                         if (!item) return null;
@@ -69,7 +93,8 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
                                     <Text style={styles.teams}>
                                         {item.home_team} VS {item.away_team}
                                     </Text>
-                                    <Text style={{ paddingVertical: 4, color: '#aaa', fontSize: 12 }}>
+
+                                    <Text style={styles.meta}>
                                         {item?.bet_type === 1 ? 'Live' : 'Pre-match'}
                                     </Text>
 
@@ -84,12 +109,16 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
                                     </View>
                                 </View>
 
-                                <TouchableOpacity
+                                {/* ✅ Pressable with feedback */}
+                                <Pressable
                                     onPress={() => handleRemove(item)}
-                                    style={styles.removeBtn}
+                                    style={({ pressed }) => [
+                                        styles.removeBtn,
+                                        pressed && styles.removeBtnPressed
+                                    ]}
                                 >
-                                    <Text style={styles.removeText}>X</Text>
-                                </TouchableOpacity>
+                                    <Text style={styles.removeText}>✕</Text>
+                                </Pressable>
 
                             </View>
                         );
@@ -97,7 +126,10 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({ jackpot, 
                 />
             )}
 
-            <BetslipSubmitForm jackpot={jackpot} jackpotData={jackpotData} />
+            <BetslipSubmitForm
+                jackpot={jackpot}
+                jackpotData={jackpotData}
+            />
 
         </View>
     );
@@ -108,8 +140,6 @@ export default Betslip;
 const styles = StyleSheet.create({
     container: {
         borderRadius: 8,
-        // padding: 12,
-        // backgroundColor: '#07070a'
     },
 
     empty: {
@@ -133,6 +163,12 @@ const styles = StyleSheet.create({
         fontWeight: '600'
     },
 
+    meta: {
+        paddingVertical: 4,
+        color: '#aaa',
+        fontSize: 12
+    },
+
     pickRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -153,14 +189,22 @@ const styles = StyleSheet.create({
 
     removeBtn: {
         padding: 8,
-        // backgroundColor: '#222',
         borderRadius: 6,
-        fontWeight: '700',
-        marginLeft: 10
+        marginLeft: 10,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+
+    // 🔥 pressed state (blur/feedback effect)
+    removeBtnPressed: {
+        opacity: 0.4,
+        transform: [{ scale: 0.9 }],
+        backgroundColor: 'rgba(255,0,0,0.1)'
     },
 
     removeText: {
         color: '#de0808',
-        fontWeight: '700'
+        fontWeight: '700',
+        fontSize: 16
     }
 });

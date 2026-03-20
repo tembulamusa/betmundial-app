@@ -11,9 +11,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { Context } from "../../context/store";
-import makeRequest from "../utils/makeRequest";
+import { makeRequest } from "../utils/makeRequest";
 import Alert from "../utils/Alert";
-
+import { removeItem } from "../utils/local-storage";
 interface Props {
     game: any;
 }
@@ -70,21 +70,21 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
             return;
         }
 
-        const [status, result] = await makeRequest({
+        const response = await makeRequest({
             url: endpoint,
             method: "GET",
-            api_version: "CasinoGameLaunch",
+            apiVersion: "CasinoGameLaunch",
         });
-
-        if (status === 200 && result?.tea_pot == null) {
-            const launchUrl = result?.game_url || result?.gameUrl;
-
+        console.log("Game Launch Response:", response);
+        if (response?.status == 200
+            && !response.data?.tea_pot
+            && (response.data?.game_url || response.data?.gameUrl || response.data?.token)) {
+            const launchUrl = response.data?.game_url || response.data?.gameUrl || response.data?.token;
             dispatch({
                 type: "SET",
                 key: "casinolaunch",
                 payload: { game: game, url: launchUrl },
             });
-
             await AsyncStorage.setItem(
                 "casinolaunch",
                 JSON.stringify({ game: game, url: launchUrl })
@@ -94,19 +94,39 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                 dispatch({
                     type: "SET",
                     key: "bitvilleGame",
-                    payload: result,
+                    payload: response.data,
                 });
             }
 
-            navigation.navigate("CasinoGameScreen", {
+            navigation.navigate("CasinoLaunchedGameScreen", {
                 provider: game?.provider_name.split(" ").join("-").toLowerCase(),
                 game: game?.game_name.split(" ").join("-").toLowerCase(),
             });
         } else {
-            setAlertMessage({
-                status: 400,
-                message: "Unable to launch Game",
-            });
+            if (response?.status === 403 || (game?.aggregator?.toLowerCase() === "bitville" &&
+                (response?.data?.token == null || response?.data?.token == "")
+            )) {
+                setAlertMessage({
+                    status: 403,
+                    message: "Please login again.",
+                });
+                dispatch({
+                    type: "DEL",
+                    key: "user",
+                });
+                await removeItem("user");
+                dispatch({
+                    type: "DEL",
+                    key: "showloginmodal",
+                });
+
+
+            } else {
+                setAlertMessage({
+                    status: 400,
+                    message: "Unable to launch Game",
+                });
+            }
         }
     };
 
@@ -142,6 +162,8 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
 
     return (
         <View style={styles.container}>
+
+            {/* IMAGE CLICK AREA ONLY */}
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowButtons(!showButtons)}
@@ -150,35 +172,42 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                     source={getCasinoImageIcon(game.image_url)}
                     style={styles.image}
                 />
-
-                {alertMessage && (
-                    <View style={styles.alert}>
-                        <Alert message={alertMessage} />
-                    </View>
-                )}
-
-                {showButtons && (
-                    <View style={styles.buttons}>
-                        <TouchableOpacity
-                            style={[styles.button, styles.playBtn]}
-                            onPress={() => launchGame(game, 1)}
-                        >
-                            <Text style={styles.buttonText}>Play</Text>
-                        </TouchableOpacity>
-
-                        {game?.aggregator?.toLowerCase() !== "suregames" && (
-                            <TouchableOpacity
-                                style={[styles.button, styles.demoBtn]}
-                                onPress={() => launchGame(game, 0)}
-                            >
-                                <Text style={styles.buttonText}>Demo</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
             </TouchableOpacity>
 
+            {/* ALERT */}
+            {alertMessage && (
+                <View style={styles.alert}>
+                    <Alert message={alertMessage} />
+                </View>
+            )}
+
+            {/* BUTTONS (NOT INSIDE IMAGE TOUCHABLE) */}
+            {showButtons && (
+                <View style={styles.buttons} pointerEvents="box-none">
+
+                    <TouchableOpacity
+                        style={[styles.button, styles.playBtn]}
+                        activeOpacity={0.7}
+                        onPress={() => launchGame(game, 1)}
+                    >
+                        <Text style={styles.buttonText}>Play</Text>
+                    </TouchableOpacity>
+
+                    {game?.aggregator?.toLowerCase() !== "suregames" && (
+                        <TouchableOpacity
+                            style={[styles.button, styles.demoBtn]}
+                            activeOpacity={0.7}
+                            onPress={() => launchGame(game, 0)}
+                        >
+                            <Text style={styles.buttonText}>Demo</Text>
+                        </TouchableOpacity>
+                    )}
+
+                </View>
+            )}
+
             <Text style={styles.title}>{game?.game_name}</Text>
+
         </View>
     );
 };

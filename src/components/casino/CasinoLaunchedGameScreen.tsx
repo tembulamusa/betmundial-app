@@ -10,15 +10,13 @@ import { WebView } from "react-native-webview";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { Context } from "../../../context/store";
-import makeRequest from "../../utils/fetch-request";
-
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { makeRequest } from "../utils/makeRequest";
+import { Context } from "../../context/store";
 
 const CasinoLaunchedGame = () => {
 
     const [state, dispatch] = useContext(Context);
-
     const navigation = useNavigation();
     const route: any = useRoute();
 
@@ -57,88 +55,21 @@ const CasinoLaunchedGame = () => {
         navigation.navigate("Casino" as never);
     };
 
-    const findGameId = (provider: string, gameName: string) => {
-
-        const games =
-            state?.casinofilters?.games?.[0]?.gameList || [];
-
-        const matchedGame = games.find(
-            (game: any) =>
-                game.provider_name.toLowerCase() ===
-                provider.toLowerCase() &&
-                game.game_name
-                    .toLowerCase()
-                    .replace(/\s+/g, "-") ===
-                gameName.toLowerCase()
-        );
-
-        return matchedGame?.game_id;
-    };
-
-    const fetchGameUrl = async (
-        provider: string,
-        gameId: string
-    ) => {
-
-        const endpoint = `${provider}/casino/game-url/mobile/1/${gameId}`;
-
-        const [status, result] = await makeRequest({
-            url: endpoint,
-            method: "GET",
-            api_version: "CasinoGameLaunch"
-        });
-
-        if (status === 200) {
-
-            const url =
-                result?.gameUrl ||
-                result?.game_url ||
-                result?.token;
-
-            if (url) {
-
-                setNoStateGame(url);
-
-                if (
-                    result?.aggregator?.toLowerCase() ===
-                    "bitville"
-                ) {
-                    dispatch({
-                        type: "SET",
-                        key: "bitvilleGame",
-                        payload: result
-                    });
-
-                    setBitvilleGame(true);
-                }
-
-            } else {
-                handleSessionExpired();
-            }
-
-        } else {
-            navigation.navigate("Casino" as never);
-        }
-    };
-
     const launchOldWay = async () => {
 
         let endpoint =
             "Unicraft/casino/game-url/mobile/1/uicraftvirtuals";
 
         if (provider?.toLowerCase() === "aviatorllc") {
-            endpoint =
-                "Bitville/casino/game-url/mobile/1/14914";
+            endpoint = "Bitville/casino/game-url/mobile/1/14914";
         }
 
         if (gameName?.toLowerCase() === "aviator") {
-            endpoint =
-                "Bitville/casino/game-url/mobile/1/1370";
+            endpoint = "Bitville/casino/game-url/mobile/1/1370";
         }
 
         if (gameName?.toLowerCase() === "jetx") {
-            endpoint =
-                "SmartSoft/casino/game-url/mobile/1/13";
+            endpoint = "SmartSoft/casino/game-url/mobile/1/13";
         }
 
         const [status, result] = await makeRequest({
@@ -159,8 +90,7 @@ const CasinoLaunchedGame = () => {
                 setNoStateGame(url);
 
                 if (
-                    result?.aggregator?.toLowerCase() ===
-                    "bitville"
+                    result?.aggregator?.toLowerCase() === "bitville"
                 ) {
 
                     dispatch({
@@ -189,11 +119,7 @@ const CasinoLaunchedGame = () => {
             payload: true
         });
 
-        if (
-            directLaunch.includes(
-                gameName?.toLowerCase()
-            )
-        ) {
+        if (directLaunch.includes(gameName?.toLowerCase())) {
             launchOldWay();
         } else {
 
@@ -236,44 +162,125 @@ const CasinoLaunchedGame = () => {
         return () => {
 
             dispatch({ type: "DEL", key: "iscasinopage" });
-
             dispatch({ type: "DEL", key: "casinolaunch" });
 
         };
 
     }, []);
 
-    return (
+    /* ✅ BITVILLE SCRIPT INJECTION + HEIGHT FIX */
+    const getInjectedJS = () => {
+        if (!bitvilleGame || !state?.bitvilleGame) return "";
 
+        return `
+            (function() {
+                var script = document.createElement('script');
+                script.src = '${state.bitvilleGame.game_base_url}/js/BVComponents.min.js?v=1.1.0';
+                script.async = true;
+
+                script.onload = function() {
+                    if (!window.bv || !window.bv.Parent) return;
+
+                    var bvComponent = new window.bv.Parent(
+                        "bv-loader",
+                        "${state.bitvilleGame.game_base_url}/partner"
+                    );
+
+                    bvComponent.setParam("token", "${state.bitvilleGame.token}");
+                    bvComponent.setParam("provider", "${state.bitvilleGame.provider}");
+                    bvComponent.setParam("game", "${state.bitvilleGame.game}");
+                    bvComponent.setParam("demoMode", "${state.bitvilleGame.demo}");
+                    bvComponent.setParam("demoOverlay", "${state.bitvilleGame.demo_overlay}");
+                    bvComponent.createComponent();
+
+                    /* 🔥 FORCE FULL HEIGHT */
+                    setTimeout(function() {
+                        var container = document.getElementById("bv-loader");
+                        if (container) {
+                            container.style.height = window.innerHeight + "px";
+                            container.style.width = "100%";
+                        }
+
+                        var iframes = document.getElementsByTagName("iframe");
+                        for (var i = 0; i < iframes.length; i++) {
+                            iframes[i].style.height = window.innerHeight + "px";
+                            iframes[i].style.width = "100%";
+                            iframes[i].style.border = "none";
+                        }
+                    }, 500);
+                };
+
+                document.body.appendChild(script);
+            })();
+            true;
+        `;
+    };
+
+    return (
         <View style={styles.container}>
 
-            {/* HEADER */}
-
             {!state?.fullcasinoscreen && (
-
                 <View style={styles.header}>
-
                     <TouchableOpacity
                         onPress={() =>
-                            navigation.navigate(
-                                "Casino" as never
-                            )
+                            navigation.navigate("Casino" as never)
                         }
                     >
                         <Text style={styles.back}>
                             ← Back
                         </Text>
                     </TouchableOpacity>
-
                 </View>
-
             )}
-
-            {/* GAME */}
 
             <View style={styles.gameContainer}>
 
-                {noStateGame ? (
+                {bitvilleGame ? (
+
+                    <WebView
+                        originWhitelist={['*']}
+                        source={{
+                            html: `
+                                <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+                                        <style>
+                                            html, body {
+                                                margin: 0;
+                                                padding: 0;
+                                                height: 100%;
+                                                width: 100%;
+                                                background: #000;
+                                                overflow: hidden;
+                                            }
+
+                                            #bv-loader {
+                                                width: 100%;
+                                                height: 100%;
+                                            }
+
+                                            #bv-loader iframe {
+                                                width: 100% !important;
+                                                height: 100% !important;
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div id="bv-loader"></div>
+                                    </body>
+                                </html>
+                            `
+                        }}
+                        injectedJavaScript={getInjectedJS()}
+                        javaScriptEnabled
+                        domStorageEnabled
+                        allowsFullscreenVideo
+                        style={{ flex: 1 }}
+                        containerStyle={{ flex: 1 }}
+                        scrollEnabled={false}
+                    />
+
+                ) : noStateGame ? (
 
                     <WebView
                         source={{ uri: noStateGame }}
@@ -294,7 +301,6 @@ const CasinoLaunchedGame = () => {
             </View>
 
         </View>
-
     );
 };
 

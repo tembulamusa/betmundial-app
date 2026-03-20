@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, {
+    useState,
+    useEffect,
+    useContext,
+    useCallback
+} from "react";
+
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     TextInput,
-    ScrollView,
-    Alert
+    ScrollView
 } from "react-native";
 
 import { Context } from "../../context/store";
@@ -41,6 +46,8 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
     const [state, dispatch] = useContext(Context);
 
+    const betslipkey = jackpot ? "jackpotbetslip" : "betslip";
+
     const [stake, setStake] = useState<number>(
         state?.mobilefooteramount || jackpotData?.bet_amount || 100
     );
@@ -50,12 +57,8 @@ const BetslipSubmitForm: React.FC<Props> = ({
     const [bonus, setBonus] = useState(0);
     const [totalOdds, setTotalOdds] = useState(1);
     const [message, setMessage] = useState<any>(null);
-
-    const [betslipkey] = useState(
-        jackpot ? "jackpotbetslip" : "betslip"
-    );
-
     const [ipInfo, setIpInfo] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // --- Load IP ---
     useEffect(() => {
@@ -65,7 +68,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
             .catch(() => setIpInfo(null));
     }, []);
 
-    // --- Load betslip ---
+    // --- Sync betslip from storage to state ---
     useEffect(() => {
         const loadBetslip = async () => {
             const storedSlip = jackpot
@@ -84,7 +87,9 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
     // --- Rebet ---
     const rebet = async () => {
+
         if (state?.jackpotrebetslip) {
+
             dispatch({
                 type: "SET",
                 key: "jackpotbetslip",
@@ -96,6 +101,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
             dispatch({ type: "DEL", key: "jackpotrebetslip" });
 
         } else {
+
             dispatch({
                 type: "SET",
                 key: "betslip",
@@ -110,10 +116,11 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
     // --- Calculate winnings ---
     const updateWinnings = useCallback(() => {
+
         const slips = Object.values(state?.[betslipkey] || {});
 
         const odds = slips.reduce(
-            (prev: number, item: any) => prev * item?.odd_value,
+            (prev: number, item: any) => prev * (item?.odd_value || 1),
             1
         );
 
@@ -122,6 +129,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
         let rawWin = Float(stake * odds);
 
         if (jackpot) rawWin = jackpotData?.jackpot_amount;
+
         if (rawWin > 500000 && !jackpot) rawWin = 500000;
 
         setPossibleWin(Float(rawWin, 2));
@@ -135,6 +143,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
     // --- Remove all ---
     const handleRemoveAll = async () => {
+
         const betslips = state?.[betslipkey] || {};
 
         for (const match_id of Object.keys(betslips)) {
@@ -143,14 +152,27 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 : await removeFromSlip(match_id);
         }
 
-        jackpot ? await clearJackpotSlip() : await clearSlip();
+        // clear storage
+        jackpot
+            ? await clearJackpotSlip()
+            : await clearSlip();
 
+        // clear state
         dispatch({ type: "DEL", key: betslipkey });
+
+        // 🔥 ensure UI updates immediately
+        dispatch({
+            type: "SET",
+            key: betslipkey,
+            payload: {}
+        });
     };
 
     // --- Place bet ---
     const handlePlaceBet = async () => {
+        setIsSubmitting(true);
         try {
+
             const user = await getItem("user");
 
             if (!user) {
@@ -158,7 +180,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 return;
             }
 
-            let bs: any[] = Object.values(state?.[betslipkey] || {});
+            const bs: any[] = Object.values(state?.[betslipkey] || {});
 
             if (!bs.length) {
                 setMessage({ status: 400, message: "No bet selected" });
@@ -170,9 +192,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
             const cleanedSlip = bs.map((slip: any) => {
 
-                if (slip.disable === true) {
-                    slipHasUnbettableEvents = true;
-                }
+                if (slip.disable === true) slipHasUnbettableEvents = true;
 
                 if (slip.prev_odds && slip.prev_odds !== slip.odd_value) {
                     slipHasOddsChange = true;
@@ -193,10 +213,8 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
             if (slipHasUnbettableEvents || slipHasOddsChange) {
                 let msg = "";
-                if (slipHasUnbettableEvents)
-                    msg += "Some events are disabled.\n";
-                if (slipHasOddsChange)
-                    msg += "Odds have changed.\n";
+                if (slipHasUnbettableEvents) msg += "Some events are disabled.\n";
+                if (slipHasOddsChange) msg += "Odds have changed.\n";
 
                 setMessage({ status: 400, message: msg });
                 return;
@@ -213,6 +231,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 slip: cleanedSlip,
                 profile_id: user?.profile_id,
                 msisdn: user?.msisdn,
+                accept_all_odds_change: 1,
                 bet_type: "3"
             };
 
@@ -227,35 +246,39 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 apiVersion: 2
             });
 
-            const { status, data, error } = res;
-            // Alert.alert("Place Bet Response", JSON.stringify(res));
-            if (status === 200 || status === 201) {
+            if (res?.status === 200 || res?.status === 201) {
 
-                if (res?.data?.status == 200) {
+                if (res?.data?.status === 200) {
+
                     dispatch({
                         type: "SET",
                         key: jackpot ? "jackpotrebetslip" : "rebetslip",
                         payload: state?.[betslipkey]
                     });
 
-                    await clearSlip();
+                    // clear storage properly
+                    jackpot
+                        ? await clearJackpotSlip()
+                        : await clearSlip();
+
                     dispatch({ type: "DEL", key: betslipkey });
 
                     setMessage({
                         status: 200,
                         message: "Your place bet request received successfully"
                     });
+
                 } else {
                     setMessage({
                         status: 400,
-                        message: res?.data?.message || res?.data?.result || "Error placing bet"
+                        message: res?.data?.message || "Error placing bet"
                     });
                 }
 
             } else {
                 setMessage({
                     status: 400,
-                    message: error || data?.message || "Error placing bet"
+                    message: res?.error || "Error placing bet"
                 });
             }
 
@@ -264,7 +287,10 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 status: 500,
                 message: err?.message || "Something went wrong"
             });
+        } finally {
+            setIsSubmitting(false);
         }
+
     };
 
     return (
@@ -275,6 +301,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                     styles.alert,
                     message.status === 200 ? styles.success : styles.error
                 ]}>
+
                     <TouchableOpacity
                         style={styles.closeBtn}
                         onPress={() => setMessage(null)}
@@ -299,9 +326,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
             <View style={styles.row}>
                 <Text style={styles.label}>TOTAL ODDS</Text>
-                <Text style={styles.value}>
-                    {totalOdds.toFixed(2)}
-                </Text>
+                <Text style={styles.value}>{totalOdds.toFixed(2)}</Text>
             </View>
 
             <View style={styles.row}>
@@ -341,8 +366,9 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 <TouchableOpacity
                     style={styles.placeBtn}
                     onPress={handlePlaceBet}
+                    disabled={Object.keys(state?.[betslipkey] || {}).length === 0 || stake <= 10 || isSubmitting}
                 >
-                    <Text style={styles.btnText}>PLACE BET</Text>
+                    <Text style={styles.btnText}>{isSubmitting ? "WAIT..." : "PLACE BET"}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -353,21 +379,65 @@ const BetslipSubmitForm: React.FC<Props> = ({
 export default React.memo(BetslipSubmitForm);
 
 const styles = StyleSheet.create({
-    container: { padding: 15, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8 },
-    row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
+    container: {
+        padding: 15,
+        backgroundColor: "rgba(255,255,255,0.15)",
+        borderRadius: 8
+    },
+    row: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 15
+    },
     label: { color: "#aaa" },
     value: { color: "#fff", fontWeight: "bold" },
-    input: { borderWidth: 1, borderColor: "#333", padding: 8, width: 100, color: "#fff", textAlign: "right" },
-    buttons: { flexDirection: "row", justifyContent: "space-between" },
-    removeBtn: { backgroundColor: "#444", padding: 12, borderRadius: 6 },
-    placeBtn: { backgroundColor: "#e70654", padding: 12, borderRadius: 6 },
-    btnText: { color: "#fff", fontWeight: "bold" },
-
-    alert: { padding: 12, borderRadius: 8, marginBottom: 10 },
+    input: {
+        borderWidth: 1,
+        borderColor: "#333",
+        padding: 8,
+        width: 100,
+        color: "#fff",
+        textAlign: "right"
+    },
+    buttons: {
+        flexDirection: "row",
+        justifyContent: "space-between"
+    },
+    removeBtn: {
+        backgroundColor: "#444",
+        padding: 12,
+        borderRadius: 6
+    },
+    placeBtn: {
+        backgroundColor: "#e70654",
+        padding: 12,
+        borderRadius: 6
+    },
+    btnText: {
+        color: "#fff",
+        fontWeight: "bold"
+    },
+    alert: {
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 10
+    },
     success: { backgroundColor: "#1b5e20" },
     error: { backgroundColor: "#b71c1c" },
     alertText: { color: "#fff", marginBottom: 10 },
-    rebetBtn: { backgroundColor: "#e70654", padding: 10, borderRadius: 6, alignItems: "center" },
-    closeBtn: { position: "absolute", right: 10, top: 5 },
-    closeText: { color: "#fff", fontSize: 18 }
+    rebetBtn: {
+        backgroundColor: "#e70654",
+        padding: 10,
+        borderRadius: 6,
+        alignItems: "center"
+    },
+    closeBtn: {
+        position: "absolute",
+        right: 10,
+        top: 5
+    },
+    closeText: {
+        color: "#fff",
+        fontSize: 18
+    }
 });

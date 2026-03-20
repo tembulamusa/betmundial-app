@@ -26,16 +26,10 @@ export const addToSlip = async (slip: Slip) => {
 };
 
 export const removeFromSlip = async (match_id: string) => {
-
-    let current_slip = await getItem('betslip');
-
-    if (!current_slip) return {};
-
-    delete current_slip[match_id];
-
-    await setItem('betslip', current_slip);
-
-    return current_slip;
+    const slip = await getBetslip() || {};
+    delete slip[match_id];
+    await setItem('betslip', slip);
+    return slip;
 };
 
 export const clearSlip = async () => {

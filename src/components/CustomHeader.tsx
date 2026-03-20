@@ -65,9 +65,14 @@ const CustomHeader = ({ scene, previous, navigation }) => {
     return (
         <View style={{ backgroundColor: theme.background }}>
             <View style={styles.header}>
-                <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+                <View style={{ width: 120, justifyContent: "center" }}>
+                    <Image
+                        source={require('../assets/images/logo.png')}
+                        style={{ width: "100%", height: 50, resizeMode: "contain" }}
+                    />
+                </View>
                 <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <Search />
+                    {/* <Search /> */}
                     {state?.user ? <HeaderUser /> : <HeaderLogin />}
                 </View>
             </View>
@@ -129,8 +134,11 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
 const styles = StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: 10, paddingVertical: 20 },
-    logo: { width: 120, height: 60 },
-
+    logo: {
+        width: "100%",
+        height: 60,
+        resizeMode: "contain"
+    },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,12,36,0.91)', justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalContent: {
         width: '100%',

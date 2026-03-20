@@ -60,13 +60,10 @@ const HeaderUser = () => {
                     style={styles.depositBtn}
                     onPress={() => navigation.navigate("DepositScreen")}
                 >
-                    <FontAwesome name="money" size={18} color="#FFD700" />
-                    <Text style={styles.depositText}>Deposit</Text>
+                    {/* <FontAwesome name="money" size={18} color="#FFD700" /> */}
+                    <Text style={styles.depositText}>KSH {formatToFloat(user.balance) || 0}</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.balance}>
-                    BAL. KES {formatToFloat(user.balance) || 0}
-                </Text>
 
                 <TouchableOpacity onPress={openDrawer}>
                     <FontAwesome name="user-circle" size={26} color="#fff" />
@@ -174,13 +171,13 @@ const styles = StyleSheet.create({
     depositBtn: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.2)",
-        paddingHorizontal: 12,
+        backgroundColor: "#FFB200",
+        paddingHorizontal: 6,
         paddingVertical: 6,
         borderRadius: 8,
         marginRight: 10,
     },
-    depositText: { color: "#fff", marginLeft: 6, fontWeight: "bold" },
+    depositText: { color: "#000000", marginLeft: 6, fontWeight: "bold" },
     balance: { color: "#38bdf8", marginRight: 10, fontWeight: "bold" },
     overlay: { position: "absolute", width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.4)" },
     drawer: { position: "absolute", top: 0, width: 260, height: "100%", backgroundColor: "#0c0c24", paddingTop: 60, paddingHorizontal: 20 },

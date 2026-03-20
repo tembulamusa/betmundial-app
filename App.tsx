@@ -32,10 +32,12 @@ import MyBetsScreen from "./src/screens/home/MyBetsScreen";
 import SelfExcludeScreen from "./src/screens/home/SelfExcludeScreen";
 import JackpotScreen from "./src/screens/home/JackpotScreen";
 import LiveScreen from "./src/screens/home/LiveScreen";
+import CasinoLaunchedGameScreen from "./src/components/casino/CasinoLaunchedGameScreen";
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
+const CasinoStack = createNativeStackNavigator();
 const TAB_BAR_HEIGHT = 60;
 
 /* ================= HOME STACK ================= */
@@ -51,6 +53,15 @@ function HomeStackScreen() {
       <HomeStack.Screen name="JackpotScreen" component={JackpotScreen} />
       <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
     </HomeStack.Navigator>
+  );
+}
+
+function CasinoStackScreen() {
+  return (
+    <CasinoStack.Navigator screenOptions={{ headerShown: false }}>
+      <CasinoStack.Screen name="CasinoMain" component={CasinoScreen} />
+      <CasinoStack.Screen name="CasinoLaunchedGameScreen" component={CasinoLaunchedGameScreen} />
+    </CasinoStack.Navigator>
   );
 }
 
@@ -72,7 +83,7 @@ function MainTabs() {
         })}
       >
         <Tab.Screen name="Sports" component={HomeStackScreen} />
-        <Tab.Screen name="Casino" component={CasinoScreen} />
+        <Tab.Screen name="Casino" component={CasinoStackScreen} />
         {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
