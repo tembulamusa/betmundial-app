@@ -25,14 +25,27 @@ const HeaderNav: React.FC = () => {
     const navigation = useNavigation<any>();
 
     const linkItems: MenuItem[] = [
+        { name: "Home", icon: "home.svg", link: "HomeScreen" },
         { name: "live", icon: "livescore.svg", link: "LiveScreen" },
         { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
-        { name: "aviator", icon: "aviator.svg", link: "AviatorScreen" },
-        { name: "jet x", icon: "jetx.svg", link: "JetXScreen" },
-        { name: "mundial league", icon: "mundial-league.svg", link: "MundialScreen" },
-        // { name: "casino", icon: "casino.svg", link: "CasinoScreen" },
-        // { name: "sports", icon: "sports.svg", link: "SportsScreen" },
-        // { name: "promotions", icon: "promos.svg", link: "PromotionsScreen" },
+
+        {
+            name: "aviator",
+            icon: "aviator.svg",
+            link: "",
+            custom: true,
+            provider: "spribe",
+            aggregator: "Bitville",
+            gameName: "aviator",
+        },
+        {
+            name: "mundial league",
+            icon: "mundial-league.svg",
+            link: "",
+            custom: true,
+            provider: "unicraft",
+            gameName: "mundial-league",
+        },
     ];
 
     // const getIcon = (name: string, group: string = "colorsvg") => {
@@ -47,8 +60,23 @@ const HeaderNav: React.FC = () => {
     //     }
     // };
 
-    const onPressMenuItem = (link: string) => {
-        navigation.navigate("Sports", { screen: link });
+    const onPressMenuItem = (item: MenuItem) => {
+
+        if (item?.custom) {
+
+            navigation.navigate("Casino", {
+                screen: "CasinoLaunchedGameScreen",
+                params: {
+                    provider: item.provider,
+                    gameName: item.gameName,
+                },
+            });
+
+        } else {
+
+            navigation.navigate("Sports", { screen: item.link });
+
+        }
     };
 
     useEffect(() => {
@@ -76,7 +104,7 @@ const HeaderNav: React.FC = () => {
                     <TouchableOpacity
                         key={idx}
                         style={styles.menuItem}
-                        onPress={() => onPressMenuItem(item.link)}
+                        onPress={() => onPressMenuItem(item)}
                     >
                         {/* <Image
                             source={getIcon(item.icon)}

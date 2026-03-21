@@ -27,7 +27,7 @@ const MatchList: React.FC<Props> = ({ matches, live }) => {
     const [state, dispatch] = React.useContext(Context);
 
     useEffect(() => {
-        Alert.alert("the betslip", JSON.stringify(state?.betslip));
+        // Alert.alert("the betslip", JSON.stringify(state?.betslip));
     }, [state?.betslip, state?.jackpotbetslip]);
 
 

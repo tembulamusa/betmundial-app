@@ -3,18 +3,18 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from "react-native";
 
 import { WebView } from "react-native-webview";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { makeRequest } from "../utils/makeRequest";
 import { Context } from "../../context/store";
 
-const CasinoLaunchedGame = () => {
+const CasinoLaunchedGameScreen = () => {
 
     const [state, dispatch] = useContext(Context);
     const navigation = useNavigation();
@@ -27,6 +27,7 @@ const CasinoLaunchedGame = () => {
 
     const directLaunch = ["mundial-league", "aviator", "jetx"];
 
+    /* ================= SESSION EXPIRE ================= */
     const handleSessionExpired = async () => {
 
         await AsyncStorage.removeItem("user");
@@ -55,63 +56,61 @@ const CasinoLaunchedGame = () => {
         navigation.navigate("Casino" as never);
     };
 
+    /* ================= OLD WAY LAUNCH ================= */
     const launchOldWay = async () => {
+        // reset state first
+        setNoStateGame(undefined);
+        setBitvilleGame(false);
 
-        let endpoint =
-            "Unicraft/casino/game-url/mobile/1/uicraftvirtuals";
-
-        if (provider?.toLowerCase() === "aviatorllc") {
-            endpoint = "Bitville/casino/game-url/mobile/1/14914";
-        }
+        let endpoint = "Unicraft/casino/game-url/mobile/1/uicraftvirtuals";
 
         if (gameName?.toLowerCase() === "aviator") {
             endpoint = "Bitville/casino/game-url/mobile/1/1370";
         }
-
         if (gameName?.toLowerCase() === "jetx") {
             endpoint = "SmartSoft/casino/game-url/mobile/1/13";
         }
 
-        const [status, result] = await makeRequest({
+        const response = await makeRequest({
             url: endpoint,
             method: "GET",
-            api_version: "CasinoGameLaunch"
+            apiVersion: "CasinoGameLaunch",
         });
 
-        if (status === 200) {
-
+        if (response?.status === 200) {
             const url =
-                result?.gameUrl ||
-                result?.game_url ||
-                result?.token;
+                response?.data?.gameUrl ||
+                response?.data?.game_url ||
+                response?.data?.token;
 
-            if (url) {
-
-                setNoStateGame(url);
-
-                if (
-                    result?.aggregator?.toLowerCase() === "bitville"
-                ) {
-
-                    dispatch({
-                        type: "SET",
-                        key: "bitvilleGame",
-                        payload: result
-                    });
-
-                    setBitvilleGame(true);
-                }
-
-            } else {
-                handleSessionExpired();
+            if (!url) {
+                return handleSessionExpired();
             }
 
+            setNoStateGame(url);
+
+            // Bitville handling
+            if (response?.data?.aggregator?.toLowerCase() === "bitville") {
+                // ✅ Update Context before rendering
+                dispatch({
+                    type: "SET",
+                    key: "bitvilleGame",
+                    payload: response.data,
+                });
+
+                setBitvilleGame(true);
+            } else {
+                setBitvilleGame(false);
+            }
         } else {
             navigation.navigate("Casino" as never);
         }
     };
 
+    /* ================= MAIN EFFECT ================= */
     useEffect(() => {
+
+        if (!gameName) return;
 
         dispatch({
             type: "SET",
@@ -120,7 +119,9 @@ const CasinoLaunchedGame = () => {
         });
 
         if (directLaunch.includes(gameName?.toLowerCase())) {
+
             launchOldWay();
+
         } else {
 
             AsyncStorage.getItem("casinolaunch")
@@ -145,10 +146,11 @@ const CasinoLaunchedGame = () => {
                     if (parsedUrl) {
 
                         if (
-                            game?.game?.aggregator?.toLowerCase() ===
-                            "bitville"
+                            game?.game?.aggregator?.toLowerCase() === "bitville"
                         ) {
                             setBitvilleGame(true);
+                        } else {
+                            setBitvilleGame(false);
                         }
 
                         setNoStateGame(parsedUrl);
@@ -160,22 +162,20 @@ const CasinoLaunchedGame = () => {
         }
 
         return () => {
-
             dispatch({ type: "DEL", key: "iscasinopage" });
             dispatch({ type: "DEL", key: "casinolaunch" });
-
         };
 
-    }, []);
+    }, [gameName, provider]); // 🔥 CRITICAL FIX
 
-    /* ✅ BITVILLE SCRIPT INJECTION + HEIGHT FIX */
+    /* ================= BITVILLE INJECTION ================= */
     const getInjectedJS = () => {
         if (!bitvilleGame || !state?.bitvilleGame) return "";
 
         return `
             (function() {
                 var script = document.createElement('script');
-                script.src = '${state.bitvilleGame.game_base_url}/js/BVComponents.min.js?v=1.1.0';
+                script.src = '${state?.bitvilleGame?.game_base_url}/js/BVComponents.min.js?v=1.1.0';
                 script.async = true;
 
                 script.onload = function() {
@@ -183,17 +183,16 @@ const CasinoLaunchedGame = () => {
 
                     var bvComponent = new window.bv.Parent(
                         "bv-loader",
-                        "${state.bitvilleGame.game_base_url}/partner"
+                        "${state?.bitvilleGame?.game_base_url}/partner"
                     );
 
-                    bvComponent.setParam("token", "${state.bitvilleGame.token}");
-                    bvComponent.setParam("provider", "${state.bitvilleGame.provider}");
-                    bvComponent.setParam("game", "${state.bitvilleGame.game}");
-                    bvComponent.setParam("demoMode", "${state.bitvilleGame.demo}");
-                    bvComponent.setParam("demoOverlay", "${state.bitvilleGame.demo_overlay}");
+                    bvComponent.setParam("token", "${state?.bitvilleGame?.token}");
+                    bvComponent.setParam("provider", "${state?.bitvilleGame?.provider}");
+                    bvComponent.setParam("game", "${state?.bitvilleGame?.game}");
+                    bvComponent.setParam("demoMode", "${state?.bitvilleGame?.demo}");
+                    bvComponent.setParam("demoOverlay", "${state?.bitvilleGame?.demo_overlay}");
                     bvComponent.createComponent();
 
-                    /* 🔥 FORCE FULL HEIGHT */
                     setTimeout(function() {
                         var container = document.getElementById("bv-loader");
                         if (container) {
@@ -216,6 +215,7 @@ const CasinoLaunchedGame = () => {
         `;
     };
 
+    /* ================= UI ================= */
     return (
         <View style={styles.container}>
 
@@ -238,12 +238,13 @@ const CasinoLaunchedGame = () => {
                 {bitvilleGame ? (
 
                     <WebView
+                        key={`bitville-${gameName}`} // 🔥 FORCE RELOAD
                         originWhitelist={['*']}
                         source={{
                             html: `
                                 <html>
                                     <head>
-                                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
                                         <style>
                                             html, body {
                                                 margin: 0;
@@ -253,15 +254,9 @@ const CasinoLaunchedGame = () => {
                                                 background: #000;
                                                 overflow: hidden;
                                             }
-
                                             #bv-loader {
                                                 width: 100%;
                                                 height: 100%;
-                                            }
-
-                                            #bv-loader iframe {
-                                                width: 100% !important;
-                                                height: 100% !important;
                                             }
                                         </style>
                                     </head>
@@ -276,13 +271,13 @@ const CasinoLaunchedGame = () => {
                         domStorageEnabled
                         allowsFullscreenVideo
                         style={{ flex: 1 }}
-                        containerStyle={{ flex: 1 }}
                         scrollEnabled={false}
                     />
 
                 ) : noStateGame ? (
 
                     <WebView
+                        key={noStateGame} // 🔥 FORCE RELOAD
                         source={{ uri: noStateGame }}
                         style={{ flex: 1 }}
                         javaScriptEnabled
@@ -292,7 +287,7 @@ const CasinoLaunchedGame = () => {
 
                 ) : (
 
-                    <Text style={{ color: "#fff" }}>
+                    <Text style={{ color: "#fff", textAlign: "center", marginTop: 20 }}>
                         Loading Game...
                     </Text>
 
@@ -304,7 +299,7 @@ const CasinoLaunchedGame = () => {
     );
 };
 
-export default React.memo(CasinoLaunchedGame);
+export default React.memo(CasinoLaunchedGameScreen);
 
 const styles = StyleSheet.create({
 

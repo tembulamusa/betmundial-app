@@ -85,7 +85,7 @@ function MainTabs() {
         <Tab.Screen name="Sports" component={HomeStackScreen} />
         <Tab.Screen name="Casino" component={CasinoStackScreen} />
         {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
-        <Tab.Screen name="Profile" component={ProfileScreen} />
+        <Tab.Screen name="Dashboard" component={ProfileScreen} />
       </Tab.Navigator>
     </MainLayout>
   );

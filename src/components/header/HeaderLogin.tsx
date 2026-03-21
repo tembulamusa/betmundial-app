@@ -26,13 +26,14 @@ const HeaderLogin = () => {
     return (
         <View style={styles.container}>
             {/* Deposit Button */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
                 style={styles.depositButton}
                 onPress={() => navigation.navigate("Deposit" as never)}
             >
                 <Icon name="money" size={16} color="#FFD700" />
-                {/* <Text style={styles.depositText}> Deposit</Text> */}
-            </TouchableOpacity>
+                 <Text style={styles.depositText}> Deposit</Text>
+        </TouchableOpacity>
+        */}
 
             {/* Login Button */}
             <TouchableOpacity
