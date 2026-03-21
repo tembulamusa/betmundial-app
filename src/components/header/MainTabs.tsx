@@ -5,13 +5,15 @@ import {
     TouchableOpacity,
     ScrollView,
     Image,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from "react-native";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Context } from "../../context/store";
 import { getItem } from "../utils/local-storage";
 import { flagMap } from "../utils/FlagMap";
+import { makeRequest } from "../utils/makeRequest";
 
 interface Competition {
     competition_id: number;
@@ -37,35 +39,42 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
 
     useEffect(() => {
 
-        let top: any = getItem("topcompetitions");
 
-        // Handle JSON string from storage
-        if (typeof top === "string") {
-            try {
-                top = JSON.parse(top);
-            } catch {
-                top = [];
-            }
-        }
-
-        // Ensure it's always an array
-        if (!Array.isArray(top)) {
-            top = [];
-        }
-
-        if (!state?.topcompetitions && top.length) {
-            dispatch({
-                type: "SET",
-                key: "topcompetitions",
-                payload: top
-            });
-
-            setTopCompetitions(top);
-        } else {
-            setTopCompetitions(state?.topcompetitions || []);
-        }
+        fetchTopCompetitions();
 
     }, []);
+
+    const fetchTopCompetitions = async () => {
+
+        try {
+            let sportId = state?.filtersport?.sport_id || localSport?.sport_id || 79;
+            if (state?.filtersport) {
+
+                let filteredTop = state?.topcompetitions || [];
+            }
+            let endpoint = `/sports/competitions/${sportId}`;
+
+            const res = await makeRequest<any>({
+                url: endpoint,
+                method,
+                data,
+                apiVersion: 2,
+            });
+            Alert.alert("Top competitions", JSON.stringify(res));
+
+            // const topcompetitionsData = topCompetitions;
+
+            setTopCompetitions(filteredTop);
+        } catch (err) {
+            console.error("Error fetching top competitions:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchTopCompetitions(state?.filtersport?.sport_id || localSport?.sport_id || 79);
+
+    }, [state?.filtersport]);
+
 
     const setActiveTabSpace = (selectedTab: string) => {
 
