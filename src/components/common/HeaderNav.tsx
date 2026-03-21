@@ -4,17 +4,20 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    Image,
     StyleSheet
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Context } from "../../context/store";
-import DefaultImg from "../../assets/img/colorsvgicons/soccer.svg";
+import { NavIcon } from "../utils/NavIcon";
 
 interface MenuItem {
     name: string;
     icon: string;
     link: string;
+    custom?: boolean;
+    provider?: string;
+    aggregator?: string;
+    gameName?: string;
 }
 
 const HeaderNav: React.FC = () => {
@@ -28,7 +31,6 @@ const HeaderNav: React.FC = () => {
         { name: "Home", icon: "home.svg", link: "HomeScreen" },
         { name: "live", icon: "livescore.svg", link: "LiveScreen" },
         { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
-
         {
             name: "aviator",
             icon: "aviator.svg",
@@ -48,22 +50,14 @@ const HeaderNav: React.FC = () => {
         },
     ];
 
-    // const getIcon = (name: string, group: string = "colorsvg") => {
-    //     try {
-    //         if (group === "casino") {
-    //             return require(`../assets/images/casino/icons/${name}`);
-    //         } else {
-    //             return require(`../assets/images/colorsvgicons/${name}`);
-    //         }
-    //     } catch (err) {
-    //         return DefaultImg;
-    //     }
-    // };
+    const onPressMenuItem = (item: MenuItem | string) => {
 
-    const onPressMenuItem = (item: MenuItem) => {
+        if (typeof item === "string") {
+            navigation.navigate("Sports", { screen: item });
+            return;
+        }
 
         if (item?.custom) {
-
             navigation.navigate("Casino", {
                 screen: "CasinoLaunchedGameScreen",
                 params: {
@@ -71,17 +65,16 @@ const HeaderNav: React.FC = () => {
                     gameName: item.gameName,
                 },
             });
-
         } else {
-
             navigation.navigate("Sports", { screen: item.link });
-
         }
     };
 
     useEffect(() => {
         const providers = state?.casinofilters?.providers || [];
-        const filteredProviders = providers.filter((p: any) => p?.name?.toLowerCase() !== "unicraft");
+        const filteredProviders = providers.filter(
+            (p: any) => p?.name?.toLowerCase() !== "unicraft"
+        );
         setCasinoProviders(filteredProviders);
     }, [state?.casinofilters]);
 
@@ -99,57 +92,54 @@ const HeaderNav: React.FC = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
+
                 {/* Static Links */}
-                {linkItems.map((item, idx) => (
-                    <TouchableOpacity
-                        key={idx}
-                        style={styles.menuItem}
-                        onPress={() => onPressMenuItem(item)}
-                    >
-                        {/* <Image
-                            source={getIcon(item.icon)}
-                            style={styles.icon}
-                            resizeMode="contain"
-                        /> */}
-                        <Text style={styles.name}>{item.name}</Text>
-                    </TouchableOpacity>
-                ))}
+                {linkItems.map((item, idx) => {
+                    const Icon = NavIcon(item.icon);
+
+                    return (
+                        <TouchableOpacity
+                            key={idx}
+                            style={styles.menuItem}
+                            onPress={() => onPressMenuItem(item)}
+                        >
+                            <Icon width={40} height={40} />
+                            <Text style={styles.name}>{item.name}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
 
                 {/* Categories */}
                 {categories.map((cat, idx) => (
                     <TouchableOpacity
                         key={idx}
                         style={styles.menuItem}
-                        onPress={() => onPressMenuItem(`SportMatchesScreen_${cat.sport_id}`)}
+                        onPress={() =>
+                            onPressMenuItem(`SportMatchesScreen_${cat.sport_id}`)
+                        }
                     >
-                        {/* <Image
-                            source={getIcon(`${cat.sport_name.toLowerCase()}.svg`)}
-                            style={styles.icon}
-                            resizeMode="contain"
-                        /> */}
                         <Text style={styles.name}>{cat.sport_name}</Text>
                     </TouchableOpacity>
                 ))}
 
                 {/* Casino Providers */}
-                {casinoProviders.map((provider, idx) => {
+                {casinoProviders?.map((provider, idx) => {
                     const lower = provider.name.toLowerCase();
                     if (["aviatrix", "pragmatic", "bitville"].includes(lower)) return null;
+
                     return (
                         <TouchableOpacity
                             key={idx}
                             style={styles.menuItem}
-                            onPress={() => onPressMenuItem(`CasinoProviderScreen_${provider.name}`)}
+                            onPress={() =>
+                                onPressMenuItem(`CasinoProviderScreen_${provider.name}`)
+                            }
                         >
-                            {/* <Image
-                                source={getIcon(`${lower}.svg`, "casino")}
-                                style={styles.icon}
-                                resizeMode="contain"
-                            /> */}
                             <Text style={styles.name}>{provider.name}</Text>
                         </TouchableOpacity>
                     );
                 })}
+
             </ScrollView>
         </View>
     );
@@ -171,11 +161,6 @@ const styles = StyleSheet.create({
         width: 70,
         marginHorizontal: 5,
         alignItems: "center",
-    },
-    icon: {
-        width: 40,
-        height: 40,
-        marginBottom: 4,
     },
     name: {
         color: "#fff",

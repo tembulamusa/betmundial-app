@@ -4,15 +4,20 @@ const defaultConfig = getDefaultConfig(__dirname);
 
 const config = {
     resolver: {
-        sourceExts: [...defaultConfig.resolver.sourceExts, "css"],
-        assetExts: [
-            ...defaultConfig.resolver.assetExts.filter((ext) => ext !== "css"),
-            "ttf",
+        sourceExts: [
+            ...defaultConfig.resolver.sourceExts,
+            "css",
+            "svg", // ✅ ADD SVG HERE
         ],
+        assetExts: defaultConfig.resolver.assetExts.filter(
+            (ext) => ext !== "css" && ext !== "svg" // ✅ REMOVE SVG FROM ASSETS
+        ),
         resolverMainFields: ["react-native", "browser", "main"],
     },
+
     transformer: {
-        babelTransformerPath: require.resolve("react-native-css-transformer"),
+        babelTransformerPath: require.resolve("react-native-svg-transformer"), // ✅ USE SVG TRANSFORMER
+
         getTransformOptions: async () => ({
             transform: {
                 experimentalImportSupport: false,
@@ -20,6 +25,7 @@ const config = {
             },
         }),
     },
+
     cacheStores: [],
 };
 
