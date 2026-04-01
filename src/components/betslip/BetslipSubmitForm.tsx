@@ -11,7 +11,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     TextInput,
-    ScrollView
+    ScrollView,
+    Alert
 } from "react-native";
 
 import { Context } from "../../context/store";
@@ -245,11 +246,10 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 data: payload,
                 apiVersion: 2
             });
-
+            // Alert.alert("Response", JSON.stringify(res));
             if (res?.status === 200 || res?.status === 201) {
 
                 if (res?.data?.status === 200) {
-
                     dispatch({
                         type: "SET",
                         key: jackpot ? "jackpotrebetslip" : "rebetslip",
@@ -271,7 +271,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 } else {
                     setMessage({
                         status: 400,
-                        message: res?.data?.message || "Error placing bet"
+                        message: res?.data?.message || res?.data?.result || "Error placing bet"
                     });
                 }
 

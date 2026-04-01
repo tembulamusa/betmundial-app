@@ -8,58 +8,32 @@ import {
     RefreshControl,
     Modal,
     Animated,
-    Alert,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 
 import FontAwesome from "react-native-vector-icons/FontAwesome";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
 import { makeRequest } from "../../components/utils/makeRequest";
 import { Context } from "../../context/store";
 
-type BetSlip = {
-    game_id: string;
-    home_team: string;
-    away_team: string;
-    bet_pick: string;
-    special_bet_value?: string;
-    result?: string;
-    status: string;
-};
-
-type Bet = {
-    bet_id: string;
-    created: string;
-    total_games: number;
-    total_odd: number;
-    bet_amount: number;
-    possible_win: number;
-    jackpot_bet_id?: string;
-    status: string;
-    cancelable: boolean;
-    sharable: number;
-    betslip: BetSlip[];
-};
-
 const MyBetsScreen = () => {
     const [state] = useContext(Context);
-    const [bets, setBets] = useState<Bet[]>([]);
+    const [bets, setBets] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [expandedBet, setExpandedBet] = useState<string | null>(null);
+    const [expandedBet, setExpandedBet] = useState(null);
     const [shareModal, setShareModal] = useState(false);
-    const [shareBet, setShareBet] = useState<Bet | null>(null);
+    const [shareBet, setShareBet] = useState(null);
+    const [betFilter, setBetFilter] = useState("all");
 
     const fetchBets = async () => {
         setRefreshing(true);
-
         try {
             const response = await makeRequest({
                 url: "/user/bets?size=20&page=1",
                 method: "GET",
                 apiVersion: 2,
             });
-            // Alert.alert("Bets Response", JSON.stringify(response));
+
             if ([200, 201].includes(response.status)) {
                 setBets(response?.data?.data || []);
             }
@@ -74,11 +48,44 @@ const MyBetsScreen = () => {
         fetchBets();
     }, []);
 
-    const toggleExpand = (id: string) => {
+    const toggleExpand = (id) => {
         setExpandedBet((prev) => (prev === id ? null : id));
     };
 
-    const cancelBet = async (betId: string) => {
+    const getBetCategory = (item) => {
+        if (item?.jackpot_bet_id) {
+            return "jackpot";
+        }
+
+        const typeHints = [
+            item?.bet_type,
+            item?.type,
+            item?.category,
+            item?.product,
+            item?.channel,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+        const hasCasinoSlip = Array.isArray(item?.betslip) && item.betslip.some((slip) =>
+            slip?.provider_name ||
+            slip?.game_name ||
+            slip?.aggregator
+        );
+
+        if (typeHints.includes("casino") || hasCasinoSlip) {
+            return "casino";
+        }
+
+        return "sports";
+    };
+
+    const filteredBets = betFilter === "all"
+        ? bets
+        : bets.filter((item) => getBetCategory(item) === betFilter);
+
+    const cancelBet = async (betId) => {
         try {
             const [status] = await makeRequest({
                 url: `/user/bet/cancel?bet-id=${betId}`,
@@ -86,34 +93,45 @@ const MyBetsScreen = () => {
                 api_version: 2,
             });
 
-            if (status === 200) {
-                fetchBets();
-            }
+            if (status === 200) fetchBets();
         } catch (err) {
             console.log(err);
         }
     };
 
-    const renderStatusIcon = (status: string) => {
+    // ✅ FIXED ICON + STATUS
+    const renderStatus = (status) => {
+        let icon = "circle";
+        let color = "#00A8FA";
+
         switch (status?.toLowerCase()) {
             case "pending":
-                return <Ionicons name="time" size={18} color="#00A8FA" />;
-
+                icon = "clock-o";
+                color = "#00A8FA";
+                break;
             case "won":
-                return <FontAwesome name="check-circle" size={18} color="#2ecc71" />;
-
+                icon = "check-circle";
+                color = "#2ecc71";
+                break;
             case "lost":
-                return <Ionicons name="close-circle" size={18} color="#ff4d4d" />;
-
+                icon = "times-circle";
+                color = "#ff4d4d";
+                break;
             case "cancelled":
-                return <MaterialIcons name="block" size={18} color="#aaa" />;
-
-            default:
-                return <Ionicons name="help-circle" size={18} color="#aaa" />;
+                icon = "ban";
+                color = "#aaa";
+                break;
         }
+
+        return (
+            <View style={styles.statusContainer}>
+                <Text style={styles.statusText}>{status}</Text>
+                <FontAwesome name={icon} size={16} color={color} />
+            </View>
+        );
     };
 
-    const BetCard = ({ item }: { item: Bet }) => {
+    const BetCard = ({ item }) => {
         const expanded = expandedBet === item.bet_id;
 
         const betType = item.jackpot_bet_id
@@ -142,7 +160,8 @@ const MyBetsScreen = () => {
                         <Text style={styles.win}>Win: {item.possible_win}</Text>
                     </View>
 
-                    {renderStatusIcon(item.status)}
+                    {/* ✅ STATUS + ICON */}
+                    {renderStatus(item.status)}
                 </TouchableOpacity>
 
                 {expanded && (
@@ -160,11 +179,14 @@ const MyBetsScreen = () => {
                                         : ""}
                                 </Text>
 
-                                <Text style={styles.result}>
-                                    {slip.result ?? "n/a"}
-                                </Text>
+                                <View style={styles.slipFooter}>
+                                    <Text style={styles.result}>
+                                        {slip.result ?? "n/a"}
+                                    </Text>
 
-                                {renderStatusIcon(slip.status)}
+                                    {/* ✅ SLIP STATUS + ICON */}
+                                    {renderStatus(slip.status)}
+                                </View>
                             </View>
                         ))}
 
@@ -200,18 +222,31 @@ const MyBetsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>My Bets</Text>
+            <View style={styles.header}>
+                <Text style={styles.title}>My Bets</Text>
+
+                <View style={styles.pickerWrap}>
+                    <Picker
+                        selectedValue={betFilter}
+                        onValueChange={(value) => setBetFilter(value)}
+                        style={styles.picker}
+                        dropdownIconColor="#fff"
+                    >
+                        <Picker.Item label="All" value="all" />
+                        <Picker.Item label="Sports" value="sports" />
+                        <Picker.Item label="Casino" value="casino" />
+                        <Picker.Item label="Jackpot" value="jackpot" />
+                    </Picker>
+                </View>
+            </View>
 
             <FlatList
-                data={bets}
+                data={filteredBets}
                 keyExtractor={(item) => item.bet_id.toString()}
                 renderItem={({ item }) => <BetCard item={item} />}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={fetchBets} />
                 }
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={5}
             />
 
             <Modal visible={shareModal} transparent animationType="slide">
@@ -237,20 +272,38 @@ const MyBetsScreen = () => {
 
 export default React.memo(MyBetsScreen);
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#0f172a",
+    container: { flex: 1, backgroundColor: "#0f172a" },
+
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        marginBottom: 8,
+        backgroundColor: "rgba(255,255,255,0.1)",
     },
 
     title: {
         fontSize: 20,
         fontWeight: "bold",
         color: "white",
-        textAlign: "center",
-        padding: 16,
-        marginBottom: 8,
-        backgroundColor: "rgba(255,255,255,0.1)",
+        textAlign: "left",
+    },
+
+    pickerWrap: {
+        width: 150,
+        height: 40,
+        borderRadius: 8,
+        overflow: "hidden",
+        backgroundColor: "#1e293b",
+    },
+
+    picker: {
+        color: "#fff",
+        fontSize: 12,
+        marginTop: -6,
     },
 
     card: {
@@ -266,41 +319,22 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 
-    date: {
-        color: "#aaa",
-        fontSize: 12,
-    },
-
-    betId: {
-        color: "#fff",
-        fontWeight: "bold",
-    },
+    date: { color: "#aaa", fontSize: 12 },
+    betId: { color: "#fff", fontWeight: "bold" },
 
     badge: {
-        backgroundColor: "#613354",
+        backgroundColor: "#a71f66",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
     },
 
-    badgeText: {
-        color: "white",
-        fontSize: 10,
-    },
+    badgeText: { color: "white", fontSize: 10 },
 
-    amount: {
-        color: "#ccc",
-        fontSize: 12,
-    },
+    amount: { color: "#ccc", fontSize: 12 },
+    win: { color: "#2ecc71", fontSize: 12 },
 
-    win: {
-        color: "#2ecc71",
-        fontSize: 12,
-    },
-
-    details: {
-        marginTop: 10,
-    },
+    details: { marginTop: 10 },
 
     slipRow: {
         backgroundColor: "#334155",
@@ -309,25 +343,31 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
 
-    team: {
-        color: "white",
-        fontSize: 12,
-    },
+    team: { color: "white", fontSize: 12 },
+    pick: { color: "#ddd", fontSize: 12 },
 
-    pick: {
-        color: "#ddd",
-        fontSize: 12,
-    },
-
-    result: {
-        color: "#aaa",
-        fontSize: 12,
-    },
-
-    actions: {
+    slipFooter: {
         flexDirection: "row",
-        marginTop: 10,
+        justifyContent: "space-between",
+        marginTop: 4,
     },
+
+    result: { color: "#aaa", fontSize: 12 },
+
+    statusContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+
+    statusText: {
+        color: "#ccc",
+        fontSize: 12,
+        marginRight: 4,
+        textTransform: "capitalize",
+    },
+
+    actions: { flexDirection: "row", marginTop: 10 },
 
     actionBtn: {
         flexDirection: "row",
@@ -335,10 +375,7 @@ const styles = StyleSheet.create({
         marginRight: 20,
     },
 
-    actionText: {
-        color: "white",
-        marginLeft: 5,
-    },
+    actionText: { color: "white", marginLeft: 5 },
 
     modal: {
         flex: 1,
@@ -366,7 +403,7 @@ const styles = StyleSheet.create({
 
     closeBtn: {
         marginTop: 20,
-        backgroundColor: "#613354",
+        backgroundColor: "#a71f66",
         padding: 10,
         alignItems: "center",
         borderRadius: 6,

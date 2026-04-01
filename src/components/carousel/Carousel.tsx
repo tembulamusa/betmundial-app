@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
     View,
     Image,
@@ -9,26 +9,61 @@ import {
     ListRenderItemInfo,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Context } from "../../context/store";
 
 const { width } = Dimensions.get("window");
 
-type CarouselImage = {
+type CarouselBanner = {
     id: string;
     src: any;
+    action?: "game" | "promo";
+    provider?: string;
+    game?: string;
 };
 
-const images: CarouselImage[] = [
-    { id: "1", src: require("../../assets/images/banners/carousel/Karibu-Bonus.jpeg") },
-    { id: "2", src: require("../../assets/images/banners/carousel/Deposit-Bonus.jpeg") },
-    { id: "3", src: require("../../assets/images/banners/carousel/fazi1.png") },
-    { id: "4", src: require("../../assets/images/banners/carousel/aviator.jpeg") },
-    { id: "5", src: require("../../assets/images/banners/carousel/fazi2.png") },
+const banners: CarouselBanner[] = [
+    {
+        id: "mundial-league",
+        src: require("../../assets/images/casino/carousel/mundial-league.jpg"),
+        action: "game",
+        provider: "unicraft",
+        game: "mundial-league",
+    },
+    {
+        id: "karibu-bonus",
+        src: require("../../assets/images/banners/carousel/Karibu-Bonus.jpeg"),
+        action: "promo",
+    },
+    {
+        id: "deposit-bonus",
+        src: require("../../assets/images/banners/carousel/Deposit-Bonus.jpeg"),
+        action: "promo",
+    },
+    {
+        id: "aviatrix",
+        src: require("../../assets/images/casino/aviatrix.jpg"),
+        action: "game",
+        provider: "aviatrix",
+        game: "aviatrix",
+    },
+    {
+        id: "aviator",
+        src: require("../../assets/images/banners/carousel/aviator.jpeg"),
+        action: "game",
+        provider: "spribe",
+        game: "aviator",
+    },
+    {
+        id: "fazi-3",
+        src: require("../../assets/images/banners/carousel/fazi3.png"),
+    },
 ];
 
 const CarouselLoader: React.FC = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
+    const [, dispatch] = useContext(Context);
 
-    const flatListRef = useRef<FlatList<CarouselImage>>(null);
+    const flatListRef = useRef<FlatList<CarouselBanner>>(null);
     const [activeIndex, setActiveIndex] = useState<number>(0);
 
     const onViewableItemsChanged = useRef(
@@ -41,7 +76,7 @@ const CarouselLoader: React.FC = () => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % images.length;
+            const nextIndex = (activeIndex + 1) % banners.length;
 
             flatListRef.current?.scrollToIndex({
                 index: nextIndex,
@@ -54,12 +89,24 @@ const CarouselLoader: React.FC = () => {
         return () => clearInterval(interval);
     }, [activeIndex]);
 
-    const renderItem = ({ item }: ListRenderItemInfo<CarouselImage>) => (
+    const handleBannerPress = (banner: CarouselBanner) => {
+        if (banner.action === "game" && banner.provider && banner.game) {
+            dispatch({ type: "SET", key: "playType", payload: "casino" });
+            navigation.navigate("Casino", {
+                screen: "CasinoLaunchedGameScreen",
+                params: {
+                    provider: banner.provider,
+                    game: banner.game,
+                },
+            });
+        }
+    };
+
+    const renderItem = ({ item }: ListRenderItemInfo<CarouselBanner>) => (
         <TouchableOpacity
             activeOpacity={0.9}
-            onPress={() => {
-                // navigation.navigate("Casino" as never);
-            }}
+            onPress={() => handleBannerPress(item)}
+            disabled={!item.action}
         >
             <Image source={item.src} style={styles.image} resizeMode="cover" />
         </TouchableOpacity>
@@ -69,7 +116,7 @@ const CarouselLoader: React.FC = () => {
         <View>
             <FlatList
                 ref={flatListRef}
-                data={images}
+                data={banners}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}

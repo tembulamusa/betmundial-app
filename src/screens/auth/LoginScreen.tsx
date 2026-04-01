@@ -22,6 +22,7 @@ import { useSync } from "../../context/SyncContext";
 import { initDatabase, hasShifts, hasMeasuringCans, saveOfflineCredentials, validateOfflineCredentials, hasOfflineCredentials as hasSQLiteOfflineCredentials } from "../../services/offlineDatabase";
 import { isSyncPendingAfterLogin, clearSyncPendingAfterLogin } from "../../services/offlineSync";
 import { setItem } from "../../components/utils/local-storage";
+import { theme } from "../../theme";
 
 export default function LoginScreen({ navigation }: any) {
     const [phoneNumber, setPhoneNumber] = useState("");
@@ -281,21 +282,16 @@ export default function LoginScreen({ navigation }: any) {
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1 }}
+            style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
             <ScrollView
-                contentContainerStyle={{
-                    flexGrow: 1,
-                    justifyContent: "flex-end",
-                    padding: 20,
-                    backgroundColor: "rgba(0,0,0,0)", // explicitly transparent
-                }}
+                contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                <View style={{ marginBottom: 24 }}>
+                <View style={styles.titleWrap}>
                     {isOfflineMode && (
                         <View style={styles.offlineLinkContent}>
                             <Icon
@@ -392,6 +388,19 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: theme.background,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: "flex-end",
+        padding: 20,
+        backgroundColor: theme.background,
+    },
+    titleWrap: {
+        marginBottom: 24,
+    },
     passwordContainer: {
         position: "relative",
         marginBottom: 16,
@@ -490,4 +499,3 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
 });
-

@@ -213,7 +213,7 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
 
             {(!matchwithmarkets && !isLoading) &&
                 <AllMarketsUnavailable
-                    backLink={live ? "/live" : "/"}
+                    backLink={live ? "LiveScreen" : "HomeMain"}
                     isLoading={isLoading}
                 />
             }

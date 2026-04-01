@@ -1,10 +1,9 @@
-import React, { use, useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -21,11 +20,18 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
   const navigation: any = useNavigation();
 
   const odds = match?.odds?.["1x2"]?.outcomes || [];
+  const liveTime =
+    match?.match_time === 0 || match?.match_time
+      ? `${match?.match_time}`.includes("'")
+        ? `${match?.match_time}`
+        : `${match?.match_time}'`
+      : "";
 
   const openMatchDetails = () => {
     if (jackpot) {
       return;
     }
+
     navigation.navigate("MatchAllMarketsScreen", {
       id: match?.match_id,
     });
@@ -33,26 +39,27 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
 
   return (
     <View style={styles.row}>
-
-      {/* Teams */}
       <TouchableOpacity style={styles.teams} onPress={openMatchDetails}>
         <Text style={styles.team}>{match?.home_team}</Text>
         <Text style={styles.team}>{match?.away_team}</Text>
       </TouchableOpacity>
 
-      {/* Score (logic preserved) */}
       {live && (
-        <View style={styles.score}>
+        <View style={styles.liveStatus}>
+          {liveTime ? (
+            <Text style={styles.liveTimeText}>
+              {liveTime}
+            </Text>
+          ) : null}
           <Text style={styles.scoreText}>
             {match?.score || "-"}
           </Text>
+
         </View>
       )}
 
-      {/* Odds buttons */}
       <View style={styles.oddsRow}>
         {odds.map((odd: any) => {
-
           const oddMatch = {
             ...match,
             odd_key: odd?.odd_key || odd?.name || odd?.label,
@@ -77,18 +84,26 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
         })}
       </View>
 
-      {/* Bottom row UI from new design */}
       <View style={styles.bottomRow}>
-        {match?.sidebets > 0 && !jackpot && (
-          <Text style={styles.moreMarkets}>
-            +{match?.sidebets || 0}
-          </Text>)}
+        <View style={styles.matchMeta}>
+          <Text style={styles.metaText} numberOfLines={1}>
+            {match?.category || "-"} | {match?.competition_name || "-"}
+          </Text>
+          <Text style={styles.metaSubText}>
+            {match?.start_time || "-"}
+          </Text>
+        </View>
 
-        {
+        <View style={styles.bottomRight}>
+          {match?.sidebets > 0 && !jackpot && (
+            <Text style={styles.moreMarkets}>
+              +{match?.sidebets || 0}
+            </Text>
+          )}
+
           <Text style={styles.liveIcon}>📊</Text>
-        }
+        </View>
       </View>
-
     </View>
   );
 };
@@ -114,15 +129,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  score: {
+  liveStatus: {
     position: "absolute",
     right: 10,
     top: 10,
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   scoreText: {
     color: "#ffcc00",
     fontWeight: "700",
+  },
+
+  liveTimeText: {
+    color: "#fff",
+    fontWeight: "700",
+    marginLeft: 8,
   },
 
   oddsRow: {
@@ -140,7 +163,31 @@ const styles = StyleSheet.create({
   bottomRow: {
     marginTop: 4,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  matchMeta: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    paddingRight: 8,
+  },
+
+  metaText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 12,
+  },
+
+  metaSubText: {
+    color: "#fff",
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: "700",
+  },
+
+  bottomRight: {
+    flexDirection: "column",
     alignItems: "center",
   },
 
@@ -148,7 +195,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
-    marginRight: 6,
+    marginBottom: 2,
   },
 
   liveIcon: {

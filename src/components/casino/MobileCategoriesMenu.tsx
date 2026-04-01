@@ -3,7 +3,6 @@ import {
     View,
     Text,
     ScrollView,
-    Image,
     TouchableOpacity,
     StyleSheet
 } from "react-native";
@@ -11,7 +10,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Context } from "../../context/store";
-import { CasinoIcons } from "./Icons";
+import { CasinoIcon } from "../utils/CasinoIcons";
 
 interface Category {
     id: number;
@@ -23,20 +22,23 @@ const MobileCategoriesMenu: React.FC = () => {
     const [state, dispatch] = useContext(Context);
 
     const [categories, setCategories] = useState<Category[]>([]);
-    const [providers, setProviders] = useState<any[]>([]);
-
+    const [activeKey, setActiveKey] = useState("all");
     const navigation: any = useNavigation();
-
-    const getSportImageIcon = (sportName: string) => {
-        return CasinoIcons[sportName] || CasinoIcons.SetDefault;
-    };
 
     useEffect(() => {
 
         setCategories(state?.casinofilters?.gameTypes || []);
-        setProviders(state?.casinofilters?.providers || []);
 
     }, [state?.casinofilters]);
+
+    useEffect(() => {
+        if (state?.casinogamesfilter?.category?.id) {
+            setActiveKey(`category-${state.casinogamesfilter.category.id}`);
+            return;
+        }
+
+        setActiveKey("all");
+    }, [state?.casinogamesfilter?.category?.id]);
 
     useEffect(() => {
 
@@ -58,20 +60,16 @@ const MobileCategoriesMenu: React.FC = () => {
 
         loadFilters();
 
-    }, []);
+    }, [dispatch]);
 
     const filterGames = async (filterName: string, filterItem: any) => {
-
-        const payload = { filterType: "category", category: filterItem };
-
         if (filterName === "category") {
+            const payload = { filterType: "category", category: filterItem };
+            setActiveKey(`category-${filterItem?.id}`);
 
             if (filterItem?.name?.toLowerCase() === "surecoin") {
-
                 navigation.navigate("Surecoin");
-
             } else {
-
                 await AsyncStorage.setItem(
                     "casinogamesfilter",
                     JSON.stringify(payload)
@@ -86,10 +84,9 @@ const MobileCategoriesMenu: React.FC = () => {
                 navigation.navigate("CasinoCategory", {
                     category: filterItem?.name?.split(" ").join("")
                 });
-
             }
-
         } else {
+            setActiveKey(filterName);
 
             await AsyncStorage.removeItem("casinogamesfilter");
 
@@ -99,9 +96,13 @@ const MobileCategoriesMenu: React.FC = () => {
             });
 
             navigation.navigate("Casino");
-
         }
 
+    };
+
+    const renderCasinoIcon = (name: string) => {
+        const Icon = CasinoIcon(name);
+        return <Icon width={20} height={20} style={styles.icon} />;
     };
 
     const CasinoCategories = () => (
@@ -113,54 +114,54 @@ const MobileCategoriesMenu: React.FC = () => {
         >
 
             <TouchableOpacity
-                style={styles.item}
+                style={[
+                    styles.item,
+                    activeKey === "all" && styles.activeItem
+                ]}
                 onPress={() => filterGames("all", "")}
             >
-                <Image
-                    source={getSportImageIcon("home")}
-                    style={styles.icon}
-                />
-                <Text style={styles.name}>
+                {renderCasinoIcon("all")}
+                <Text style={[
+                    styles.name,
+                    activeKey === "all" && styles.activeName
+                ]}>
                     All Games
                 </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.item}
+                style={[
+                    styles.item,
+                    activeKey === "popular" && styles.activeItem
+                ]}
                 onPress={() => filterGames("popular", "popular")}
             >
-                <Image
-                    source={getSportImageIcon("popular")}
-                    style={styles.icon}
-                />
-                <Text style={styles.name}>
+                {renderCasinoIcon("popular")}
+                <Text style={[
+                    styles.name,
+                    activeKey === "popular" && styles.activeName
+                ]}>
                     Popular
                 </Text>
             </TouchableOpacity>
 
             {categories?.map((category, idx) => (
-
                 <TouchableOpacity
                     key={idx}
                     style={[
                         styles.item,
-                        state?.casinogamesfilter?.category?.id === category?.id &&
-                        styles.active
+                        activeKey === `category-${category?.id}` && styles.activeItem
                     ]}
                     onPress={() => filterGames("category", category)}
                 >
-
-                    <Image
-                        source={getSportImageIcon(category?.name)}
-                        style={styles.icon}
-                    />
-
-                    <Text style={styles.name}>
+                    {renderCasinoIcon(category?.name)}
+                    <Text style={[
+                        styles.name,
+                        activeKey === `category-${category?.id}` && styles.activeName
+                    ]}>
                         {category?.name}
                     </Text>
-
                 </TouchableOpacity>
-
             ))}
 
         </ScrollView>
@@ -194,12 +195,16 @@ const styles = StyleSheet.create({
 
     item: {
         alignItems: "center",
-        marginRight: 16
+        marginRight: 32,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderBottomWidth: 2,
+        borderBottomColor: "transparent"
     },
 
     icon: {
-        width: 40,
-        height: 40,
+        width: 20,
+        height: 20,
         marginBottom: 4
     },
 
@@ -209,8 +214,13 @@ const styles = StyleSheet.create({
         textAlign: "center"
     },
 
-    active: {
-        opacity: 0.6
+    activeName: {
+        color: "#a71f66",
+        fontWeight: "700"
+    },
+
+    activeItem: {
+        borderBottomColor: "#a71f66"
     }
 
 });

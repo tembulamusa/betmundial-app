@@ -14,14 +14,17 @@ const CustomHeader = ({ scene, previous, navigation }) => {
     const [loginForm, setLoginForm] = useState({ mobile: '', password: '' });
     const [loginError, setLoginError] = useState<string | null>(null);
     const [loginLoading, setLoginLoading] = useState(false);
+    const [loginNotice, setLoginNotice] = useState<string | null>(null);
 
-    const handleLogin = async () => {
+    const handleLogin = async (formOverride?: { mobile: string; password: string }) => {
+        const activeForm = formOverride || loginForm;
+
         // Validation
-        if (!loginForm.mobile || !loginForm.mobile.match(/(254|0|)?[71]\d{8}/)) {
+        if (!activeForm.mobile || !activeForm.mobile.match(/(254|0|)?[71]\d{8}/)) {
             setLoginError('Invalid mobile number');
             return;
         }
-        if (!loginForm.password || loginForm.password.length < 4) {
+        if (!activeForm.password || activeForm.password.length < 4) {
             setLoginError('Password must be at least 4 characters');
             return;
         }
@@ -31,8 +34,8 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
         try {
             const data = {
-                msisdn: loginForm.mobile,
-                password: loginForm.password,
+                msisdn: activeForm.mobile,
+                password: activeForm.password,
             };
             const response = await makeRequest({
                 url: '/auth/login',
@@ -48,6 +51,9 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                     dispatch({ type: 'SET', key: 'user', payload: response.data?.data });
                     // Close login modal
                     dispatch({ type: 'DEL', key: 'showloginmodal' });
+                    dispatch({ type: 'DEL', key: 'loginmodalprefill' });
+                    dispatch({ type: 'DEL', key: 'loginmodalmessage' });
+                    setLoginNotice(null);
                 } else {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }
@@ -61,6 +67,46 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             setLoginLoading(false);
         }
     };
+
+    useEffect(() => {
+        const prefill = state?.loginmodalprefill;
+        if (!prefill) {
+            return;
+        }
+
+        setLoginForm({
+            mobile: prefill?.mobile || '',
+            password: prefill?.password || '',
+        });
+        setLoginError(null);
+        setLoginNotice(state?.loginmodalmessage || null);
+    }, [state?.loginmodalprefill, state?.loginmodalmessage]);
+
+    useEffect(() => {
+        const prefill = state?.loginmodalprefill;
+
+        if (
+            state?.showloginmodal &&
+            prefill?.autoLogin &&
+            prefill?.mobile &&
+            prefill?.password &&
+            !loginLoading
+        ) {
+            dispatch({
+                type: 'SET',
+                key: 'loginmodalprefill',
+                payload: {
+                    ...prefill,
+                    autoLogin: false,
+                },
+            });
+
+            handleLogin({
+                mobile: prefill.mobile,
+                password: prefill.password,
+            });
+        }
+    }, [state?.showloginmodal, state?.loginmodalprefill, loginLoading]);
 
     return (
         <View style={{ backgroundColor: theme.background }}>
@@ -109,6 +155,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                             secureTextEntry
                         />
 
+                        {loginNotice && <Text style={styles.noticeText}>{loginNotice}</Text>}
                         {loginError && <Text style={styles.errorText}>{loginError}</Text>}
 
                         <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loginLoading}>
@@ -121,7 +168,12 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
                         <TouchableOpacity
                             style={styles.closeButton}
-                            onPress={() => dispatch({ type: 'DEL', key: 'showloginmodal' })}
+                            onPress={() => {
+                                dispatch({ type: 'DEL', key: 'showloginmodal' });
+                                dispatch({ type: 'DEL', key: 'loginmodalprefill' });
+                                dispatch({ type: 'DEL', key: 'loginmodalmessage' });
+                                setLoginNotice(null);
+                            }}
                         >
                             <Text style={styles.closeButtonText}>Cancel</Text>
                         </TouchableOpacity>
@@ -133,7 +185,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: 10, paddingVertical: 20 },
+    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingBottom: 4, paddingTop: 12 },
     logo: {
         width: "100%",
         height: 60,
@@ -157,6 +209,7 @@ const styles = StyleSheet.create({
     loginButtonText: { color: '#fff', fontWeight: 'bold' },
     closeButton: { marginTop: 10, alignItems: 'center', marginBottom: 16 },
     closeButtonText: { color: '#a71f66', fontWeight: 'bold' },
+    noticeText: { color: '#86efac', marginTop: 10, textAlign: 'center', paddingHorizontal: 20 },
     errorText: { color: '#F44336', marginTop: 4, textAlign: 'center' },
 });
 

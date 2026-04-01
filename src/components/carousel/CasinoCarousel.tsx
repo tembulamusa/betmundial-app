@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
     View,
     Image,
@@ -9,24 +9,61 @@ import {
     ListRenderItemInfo,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Context } from "../../context/store";
+import { setItem } from "../utils/local-storage";
 
 const { width } = Dimensions.get("window");
 
-type CarouselImage = {
+type CarouselBanner = {
     id: string;
     src: any;
+    requiresAuth?: boolean;
+    action?: "mundial" | "category" | "provider";
+    value?: string;
 };
 
-const images: CarouselImage[] = [
-    { id: "1", src: require("../../assets/images/casino/carousel/live-casino.jpeg") },
-    { id: "2", src: require("../../assets/images/casino/carousel/casino-live.jpeg") },
-    { id: "3", src: require("../../assets/images/casino/carousel/casino-offers.jpeg") },
+const banners: CarouselBanner[] = [
+    {
+        id: "mundial-league",
+        src: require("../../assets/images/casino/carousel/mundial-league.jpg"),
+        requiresAuth: true,
+        action: "mundial",
+    },
+    {
+        id: "live-casino",
+        src: require("../../assets/images/casino/carousel/casino-live.jpeg"),
+        action: "category",
+        value: "live games",
+    },
+    {
+        id: "casino-offers",
+        src: require("../../assets/images/casino/carousel/casino-offers.jpeg"),
+    },
+    {
+        id: "casino-live",
+        src: require("../../assets/images/casino/carousel/live-casino.jpeg"),
+        action: "category",
+        value: "live games",
+    },
+    {
+        id: "highflyer",
+        src: require("../../assets/images/casino/carousel/highflyer.jpeg"),
+        action: "provider",
+        value: "pragmatic",
+    },
+    {
+        id: "kuku-maziwa",
+        src: require("../../assets/images/casino/carousel/kuku_maziwa.jpeg"),
+        action: "provider",
+        value: "spribe",
+    },
 ];
 
 const CasinoCarousel: React.FC = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
+    const [state, dispatch] = useContext(Context);
 
-    const flatListRef = useRef<FlatList<CarouselImage>>(null);
+    const flatListRef = useRef<FlatList<CarouselBanner>>(null);
     const [activeIndex, setActiveIndex] = useState<number>(0);
 
     const onViewableItemsChanged = useRef(
@@ -39,7 +76,7 @@ const CasinoCarousel: React.FC = () => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % images.length;
+            const nextIndex = (activeIndex + 1) % banners.length;
 
             flatListRef.current?.scrollToIndex({
                 index: nextIndex,
@@ -52,12 +89,112 @@ const CasinoCarousel: React.FC = () => {
         return () => clearInterval(interval);
     }, [activeIndex]);
 
-    const renderItem = ({ item }: ListRenderItemInfo<CarouselImage>) => (
+    const openCasinoProvider = async (providerName: string) => {
+        const provider = state?.casinofilters?.providers?.find(
+            (item: any) => item?.name?.toLowerCase() === providerName.toLowerCase()
+        );
+
+        if (!provider) {
+            navigation.navigate("Casino");
+            return;
+        }
+
+        const payload = {
+            filterType: "providers",
+            provider,
+            page: 1,
+        };
+
+        await setItem("casinogamesfilter", payload);
+
+        dispatch({
+            type: "SET",
+            key: "casinogamesfilter",
+            payload,
+        });
+
+        dispatch({
+            type: "SET",
+            key: "playType",
+            payload: "casino",
+        });
+
+        navigation.navigate("Casino");
+    };
+
+    const openCasinoCategory = async (categoryName: string) => {
+        const category = state?.casinofilters?.gameTypes?.find(
+            (item: any) => item?.name?.toLowerCase() === categoryName.toLowerCase()
+        );
+
+        if (!category) {
+            navigation.navigate("Casino");
+            return;
+        }
+
+        const payload = {
+            filterType: "category",
+            category,
+        };
+
+        await setItem("casinogamesfilter", payload);
+
+        dispatch({
+            type: "SET",
+            key: "casinogamesfilter",
+            payload,
+        });
+
+        dispatch({
+            type: "SET",
+            key: "playType",
+            payload: "casino",
+        });
+
+        navigation.navigate("Casino");
+    };
+
+    const handleBannerPress = async (banner: CarouselBanner) => {
+        if (banner.requiresAuth && !state?.user) {
+            dispatch({
+                type: "SET",
+                key: "showloginmodal",
+                payload: true,
+            });
+            return;
+        }
+
+        if (banner.action === "mundial") {
+            dispatch({
+                type: "SET",
+                key: "playType",
+                payload: "casino",
+            });
+
+            navigation.navigate("Casino", {
+                screen: "CasinoLaunchedGameScreen",
+                params: {
+                    provider: "unicraft",
+                    game: "mundial-league",
+                },
+            });
+            return;
+        }
+
+        if (banner.action === "provider" && banner.value) {
+            await openCasinoProvider(banner.value);
+            return;
+        }
+
+        if (banner.action === "category" && banner.value) {
+            await openCasinoCategory(banner.value);
+        }
+    };
+
+    const renderItem = ({ item }: ListRenderItemInfo<CarouselBanner>) => (
         <TouchableOpacity
             activeOpacity={0.9}
-            onPress={() => {
-                // navigation.navigate("Casino" as never);
-            }}
+            onPress={() => handleBannerPress(item)}
         >
             <Image source={item.src} style={styles.image} resizeMode="cover" />
         </TouchableOpacity>
@@ -67,7 +204,7 @@ const CasinoCarousel: React.FC = () => {
         <View>
             <FlatList
                 ref={flatListRef}
-                data={images}
+                data={banners}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}

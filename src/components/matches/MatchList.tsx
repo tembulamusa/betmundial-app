@@ -39,7 +39,10 @@ const MatchList: React.FC<Props> = ({ matches, live }) => {
         <FlatList
             data={matches}
             renderItem={renderItem}
-            keyExtractor={(item) => item.match_id}
+            key={live ? "live-match-list" : "prematch-list"}
+            keyExtractor={(item) =>
+                `${live ? "live" : "prematch"}-${item.match_id}`
+            }
             contentContainerStyle={styles.container}
         />
     );

@@ -100,7 +100,7 @@ const CategoryListing: React.FC<Props> = ({
                 data={games}
                 renderItem={renderGame}
                 keyExtractor={(item, index) =>
-                    item?.id?.toString() || "casino-" + index
+                    `${item?.provider_name || "provider"}-${item?.game_name || item?.id || index}`
                 }
                 numColumns={3}
                 scrollEnabled={false}

@@ -1,99 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Image, Animated, StatusBar } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  Animated,
+  StatusBar,
+  Easing,
+} from 'react-native';
+import Logo from '../assets/images/logo.svg';
 
 interface LaunchScreenProps {
   visible: boolean;
 }
 
 const LaunchScreen: React.FC<LaunchScreenProps> = ({ visible }) => {
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [bounceAnim] = useState(new Animated.Value(0));
-  const [featureAnim1] = useState(new Animated.Value(0));
-  const [featureAnim2] = useState(new Animated.Value(0));
-  const [featureAnim3] = useState(new Animated.Value(0));
+  const fadeAnim = useRef(new Animated.Value(0.2)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoBounce = useRef(new Animated.Value(0)).current;
+
+  // 🔁 Infinite logo bounce (1 second cycle)
+  const startLogoBounce = () => {
+    Animated.sequence([
+      Animated.timing(logoBounce, {
+        toValue: -15,
+        duration: 500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoBounce, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (visible) {
+        startLogoBounce(); // loop manually
+      }
+    });
+  };
+
+  // 🔁 Infinite text bounce
+  const startTextBounce = () => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: -8,
+        duration: 500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (visible) {
+        startTextBounce();
+      }
+    });
+  };
 
   useEffect(() => {
     if (visible) {
       console.log('[LAUNCH] LaunchScreen visible, starting animations');
 
-      // Fade in animation
+      // Fade in
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
         useNativeDriver: true,
       }).start();
 
-      // Bouncing text animation
-      const bounceAnimation = () => {
-        Animated.sequence([
-          Animated.timing(bounceAnim, {
-            toValue: -10,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bounceAnim, {
-            toValue: 0,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          if (visible) {
-            setTimeout(bounceAnimation, 1000);
-          }
-        });
-      };
+      // Logo pop-in
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }).start();
 
-      bounceAnimation();
-
-      // Feature animations
-      setTimeout(() => {
-        Animated.timing(featureAnim1, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-      }, 500);
-
-      setTimeout(() => {
-        Animated.timing(featureAnim2, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-      }, 800);
-
-      setTimeout(() => {
-        Animated.timing(featureAnim3, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-      }, 1100);
+      // Start loops
+      startLogoBounce();
+      startTextBounce();
     }
-  }, [visible, fadeAnim, bounceAnim, featureAnim1, featureAnim2, featureAnim3]);
 
-  console.log('[LAUNCH] LaunchScreen rendered, visible:', visible);
+    return () => {
+      // Cleanup animations
+      logoBounce.stopAnimation();
+      bounceAnim.stopAnimation();
+    };
+  }, [visible]);
 
   if (!visible) return null;
 
   return (
     <>
       <StatusBar backgroundColor="#000C24" barStyle="light-content" />
+
       <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
         <View style={styles.container}>
-          <Image
-            source={require('../assets/images/logo.svg')}
-            style={styles.logo}
-            resizeMode="cover"
+          {/* Logo */}
+          <Animated.View
+            style={[
+              styles.logoContainer,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: logoBounce },
+                ],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <Logo width={300} height={160} />
+          </Animated.View>
+
+          {/* Loader */}
+          <ActivityIndicator
+            size="large"
+            color="#FFFFFF"
+            style={styles.spinner}
           />
-          <ActivityIndicator size="large" color="#FFFFFF" style={styles.spinner} />
-          <Animated.Text style={[styles.mainMessage, { transform: [{ translateY: bounceAnim }] }]}>
+
+          {/* Text */}
+          <Animated.Text
+            style={[
+              styles.mainMessage,
+              { transform: [{ translateY: bounceAnim }] },
+            ]}
+          >
             Launching betMundial App
           </Animated.Text>
-          <Text style={styles.subMessage}>
-            Please wait while we prepare your experience
-          </Text>
-
         </View>
       </Animated.View>
     </>
@@ -107,7 +148,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 12, 36, 1)',
+    backgroundColor: '#000C24',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
@@ -117,51 +158,24 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     padding: 32,
     alignItems: 'center',
-    minWidth: 320,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 300,
+    borderWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0)',
   },
-  logo: {
-    width: 80,
-    height: 80,
+  logoContainer: {
     marginBottom: 20,
-    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   spinner: {
     marginBottom: 20,
   },
   mainMessage: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 12,
-  },
-  subMessage: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    opacity: 0.9,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  featuresContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  featureText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    opacity: 0.8,
-    textAlign: 'center',
-    marginVertical: 2,
-    fontWeight: '500',
-  },
-  instruction: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    opacity: 0.7,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 

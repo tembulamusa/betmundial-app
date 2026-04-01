@@ -88,7 +88,7 @@ const BetslipIndex: React.FC<Props> = ({
       </Modal>
 
       {/* FOOTER ABOVE TABS */}
-      {Object?.keys(state?.betslip || state?.jackpotbetslip || {})?.length > 0 && (
+      {/* {Object?.keys(state?.betslip || state?.jackpotbetslip || {})?.length > 0 && (
         <View style={[styles.footer, { bottom: footerOffset }]}>
           <TouchableOpacity
             style={styles.footerItem}
@@ -127,7 +127,7 @@ const BetslipIndex: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
       )
-      }
+      } */}
     </View>
   );
 };

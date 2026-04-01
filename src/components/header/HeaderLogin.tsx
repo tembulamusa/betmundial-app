@@ -4,18 +4,15 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "react-native-vector-icons/FontAwesome";
 import { Context } from "../../context/store";
 
 const HeaderLogin = () => {
-    const navigation = useNavigation();
+    const navigation: any = useNavigation();
     const [, dispatch] = useContext(Context);
 
     const handleLogin = () => {
-
         dispatch({
             type: "SET",
             key: "showloginmodal",
@@ -46,7 +43,7 @@ const HeaderLogin = () => {
             {/* Register Button */}
             <TouchableOpacity
                 style={styles.registerButton}
-                onPress={() => navigation.navigate("Signup" as never)}
+                onPress={() => navigation.navigate("Sports", { screen: "RegisterScreen" })}
             >
                 <Text style={styles.registerText}>Register</Text>
             </TouchableOpacity>

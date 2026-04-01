@@ -14,8 +14,8 @@ import { getItem } from "../utils/local-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Static Images
-import HomeTeamDefaultFlag from "../../assets/images/team-jersies/home-default.png";
-import AwayTeamDefaultFlag from "../../assets/images/team-jersies/away-default.png";
+import HomeTeamDefaultFlag from "../../assets/images/teamjersies/homedefault.png";
+import AwayTeamDefaultFlag from "../../assets/images/teamjersies/awaydefault.png";
 import { makeRequest } from "../utils/makeRequest";
 
 interface Outcome {

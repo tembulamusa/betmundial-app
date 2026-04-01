@@ -15,7 +15,9 @@ const AllMarketsUnavailable: React.FC<Props> = ({ backLink, isLoading }) => {
     const navigation = useNavigation<any>();
 
     const handleGoBack = () => {
-        if (backLink) {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else if (backLink) {
             navigation.navigate(backLink);
         } else {
             navigation.goBack();
@@ -30,11 +32,9 @@ const AllMarketsUnavailable: React.FC<Props> = ({ backLink, isLoading }) => {
                 <NoEvents message="Event Not Found" />
 
                 {/* Optional Back Button */}
-                {backLink && (
-                    <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-                        <Text style={styles.backButtonText}>Back</Text>
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );

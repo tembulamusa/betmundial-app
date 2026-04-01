@@ -9,6 +9,10 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { Context } from "../../context/store";
 import { NavIcon } from "../utils/NavIcon";
+import { CasinoIcon } from "../utils/CasinoIcons";
+import { makeRequest } from "../utils/makeRequest";
+import { getItem, setItem } from "../utils/local-storage";
+import { theme } from "../../theme";
 
 interface MenuItem {
     name: string;
@@ -20,11 +24,17 @@ interface MenuItem {
     gameName?: string;
 }
 
+interface CasinoProvider {
+    id: number | string;
+    name: string;
+}
+
 const HeaderNav: React.FC = () => {
     const scrollRef = useRef<ScrollView>(null);
-    const [state] = useContext(Context);
+    const [state, dispatch] = useContext(Context);
     const [categories, setCategories] = useState<any[]>([]);
     const [casinoProviders, setCasinoProviders] = useState<any[]>([]);
+    const [activeKey, setActiveKey] = useState<string>("home");
     const navigation = useNavigation<any>();
 
     const linkItems: MenuItem[] = [
@@ -51,23 +61,65 @@ const HeaderNav: React.FC = () => {
     ];
 
     const onPressMenuItem = (item: MenuItem | string) => {
-
         if (typeof item === "string") {
             navigation.navigate("Sports", { screen: item });
             return;
         }
 
+        setActiveKey(item.name.toLowerCase());
+
         if (item?.custom) {
+            dispatch({
+                type: "SET",
+                key: "playType",
+                payload: "casino",
+            });
+
             navigation.navigate("Casino", {
                 screen: "CasinoLaunchedGameScreen",
                 params: {
                     provider: item.provider,
-                    gameName: item.gameName,
+                    game: item.gameName,
                 },
             });
-        } else {
-            navigation.navigate("Sports", { screen: item.link });
+            return;
         }
+
+        navigation.navigate("Sports", { screen: item.link });
+    };
+
+    const onPressSportCategory = (cat: any) => {
+        setActiveKey(`sport-${cat?.sport_id}`);
+        dispatch({
+            type: "SET",
+            key: "filtersport",
+            payload: cat,
+        });
+    };
+
+    const openCasinoProvider = async (provider: CasinoProvider) => {
+        setActiveKey(`provider-${provider.id}`);
+        const payload = {
+            filterType: "providers",
+            provider,
+            page: 1,
+        };
+
+        await setItem("casinogamesfilter", payload);
+
+        dispatch({
+            type: "SET",
+            key: "casinogamesfilter",
+            payload,
+        });
+
+        dispatch({
+            type: "SET",
+            key: "playType",
+            payload: "casino",
+        });
+
+        navigation.navigate("Casino");
     };
 
     useEffect(() => {
@@ -79,10 +131,79 @@ const HeaderNav: React.FC = () => {
     }, [state?.casinofilters]);
 
     useEffect(() => {
-        if (state?.categories && Array.isArray(state?.categories)) {
-            setCategories(state?.categories);
+        if (state?.playType === "casino" && state?.casinogamesfilter?.provider?.id) {
+            setActiveKey(`provider-${state.casinogamesfilter.provider.id}`);
+            return;
         }
-    }, [state?.categories]);
+
+        if (state?.playType !== "casino" && state?.filtersport?.sport_id) {
+            setActiveKey(`sport-${state.filtersport.sport_id}`);
+        }
+    }, [
+        state?.playType,
+        state?.casinogamesfilter?.provider?.id,
+        state?.filtersport?.sport_id
+    ]);
+
+    useEffect(() => {
+        if (!state?.filtersport?.sport_id) return;
+
+        const fetchTopCompetitions = async () => {
+            try {
+                const res = await makeRequest<any>({
+                    url: `/sports/competitions/${state?.filtersport?.sport_id}`,
+                    method: "GET",
+                    apiVersion: 2,
+                });
+                const data = res?.data?.data?.items || [];
+                await setItem("topcompetitions", data);
+                dispatch({
+                    type: "SET",
+                    key: "topcompetitions",
+                    payload: data,
+                });
+            } catch (err) {
+                console.error("Error fetching top competitios:", err);
+            }
+        };
+
+        fetchTopCompetitions();
+    }, [dispatch, state?.filtersport?.sport_id]);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            const cached = await getItem("categories");
+            if (cached) {
+                setCategories(cached);
+                return;
+            }
+
+            try {
+                const res = await makeRequest<any>({
+                    url: "/sports",
+                    method: "GET",
+                    apiVersion: 2,
+                });
+
+                const data = res?.data?.data || [];
+
+                await setItem("categories", data);
+                setCategories(data);
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+            }
+        };
+
+        fetchCategories();
+
+        if (!state?.filtersport) {
+            dispatch({
+                type: "SET",
+                key: "filtersport",
+                payload: { sport_id: 79, sport_name: "soccer" },
+            });
+        }
+    }, [dispatch, state?.filtersport]);
 
     return (
         <View style={styles.container}>
@@ -92,54 +213,71 @@ const HeaderNav: React.FC = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-
-                {/* Static Links */}
                 {linkItems.map((item, idx) => {
                     const Icon = NavIcon(item.icon);
 
                     return (
                         <TouchableOpacity
                             key={idx}
-                            style={styles.menuItem}
+                            style={[
+                                styles.menuItem,
+                                activeKey === item.name.toLowerCase() && styles.activeItem
+                            ]}
                             onPress={() => onPressMenuItem(item)}
                         >
-                            <Icon width={40} height={40} />
-                            <Text style={styles.name}>{item.name}</Text>
+                            <Icon width={28} height={28} />
+                            <Text style={[
+                                styles.name,
+                                activeKey === item.name.toLowerCase() && styles.activeName
+                            ]}>{item.name}</Text>
                         </TouchableOpacity>
                     );
                 })}
 
-                {/* Categories */}
-                {categories.map((cat, idx) => (
-                    <TouchableOpacity
-                        key={idx}
-                        style={styles.menuItem}
-                        onPress={() =>
-                            onPressMenuItem(`SportMatchesScreen_${cat.sport_id}`)
-                        }
-                    >
-                        <Text style={styles.name}>{cat.sport_name}</Text>
-                    </TouchableOpacity>
-                ))}
-
-                {/* Casino Providers */}
-                {casinoProviders?.map((provider, idx) => {
-                    const lower = provider.name.toLowerCase();
-                    if (["aviatrix", "pragmatic", "bitville"].includes(lower)) return null;
+                {(state?.playType === "sports" || !state?.playType) && categories?.map((cat, idx) => {
+                    const Icon = NavIcon(cat.sport_name.toLowerCase());
 
                     return (
                         <TouchableOpacity
                             key={idx}
-                            style={styles.menuItem}
-                            onPress={() =>
-                                onPressMenuItem(`CasinoProviderScreen_${provider.name}`)
-                            }
+                            style={[
+                                styles.menuItem,
+                                activeKey === `sport-${cat.sport_id}` && styles.activeItem
+                            ]}
+                            onPress={() => onPressSportCategory(cat)}
                         >
-                            <Text style={styles.name}>{provider.name}</Text>
+                            <Icon width={28} height={28} />
+                            <Text style={[
+                                styles.name,
+                                activeKey === `sport-${cat.sport_id}` && styles.activeName
+                            ]}>{cat.sport_name}</Text>
                         </TouchableOpacity>
                     );
                 })}
 
+                {state?.playType === "casino" && casinoProviders?.map((provider, idx) => {
+                    const lower = provider.name.toLowerCase();
+                    if (lower === "bitville") return null;
+
+                    const Icon = CasinoIcon(provider.name);
+
+                    return (
+                        <TouchableOpacity
+                            key={idx}
+                            style={[
+                                styles.menuItem,
+                                activeKey === `provider-${provider.id}` && styles.activeItem
+                            ]}
+                            onPress={() => openCasinoProvider(provider)}
+                        >
+                            <Icon width={28} height={28} />
+                            <Text style={[
+                                styles.name,
+                                activeKey === `provider-${provider.id}` && styles.activeName
+                            ]}>{provider.name}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
         </View>
     );
@@ -150,21 +288,31 @@ export default React.memo(HeaderNav);
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 10,
-        backgroundColor: "transparent",
+        paddingTop: 6,
+        backgroundColor: theme.background,
     },
     scrollContent: {
         alignItems: "center",
         paddingHorizontal: 10,
     },
     menuItem: {
-        width: 70,
         marginHorizontal: 5,
         alignItems: "center",
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderBottomWidth: 2,
+        borderBottomColor: "transparent",
     },
     name: {
         color: "#fff",
         fontSize: 12,
         textAlign: "center",
+    },
+    activeItem: {
+        borderBottomColor: "#a71f66",
+    },
+    activeName: {
+        color: "#a71f66",
+        fontWeight: "700",
     },
 });

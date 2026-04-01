@@ -15,7 +15,7 @@ import {
     ActivityIndicator
 } from "react-native";
 
-import MatchList from "../../components/matches/MatchList";
+import MatchList from "../../components/matches";
 import useInterval from "../../hooks/set-interval.hook";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { Context } from "../../context/store";
@@ -200,7 +200,7 @@ const LiveScreen: React.FC<any> = ({ route }) => {
             isFirstLoad.current = false;
         }
 
-        if (response?.status === 200) {
+        if (response?.status == 200) {
 
             const result = response?.data;
 
@@ -339,13 +339,15 @@ const LiveScreen: React.FC<any> = ({ route }) => {
 
             {!fetching && matches?.length > 0 && (
                 <MatchList
-                    fetching={fetching}
-                    three_way={threeWay}
-                    live
-                    setReload={setReload}
+                    socket={socket}
+                    live={true}
                     matches={matches}
                     producers={producers}
+                    three_way={threeWay}
+                    fetching={fetching}
+                    setReload={setReload}
                     betslip_key={"betslip"}
+                    fetchingcount={matches?.length}
                     subTypes={
                         state?.selectedLivesport
                             ?

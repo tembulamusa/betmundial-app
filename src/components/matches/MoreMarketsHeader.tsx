@@ -23,6 +23,17 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
 
     const navigation: any = useNavigation();
 
+    const handleBackPress = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+            return;
+        }
+
+        navigation.navigate("Sports", {
+            screen: live ? "LiveScreen" : "HomeMain",
+        });
+    };
+
     const updateMatchTimeMinutesAndSeconds = (match_time: string) => {
         setMatchTime((prevTime: any) => {
             if (match_time) {
@@ -74,7 +85,7 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backRow}
-                    onPress={() => navigation.goBack()}
+                    onPress={handleBackPress}
                 >
                     <Ionicons name="arrow-back" size={18} color="#fff" />
                     <Text style={styles.backText}>Back</Text>

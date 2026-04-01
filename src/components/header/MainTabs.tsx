@@ -37,43 +37,44 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
 
     const localSport = getItem("filtersport");
 
+
     useEffect(() => {
+        if (state?.topcompetitions) {
+            setTopCompetitions(state?.topcompetitions);
+        }
+    }, [state?.topcompetitions]);
 
+    useEffect(() => {
+        let top: any = getItem("topcompetitions");
 
-        fetchTopCompetitions();
+        // Handle JSON string from storage
+        if (typeof top === "string") {
+            try {
+                top = JSON.parse(top);
+            } catch {
+                top = [];
+            }
+        }
+
+        // Ensure it's always an array
+        if (!Array.isArray(top)) {
+            top = [];
+        }
+
+        if (!state?.topcompetitions && top.length) {
+            dispatch({
+                type: "SET",
+                key: "topcompetitions",
+                payload: top
+            });
+
+            setTopCompetitions(top);
+        } else {
+            setTopCompetitions(state?.topcompetitions || []);
+        }
 
     }, []);
 
-    const fetchTopCompetitions = async () => {
-
-        try {
-            let sportId = state?.filtersport?.sport_id || localSport?.sport_id || 79;
-            if (state?.filtersport) {
-
-                let filteredTop = state?.topcompetitions || [];
-            }
-            let endpoint = `/sports/competitions/${sportId}`;
-
-            const res = await makeRequest<any>({
-                url: endpoint,
-                method,
-                data,
-                apiVersion: 2,
-            });
-            Alert.alert("Top competitions", JSON.stringify(res));
-
-            // const topcompetitionsData = topCompetitions;
-
-            setTopCompetitions(filteredTop);
-        } catch (err) {
-            console.error("Error fetching top competitions:", err);
-        }
-    };
-
-    useEffect(() => {
-        fetchTopCompetitions(state?.filtersport?.sport_id || localSport?.sport_id || 79);
-
-    }, [state?.filtersport]);
 
 
     const setActiveTabSpace = (selectedTab: string) => {

@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
     View,
     Text,
@@ -10,24 +10,101 @@ import {
     Pressable,
     SafeAreaView,
     ScrollView,
+    AppState,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
 import { Context } from "../../context/store";
 import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
+import { theme } from "../../theme";
+import socket from "../utils/SocketConnect";
+import { makeRequest } from "../utils/makeRequest";
 
 const { width } = Dimensions.get("window");
 
 const HeaderUser = () => {
     const [state, dispatch] = useContext(Context);
-    const navigation = useNavigation<any>();
+    const navigation = useNavigation();
 
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
     const user = state?.user;
+
+    const refreshUserBalance = useCallback(async () => {
+        if (!user?.member_id) return;
+
+        const response = await makeRequest<any>({
+            url: `wallet-details-balance?owner=member&&member_id=${user.member_id}`,
+            method: "GET",
+        });
+
+        if (![200, 201].includes(response.status) || !response.data) {
+            return;
+        }
+
+        const nextUser = {
+            ...user,
+            balance:
+                response.data?.data?.currentBalance ??
+                response.data?.currentBalance ??
+                user.balance,
+            bonus:
+                response.data?.data?.bonusBalance ??
+                response.data?.data?.bonus_balance ??
+                response.data?.bonusBalance ??
+                response.data?.bonus_balance ??
+                user.bonus,
+        };
+
+        dispatch({
+            type: "SET",
+            key: "user",
+            payload: nextUser,
+        });
+
+        await AsyncStorage.setItem("user", JSON.stringify(nextUser));
+    }, [dispatch, user]);
+
+    useEffect(() => {
+        const handleConnect = () => {
+            refreshUserBalance();
+        };
+
+        const handleReconnect = () => {
+            refreshUserBalance();
+        };
+
+        const handleAppStateChange = (nextState: string) => {
+            if (nextState === "active") {
+                refreshUserBalance();
+            }
+        };
+
+        if (!socket.connected) {
+            socket.connect();
+        }
+
+        socket.on("connect", handleConnect);
+        socket.io.on("reconnect", handleReconnect);
+
+        const appStateSubscription = AppState.addEventListener(
+            "change",
+            handleAppStateChange
+        );
+
+        refreshUserBalance();
+
+        return () => {
+            socket.off("connect", handleConnect);
+            socket.io.off("reconnect", handleReconnect);
+            appStateSubscription.remove();
+        };
+    }, [refreshUserBalance, state?.toggleuserbalance]);
+
     if (!user) return null;
 
     const openDrawer = () => {
@@ -60,10 +137,10 @@ const HeaderUser = () => {
                     style={styles.depositBtn}
                     onPress={() => navigation.navigate("DepositScreen")}
                 >
-                    {/* <FontAwesome name="money" size={18} color="#FFD700" /> */}
-                    <Text style={styles.depositText}>KSH {formatToFloat(user.balance) || 0}</Text>
+                    <Text style={styles.depositText}>
+                        KES {formatToFloat(user.balance) || 0}
+                    </Text>
                 </TouchableOpacity>
-
 
                 <TouchableOpacity onPress={openDrawer}>
                     <FontAwesome name="user-circle" size={26} color="#fff" />
@@ -77,8 +154,15 @@ const HeaderUser = () => {
                 <Animated.View style={[styles.drawer, { left: slideAnim }]}>
                     <View style={styles.drawerHeader}>
                         <FontAwesome name="user-circle" size={40} color="#fff" />
+
+                        {/* BALANCE */}
                         <Text style={styles.drawerBalance}>
                             KES {formatToFloat(user.balance) || 0}
+                        </Text>
+
+                        {/* ✅ BONUS ADDED */}
+                        <Text style={styles.drawerBonus}>
+                            Bonus: KES {formatToFloat(user?.bonus || 0)}
                         </Text>
                     </View>
 
@@ -103,6 +187,7 @@ const HeaderUser = () => {
                         <FontAwesome name="user" size={18} color="#fff" />
                         <Text style={styles.menuText}>Withdraw</Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                         style={styles.menuItem}
                         onPress={() => {
@@ -129,7 +214,7 @@ const HeaderUser = () => {
                         style={styles.menuItem}
                         onPress={() => {
                             closeDrawer();
-                            setMpesaModalVisible(true); // open modal
+                            setMpesaModalVisible(true);
                         }}
                     >
                         <FontAwesome name="user" size={18} color="#fff" />
@@ -147,9 +232,16 @@ const HeaderUser = () => {
             <Modal visible={mpesaModalVisible} transparent animationType="slide">
                 <SafeAreaView style={styles.mpesaModalContainer}>
                     <View style={styles.mpesaModalBody}>
-                        <ScrollView contentContainerStyle={{ padding: 20 }}>
-                            <Text style={styles.mpesaModalTitle}>Check Deposit Status</Text>
+                        <ScrollView
+                            contentContainerStyle={styles.mpesaScrollContent}
+                        >
+                            <Text style={styles.mpesaModalTitle}>
+                                Check Deposit Status
+                            </Text>
+
                             <ConfirmMpesaStatus />
+
+                            {/* ✅ FIXED CLOSE BUTTON */}
                             <TouchableOpacity
                                 style={styles.closeButton}
                                 onPress={() => setMpesaModalVisible(false)}
@@ -166,8 +258,14 @@ const HeaderUser = () => {
 
 export default React.memo(HeaderUser);
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-    container: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10 },
+    container: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 10,
+    },
+
     depositBtn: {
         flexDirection: "row",
         alignItems: "center",
@@ -177,20 +275,106 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginRight: 10,
     },
-    depositText: { color: "#000000", marginLeft: 6, fontWeight: "bold" },
-    balance: { color: "#38bdf8", marginRight: 10, fontWeight: "bold" },
-    overlay: { position: "absolute", width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.4)" },
-    drawer: { position: "absolute", top: 0, width: 260, height: "100%", backgroundColor: "#0c0c24", paddingTop: 60, paddingHorizontal: 20 },
-    drawerHeader: { alignItems: "center", marginBottom: 30 },
-    drawerBalance: { color: "#38bdf8", marginTop: 8, fontSize: 16, fontWeight: "bold" },
-    menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14 },
-    menuText: { color: "#fff", marginLeft: 12, fontSize: 15 },
-    logoutText: { color: "#ff4d4d", marginLeft: 12, fontSize: 15, fontWeight: "bold" },
 
-    // MPESA Modal
-    mpesaModalContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center" },
-    mpesaModalBody: { backgroundColor: "#0c0c24", marginHorizontal: 20, borderRadius: 10, maxHeight: "80%" },
-    mpesaModalTitle: { fontSize: 20, fontWeight: "700", color: "#fff", textAlign: "center", marginBottom: 20 },
-    closeButton: { backgroundColor: "#a71f66", marginTop: 20, padding: 12, borderRadius: 10, alignItems: "center" },
-    closeText: { color: "#fff", fontWeight: "700" },
+    depositText: {
+        color: "#000000",
+        marginLeft: 6,
+        fontWeight: "bold",
+    },
+
+    overlay: {
+        position: "absolute",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "rgba(0,0,0,0.4)",
+    },
+
+    drawer: {
+        position: "absolute",
+        top: 0,
+        width: 260,
+        height: "100%",
+        backgroundColor: theme.background,
+        paddingTop: 60,
+        paddingHorizontal: 20,
+    },
+
+    drawerHeader: {
+        alignItems: "center",
+        marginBottom: 30,
+    },
+
+    drawerBalance: {
+        color: "#fff",
+        marginTop: 8,
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+
+    /* ✅ BONUS STYLE */
+    drawerBonus: {
+        color: "#FFD700",
+        marginTop: 4,
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    menuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 14,
+    },
+
+    menuText: {
+        color: "#fff",
+        marginLeft: 12,
+        fontSize: 15,
+    },
+
+    logoutText: {
+        color: "#ff4d4d",
+        marginLeft: 12,
+        fontSize: 15,
+        fontWeight: "bold",
+    },
+
+    /* MODAL */
+    mpesaModalContainer: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+    },
+
+    mpesaModalBody: {
+        backgroundColor: "#0c0c24",
+        marginHorizontal: 20,
+        borderRadius: 10,
+        maxHeight: "80%",
+    },
+    mpesaScrollContent: {
+        padding: 20,
+        paddingBottom: 40,
+    },
+
+    mpesaModalTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#fff",
+        textAlign: "center",
+        marginBottom: 20,
+    },
+
+    closeButton: {
+        backgroundColor: "#e70654", // brighter for visibility
+        marginTop: 20,
+        padding: 14,
+        borderRadius: 10,
+        alignItems: "center",
+    },
+
+    closeText: {
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: 16,
+    },
 });
