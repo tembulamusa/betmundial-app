@@ -2,5 +2,5 @@
 <resources>
     <color name="splash_background">#000C24</color>
     <color name="loading_background">#000C24</color>
-    <color name="bootsplash_background">#0a0a15</color>
+    <color name="bootsplash_background">#000c24</color>
 </resources>

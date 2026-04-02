@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import socket from "../utils/SocketConnect";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import MatchWidget from "../utils/MatchWidget";
 
 interface Props {
@@ -87,7 +86,7 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
                     style={styles.backRow}
                     onPress={handleBackPress}
                 >
-                    <Ionicons name="arrow-back" size={18} color="#fff" />
+                    <Text style={styles.backIcon}>{"←"}</Text>
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
 
@@ -124,6 +123,13 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontSize: 13,
         opacity: 0.8,
+    },
+
+    backIcon: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "700",
+        lineHeight: 18,
     },
 
     matchTitle: {

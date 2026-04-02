@@ -7,8 +7,8 @@ import {
   Animated,
   StatusBar,
   Easing,
+  Image,
 } from 'react-native';
-import Logo from '../assets/images/logo.svg';
 
 interface LaunchScreenProps {
   visible: boolean;
@@ -116,8 +116,31 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ visible }) => {
               },
             ]}
           >
-            <Logo width={300} height={160} />
+            <Image
+              source={require('../assets/images/launch-logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </Animated.View>
+
+          <Animated.Text
+            style={[
+              styles.brandName,
+              { transform: [{ translateY: bounceAnim }] },
+            ]}
+          >
+            <Text style={styles.brandBet}>Bet</Text>
+            <Text style={styles.brandMundial}>Mundial</Text>
+          </Animated.Text>
+
+          <Animated.Text
+            style={[
+              styles.tagline,
+              { transform: [{ translateY: bounceAnim }] },
+            ]}
+          >
+            The best betting experience for both sports and casino
+          </Animated.Text>
 
           {/* Loader */}
           <ActivityIndicator
@@ -163,9 +186,33 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0)',
   },
   logoContainer: {
-    marginBottom: 20,
+    marginBottom: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logoImage: {
+    width: 150,
+    height: 150,
+  },
+  brandName: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  brandBet: {
+    color: '#FFD700',
+  },
+  brandMundial: {
+    color: '#a71f66',
+  },
+  tagline: {
+    color: 'rgba(255, 255, 255, 0.82)',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    maxWidth: 260,
+    lineHeight: 20,
   },
   spinner: {
     marginBottom: 20,
