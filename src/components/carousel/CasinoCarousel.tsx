@@ -25,35 +25,35 @@ type CarouselBanner = {
 const banners: CarouselBanner[] = [
     {
         id: "mundial-league",
-        src: require("../../assets/images/casino/carousel/mundial-league.jpg"),
+        src: require("../../assets/images/casino/carousel/mundial-league-home-opt.jpeg"),
         requiresAuth: true,
         action: "mundial",
     },
     {
         id: "live-casino",
-        src: require("../../assets/images/casino/carousel/casino-live.jpeg"),
+        src: require("../../assets/images/casino/carousel/casino-live-opt.jpeg"),
         action: "category",
         value: "live games",
     },
     {
         id: "casino-offers",
-        src: require("../../assets/images/casino/carousel/casino-offers.jpeg"),
+        src: require("../../assets/images/casino/carousel/casino-offers-opt.jpeg"),
     },
     {
         id: "casino-live",
-        src: require("../../assets/images/casino/carousel/live-casino.jpeg"),
+        src: require("../../assets/images/casino/carousel/live-casino-opt.jpeg"),
         action: "category",
         value: "live games",
     },
     {
         id: "highflyer",
-        src: require("../../assets/images/casino/carousel/highflyer.jpeg"),
+        src: require("../../assets/images/casino/carousel/highflyer-opt.jpeg"),
         action: "provider",
         value: "pragmatic",
     },
     {
         id: "kuku-maziwa",
-        src: require("../../assets/images/casino/carousel/kuku_maziwa.jpeg"),
+        src: require("../../assets/images/casino/carousel/kuku_maziwa-opt.jpeg"),
         action: "provider",
         value: "spribe",
     },

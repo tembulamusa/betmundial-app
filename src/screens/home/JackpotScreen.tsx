@@ -9,7 +9,7 @@ import {
     Alert
 } from "react-native";
 import { JackpotMatchList, JackpotResultsList, JackpotHeader } from "../../components/matches/JackpotComponents";
-import dailyJackpot from "../../assets/images/banners/jackpot/DailyJackpot.jpeg";
+import dailyJackpot from "../../assets/images/banners/jackpot/DailyJackpot-opt.jpeg";
 import {
     addToJackpotSlip,
     getJackpotBetslip

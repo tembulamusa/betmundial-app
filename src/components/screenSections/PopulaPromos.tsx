@@ -167,7 +167,7 @@ const PopulaPromos = () => {
                             source={
                                 game?.image_url
                                     ? { uri: game.image_url }
-                                    : require("../../assets/images/casino/casino-default-thumbnail.jpeg")
+                                    : require("../../assets/images/casino/casino-default-thumbnail-opt.jpg")
                             }
                             style={styles.image}
                             resizeMode="cover"

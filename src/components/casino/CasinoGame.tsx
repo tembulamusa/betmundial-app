@@ -146,14 +146,14 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
             sport_image = { uri: imgUrl };
 
             if (!imgUrl || imgUrl.trim() === "") {
-                sport_image = require("../../assets/images/casino/casino-default-thumbnail.jpg");
+                sport_image = require("../../assets/images/casino/casino-default-thumbnail-opt.jpg");
             }
 
             if (game?.provider_name?.toLowerCase() === "aviatrix") {
                 sport_image = require("../../assets/images/casino/aviatrix.jpg");
             }
         } catch (error) {
-            sport_image = require("../../assets/images/casino/casino-default-thumbnail.jpg");
+            sport_image = require("../../assets/images/casino/casino-default-thumbnail-opt.jpg");
         }
         return sport_image;
     };

@@ -24,31 +24,31 @@ type CarouselBanner = {
 const banners: CarouselBanner[] = [
     {
         id: "mundial-league",
-        src: require("../../assets/images/casino/carousel/mundial-league.jpg"),
+        src: require("../../assets/images/casino/carousel/mundial-league-home-opt.jpeg"),
         action: "game",
         provider: "unicraft",
         game: "mundial-league",
     },
     {
         id: "karibu-bonus",
-        src: require("../../assets/images/banners/carousel/Karibu-Bonus.jpeg"),
+        src: require("../../assets/images/banners/carousel/Karibu-Bonus-opt.jpeg"),
         action: "promo",
     },
     {
         id: "deposit-bonus",
-        src: require("../../assets/images/banners/carousel/Deposit-Bonus.jpeg"),
+        src: require("../../assets/images/banners/carousel/Deposit-Bonus-opt.jpeg"),
         action: "promo",
     },
     {
         id: "aviatrix",
-        src: require("../../assets/images/casino/aviatrix.jpg"),
+        src: require("../../assets/images/banners/carousel/aviatrix-opt.jpeg"),
         action: "game",
         provider: "aviatrix",
         game: "aviatrix",
     },
     {
         id: "aviator",
-        src: require("../../assets/images/banners/carousel/aviator.jpeg"),
+        src: require("../../assets/images/banners/carousel/aviator-opt.jpeg"),
         action: "game",
         provider: "spribe",
         game: "aviator",

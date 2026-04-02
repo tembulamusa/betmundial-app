@@ -78,7 +78,7 @@ const PopularGames: React.FC = () => {
     const getCasinoImageIcon = (imgUrl?: string) => {
 
         if (!imgUrl || imgUrl.trim() === "") {
-            return require("../../assets/images/casino/casino-default-thumbnail.jpg");
+            return require("../../assets/images/casino/casino-default-thumbnail-opt.jpg");
         }
 
         return { uri: imgUrl };
