@@ -14,6 +14,7 @@ import {
 import { Formik } from "formik";
 import { getItem } from "../../components/utils/local-storage";
 import { makeRequest } from "../../components/utils/makeRequest";
+import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
 import { Context } from "../../context/store";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
@@ -37,7 +38,7 @@ const DepositScreen = () => {
     const validate = (values: any) => {
         let errors: any = {};
 
-        if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+        if (!isValidKenyanPhoneNumber(values.msisdn)) {
             errors.msisdn = "Invalid phone number";
         }
 
@@ -53,6 +54,7 @@ const DepositScreen = () => {
 
         const requestData = {
             ...values,
+            msisdn: normalizeKenyanPhoneNumber(values.msisdn),
             app_name: app
         };
 

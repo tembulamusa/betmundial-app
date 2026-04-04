@@ -68,13 +68,37 @@ const HeaderNav: React.FC = () => {
 
         setActiveKey(item.name.toLowerCase());
 
-        if (item?.custom) {
-            dispatch({
-                type: "SET",
-                key: "playType",
-                payload: "casino",
+        if (item.link === "HomeScreen") {
+            navigation.navigate("Sports", {
+                screen: "HomeMain",
             });
 
+            setTimeout(() => {
+                dispatch({
+                    type: "SET",
+                    key: "playType",
+                    payload: "sports",
+                });
+            }, 0);
+            return;
+        }
+
+        if (item.link === "JackpotScreen") {
+            navigation.navigate("Jackpot", {
+                screen: "JackpotMain",
+            });
+
+            setTimeout(() => {
+                dispatch({
+                    type: "SET",
+                    key: "playType",
+                    payload: "jackpot",
+                });
+            }, 0);
+            return;
+        }
+
+        if (item?.custom) {
             navigation.navigate("Casino", {
                 screen: "CasinoLaunchedGameScreen",
                 params: {
@@ -82,6 +106,14 @@ const HeaderNav: React.FC = () => {
                     game: item.gameName,
                 },
             });
+
+            setTimeout(() => {
+                dispatch({
+                    type: "SET",
+                    key: "playType",
+                    payload: "casino",
+                });
+            }, 0);
             return;
         }
 
@@ -90,11 +122,13 @@ const HeaderNav: React.FC = () => {
 
     const onPressSportCategory = (cat: any) => {
         setActiveKey(`sport-${cat?.sport_id}`);
-        dispatch({
-            type: "SET",
-            key: "filtersport",
-            payload: cat,
-        });
+        setTimeout(() => {
+            dispatch({
+                type: "SET",
+                key: "filtersport",
+                payload: cat,
+            });
+        }, 0);
     };
 
     const openCasinoProvider = async (provider: CasinoProvider) => {
@@ -105,21 +139,23 @@ const HeaderNav: React.FC = () => {
             page: 1,
         };
 
-        await setItem("casinogamesfilter", payload);
-
-        dispatch({
-            type: "SET",
-            key: "casinogamesfilter",
-            payload,
-        });
-
-        dispatch({
-            type: "SET",
-            key: "playType",
-            payload: "casino",
-        });
-
         navigation.navigate("Casino");
+
+        setTimeout(() => {
+            setItem("casinogamesfilter", payload);
+
+            dispatch({
+                type: "SET",
+                key: "casinogamesfilter",
+                payload,
+            });
+
+            dispatch({
+                type: "SET",
+                key: "playType",
+                payload: "casino",
+            });
+        }, 0);
     };
 
     useEffect(() => {

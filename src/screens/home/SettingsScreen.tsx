@@ -726,7 +726,7 @@ const SettingsScreen: React.FC = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.listRow}
-                        onPress={() => Alert.alert("About", "betMundial App v1.0. Powering dairy digitization.")}
+                        onPress={() => Alert.alert("About", "betMundial App v1.0.")}
                     >
                         <Icon name="info" size={20} color="#64748b" />
                         <View style={{ flex: 1, marginLeft: 12 }}>
@@ -863,4 +863,3 @@ const styles = StyleSheet.create({
     },
     signOutText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
-

@@ -12,6 +12,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { Formik } from "formik";
 import { Context } from "../../context/store";
 import { makeRequest } from "../../components/utils/makeRequest";
+import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
 import { theme } from "../../theme";
 
 export default function RegisterScreen({ navigation, route }: any) {
@@ -42,7 +43,7 @@ export default function RegisterScreen({ navigation, route }: any) {
     const validate = (values: any) => {
         const errors: any = {};
 
-        if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+        if (!isValidKenyanPhoneNumber(values.msisdn)) {
             errors.msisdn = "Please enter a valid phone number";
         }
 
@@ -60,13 +61,14 @@ export default function RegisterScreen({ navigation, route }: any) {
     const submitRegistration = async (values: any) => {
         setLoading(true);
         setSubmitError(null);
+        const normalizedMsisdn = normalizeKenyanPhoneNumber(values.msisdn);
 
         const response = await makeRequest({
             url: "/auth/signup",
             method: "POST",
             apiVersion: 2,
             data: {
-                msisdn: values.msisdn,
+                msisdn: normalizedMsisdn,
                 password: values.password,
                 promo_code: values.promo_code,
                 app_name: appName,
@@ -76,7 +78,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         dispatch({
             type: "SET",
             key: "regmsisdn",
-            payload: values.msisdn,
+            payload: normalizedMsisdn,
         });
 
         if ([200, 201, 204].includes(response.status)) {
@@ -84,7 +86,7 @@ export default function RegisterScreen({ navigation, route }: any) {
                 type: "SET",
                 key: "loginmodalprefill",
                 payload: {
-                    mobile: values.msisdn,
+                    mobile: normalizedMsisdn,
                     password: values.password,
                     autoLogin: true,
                 },

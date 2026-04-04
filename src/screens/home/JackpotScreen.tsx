@@ -6,7 +6,7 @@ import {
     Image,
     TouchableOpacity,
     ScrollView,
-    Alert
+    ActivityIndicator
 } from "react-native";
 import { JackpotMatchList, JackpotResultsList, JackpotHeader } from "../../components/matches/JackpotComponents";
 import dailyJackpot from "../../assets/images/banners/jackpot/DailyJackpot-opt.jpeg";
@@ -23,6 +23,8 @@ const JackpotScreen: React.FC<any> = () => {
     const [jackpotData, setJackpotData] = useState<any>(null);
     const [results, setResults] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<"matches" | "results">("matches");
+    const [loadingMatches, setLoadingMatches] = useState(true);
+    const [loadingResults, setLoadingResults] = useState(true);
 
     const [, dispatch] = useContext(Context);
 
@@ -31,17 +33,25 @@ const JackpotScreen: React.FC<any> = () => {
     };
 
     const fetchMatches = async () => {
-        const matchEndpoint = "/jackpot/matches";
-        const response = await makeRequest({
-            url: matchEndpoint,
-            method: "GET",
-            apiVersion: 2
-        });
+        setLoadingMatches(true);
+        try {
+            const matchEndpoint = "/jackpot/matches";
+            const response = await makeRequest({
+                url: matchEndpoint,
+                method: "GET",
+                apiVersion: 2
+            });
 
-        if (response.status === 200) {
-            setJackpotData(response?.data?.data);
-            dispatch({ type: "SET", key: "jackpotdata", payload: response?.data?.data });
+            if (response.status === 200) {
+                setJackpotData(response?.data?.data || null);
+                dispatch({ type: "SET", key: "jackpotdata", payload: response?.data?.data });
+            } else {
+                setJackpotData(null);
+            }
+        } finally {
+            setLoadingMatches(false);
         }
+
         let jackpotbetslip = getJackpotBetslip();
         dispatch({ type: "SET", key: "jackpotbetslip", payload: jackpotbetslip });
 
@@ -51,18 +61,22 @@ const JackpotScreen: React.FC<any> = () => {
 
 
     const fetchResults = async () => {
-        const resultsEndpoint = "/jackpot/results";
+        setLoadingResults(true);
+        try {
+            const resultsEndpoint = "/jackpot/results";
+            const response = await makeRequest({
+                url: resultsEndpoint,
+                method: "GET",
+                apiVersion: 2
+            });
 
-        const [r_status, result] = await makeRequest({
-            url: resultsEndpoint,
-            method: "GET",
-            apiVersion: 2
-        });
-
-        if (r_status === 200) {
-            setResults(result?.data);
-        } else {
-            Notify({ status: 400, message: "Error fetching Jackpot results" });
+            if (response?.status === 200) {
+                setResults(response?.data?.data || response?.data || null);
+            } else {
+                setResults(null);
+            }
+        } finally {
+            setLoadingResults(false);
         }
 
     };
@@ -199,6 +213,13 @@ const JackpotScreen: React.FC<any> = () => {
 
                 <View>
 
+                    {loadingMatches ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color="#fff" />
+                            <Text style={styles.loading}>Loading jackpots...</Text>
+                        </View>
+                    ) : (
+                        <>
                     {(jackpotData?.status?.toLowerCase() === "active" &&
                         jackpotData?.matches?.length === jackpotData?.total_games) && (
 
@@ -233,16 +254,25 @@ const JackpotScreen: React.FC<any> = () => {
                         </View>
 
                     )}
+                        </>
+                    )}
 
                 </View>
             )}
 
             {activeTab === "results" && (
 
-                results ? (
+                loadingResults ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#fff" />
+                        <Text style={styles.loading}>Loading results...</Text>
+                    </View>
+                ) : results ? (
                     <JackpotResultsList results={results} />
                 ) : (
-                    <Text style={styles.loading}>Loading results...</Text>
+                    <View style={styles.noEvents}>
+                        <Text style={styles.noEventsText}>No jackpot results found.</Text>
+                    </View>
                 )
 
             )}
@@ -326,8 +356,13 @@ const styles = StyleSheet.create({
 
     loading: {
         textAlign: "center",
-        marginTop: 20,
+        marginTop: 12,
         color: "#fff"
+    },
+
+    loadingContainer: {
+        paddingVertical: 30,
+        alignItems: "center",
     }
 
 });

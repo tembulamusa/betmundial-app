@@ -1,41 +1,60 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Context } from '../context/store';
 import HeaderNav from './common/HeaderNav';
 import HeaderUser from './common/HeaderUser';
 import HeaderLogin from './header/HeaderLogin';
-import Search from './header/Search';
 import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
 import { setItem } from './utils/local-storage';
+import { normalizeKenyanPhoneNumber } from './utils/phone';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
-    const [loginForm, setLoginForm] = useState({ mobile: '', password: '' });
+    const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+    const [mobile, setMobile] = useState('');
+    const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState<string | null>(null);
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginNotice, setLoginNotice] = useState<string | null>(null);
+    const clearGlobalLoginModalState = useCallback(() => {
+        dispatch({ type: 'DEL', key: 'showloginmodal' });
+        dispatch({ type: 'DEL', key: 'loginmodalprefill' });
+        dispatch({ type: 'DEL', key: 'loginmodalmessage' });
+    }, [dispatch]);
+
+    const closeLoginModal = useCallback(() => {
+        setIsLoginModalVisible(false);
+        setLoginNotice(null);
+        setLoginError(null);
+        setTimeout(() => {
+            clearGlobalLoginModalState();
+        }, 0);
+    }, [clearGlobalLoginModalState]);
+
+    const openHeaderLoginModal = useCallback(() => {
+        setLoginError(null);
+        setLoginNotice(null);
+        setIsLoginModalVisible(true);
+    }, []);
+
+    useEffect(() => {
+        if (state?.showloginmodal) {
+            setIsLoginModalVisible(true);
+        }
+    }, [state?.showloginmodal]);
 
     const handleLogin = async (formOverride?: { mobile: string; password: string }) => {
-        const activeForm = formOverride || loginForm;
-
-        // Validation
-        if (!activeForm.mobile || !activeForm.mobile.match(/(254|0|)?[71]\d{8}/)) {
-            setLoginError('Invalid mobile number');
-            return;
-        }
-        if (!activeForm.password || activeForm.password.length < 4) {
-            setLoginError('Password must be at least 4 characters');
-            return;
-        }
+        const activeForm = formOverride || { mobile, password };
+        const normalizedMobile = normalizeKenyanPhoneNumber(activeForm.mobile);
 
         setLoginLoading(true);
         setLoginError(null);
 
         try {
             const data = {
-                msisdn: activeForm.mobile,
-                password: activeForm.password,
+                msisdn: mobile,
+                password: password,
             };
             const response = await makeRequest({
                 url: '/auth/login',
@@ -43,17 +62,13 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 apiVersion: 2,
                 data: data,
             });
-            // Handle success & errors
-            if (response?.status === 200 || response.status === 201) {
+            if (response?.status == 200 || response.status == 201) {
                 if (response.data && response?.data?.data) {
                     // Dispatch user to global state
                     await setItem("user", response.data.data); // Save user data to local storage
                     dispatch({ type: 'SET', key: 'user', payload: response.data?.data });
                     // Close login modal
-                    dispatch({ type: 'DEL', key: 'showloginmodal' });
-                    dispatch({ type: 'DEL', key: 'loginmodalprefill' });
-                    dispatch({ type: 'DEL', key: 'loginmodalmessage' });
-                    setLoginNotice(null);
+                    closeLoginModal();
                 } else {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }
@@ -74,19 +89,18 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             return;
         }
 
-        setLoginForm({
-            mobile: prefill?.mobile || '',
-            password: prefill?.password || '',
-        });
+        setMobile(prefill?.mobile || '');
+        setPassword(prefill?.password || '');
         setLoginError(null);
         setLoginNotice(state?.loginmodalmessage || null);
+        setIsLoginModalVisible(true);
     }, [state?.loginmodalprefill, state?.loginmodalmessage]);
 
     useEffect(() => {
         const prefill = state?.loginmodalprefill;
 
         if (
-            state?.showloginmodal &&
+            isLoginModalVisible &&
             prefill?.autoLogin &&
             prefill?.mobile &&
             prefill?.password &&
@@ -106,7 +120,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 password: prefill.password,
             });
         }
-    }, [state?.showloginmodal, state?.loginmodalprefill, loginLoading]);
+    }, [isLoginModalVisible, state?.loginmodalprefill, loginLoading]);
 
     return (
         <View style={{ backgroundColor: theme.background }}>
@@ -119,7 +133,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 </View>
                 <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {/* <Search /> */}
-                    {state?.user ? <HeaderUser /> : <HeaderLogin />}
+                    {state?.user ? <HeaderUser /> : <HeaderLogin onLoginPress={openHeaderLoginModal} />}
                 </View>
             </View>
 
@@ -127,10 +141,10 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
             {/* Login Modal */}
             <Modal
-                visible={!!state?.showloginmodal}
+                visible={isLoginModalVisible}
                 transparent
                 animationType="fade"
-                onRequestClose={() => dispatch({ type: 'DEL', key: 'showloginmodal' })}
+                onRequestClose={closeLoginModal}
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -142,16 +156,16 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                             placeholder="Mobile / MSISDN"
                             placeholderTextColor="#ccc"
                             style={styles.input}
-                            value={loginForm.mobile}
-                            onChangeText={(text) => setLoginForm({ ...loginForm, mobile: text })}
+                            value={mobile}
+                            onChangeText={setMobile}
                             keyboardType="phone-pad"
                         />
                         <TextInput
                             placeholder="Password"
                             placeholderTextColor="#ccc"
                             style={styles.input}
-                            value={loginForm.password}
-                            onChangeText={(text) => setLoginForm({ ...loginForm, password: text })}
+                            value={password}
+                            onChangeText={setPassword}
                             secureTextEntry
                         />
 
@@ -168,12 +182,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
                         <TouchableOpacity
                             style={styles.closeButton}
-                            onPress={() => {
-                                dispatch({ type: 'DEL', key: 'showloginmodal' });
-                                dispatch({ type: 'DEL', key: 'loginmodalprefill' });
-                                dispatch({ type: 'DEL', key: 'loginmodalmessage' });
-                                setLoginNotice(null);
-                            }}
+                            onPress={closeLoginModal}
                         >
                             <Text style={styles.closeButtonText}>Cancel</Text>
                         </TouchableOpacity>

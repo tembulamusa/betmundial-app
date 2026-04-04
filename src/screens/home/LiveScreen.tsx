@@ -168,14 +168,14 @@ const LiveScreen: React.FC<any> = ({ route }) => {
     }, [betradarSportId, socket.connected]);
 
     const fetchData = async () => {
-
+        const selectedSport = await state?.selectedLivesport || await getItem("selectedLivesport");
         let endpoint =
             "/sports/matches/live/" +
             (spid || 79) +
             (
-                `${state?.selectedLivesport &&
-                    state?.selectedLivesport?.sport_name?.toLowerCase() !== "soccer"
-                    ? "/" + state?.selectedLivesport?.default_market
+                `${selectedSport &&
+                    selectedSport?.sport_name?.toLowerCase() !== "soccer"
+                    ? "/" + selectedSport?.default_market
                     : ""
                 }`
             ) +
@@ -192,8 +192,6 @@ const LiveScreen: React.FC<any> = ({ route }) => {
             method: "GET",
             apiVersion: 2
         });
-
-        // Alert.alert("Live Matches", JSON.stringify(response));
 
         if (isFirstLoad.current) {
             setFetching(false);
@@ -374,7 +372,8 @@ const styles = StyleSheet.create({
 
     container: {
         flex: 1,
-        backgroundColor: theme.background
+        backgroundColor: theme.background,
+        paddinghorizontal: 8,
     },
 
     liveHeader: {
@@ -383,6 +382,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         backgroundColor: "rgba(255,255,255,0.1)",
+        marginBottom: 8
     },
 
     liveDot: {

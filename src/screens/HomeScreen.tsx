@@ -54,7 +54,7 @@ const HomeScreen: React.FC = () => {
     const [allSportId, setAllSportId] = useState<number | undefined>();
     const [threeWay, setThreeWay] = useState<boolean>(true);
     const [matches, setMatches] = useState<Match[]>([]);
-    const [limit] = useState<number>(300);
+    const [limit] = useState<number>(3);
     const [page, setPage] = useState<number>(1);
 
     const [state] = useContext<any>(Context);
@@ -77,7 +77,7 @@ const HomeScreen: React.FC = () => {
         let filtersport = state?.filtersport || await getItem("filtersport");
 
         let pageNo = 1;
-        let limitSize = limit || 300;
+        let limitSize = limit;
 
         let tab = "highlights";
         let method: "GET" | "POST" = "GET";
@@ -141,9 +141,10 @@ const HomeScreen: React.FC = () => {
             setFetchingCount(fetchcount);
 
             if ([200, 201].includes(res.status)) {
-                const result = res.data;
-                setMatches((result as any)?.data?.items || (result as any) || []);
-                setProducers((result as any)?.producer_statuses || []);
+                setMatches([]);
+                // const result = res.data;
+                // setMatches((result as any)?.data?.items || (result as any) || []);
+                // setProducers((result as any)?.producer_statuses || []);
             } else {
                 setMatches([]);
                 setProducers([]);

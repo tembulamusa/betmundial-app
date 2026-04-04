@@ -15,6 +15,7 @@ import { Formik } from "formik";
 import { Context } from "../../context/store";
 import { getItem } from "../../components/utils/local-storage";
 import { makeRequest } from "../../components/utils/makeRequest";
+import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
 
 const mpesa = require("../../assets/images/mpesa.png");
 
@@ -33,7 +34,7 @@ const WithdrawScreen = () => {
     const validate = (values: any) => {
         let errors: any = {};
 
-        if (!values.msisdn || !values.msisdn.match(/(254|0|)?[71]\d{8}/g)) {
+        if (!isValidKenyanPhoneNumber(values.msisdn)) {
             errors.msisdn = "Please enter a valid phone number";
         }
 
@@ -46,13 +47,14 @@ const WithdrawScreen = () => {
 
     const handleSubmit = async (values: any) => {
         setIsLoading(true);
+        const normalizedMsisdn = normalizeKenyanPhoneNumber(values.msisdn);
 
         try {
             const response = await makeRequest({
                 url: "v2/withdrawals/new",
                 method: "POST",
                 data: {
-                    msisdn: user?.msisdn,
+                    msisdn: normalizedMsisdn,
                     amount: values.amount
                 },
                 apiVersion: 3

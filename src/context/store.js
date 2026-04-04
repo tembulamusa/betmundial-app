@@ -1,4 +1,4 @@
-import { createContext, useReducer } from "react";
+import { createContext, useContext, useReducer } from "react";
 import Reducer from './reducer'
 
 
@@ -7,15 +7,20 @@ const initialState = {
     // user:localStorage.getItem('auth_token')
 };
 
+export const DispatchContext = createContext(() => { });
+
 const Store = ({ children }) => {
     const [state, dispatch] = useReducer(Reducer, initialState);
 
     return (
-        <Context.Provider value={[state, dispatch]}>
-            {children}
-        </Context.Provider>
+        <DispatchContext.Provider value={dispatch}>
+            <Context.Provider value={[state, dispatch]}>
+                {children}
+            </Context.Provider>
+        </DispatchContext.Provider>
     )
 };
 
 export const Context = createContext(initialState);
+export const useAppDispatch = () => useContext(DispatchContext);
 export default Store;

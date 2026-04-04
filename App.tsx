@@ -7,13 +7,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import { theme } from "./src/theme";
-import Store, { Context } from "./src/context/store";
+import Store, { Context, useAppDispatch } from "./src/context/store";
 import { GlobalProvider } from "./src/context/GlobalContext";
 import { AuthProvider } from "./src/AuthContext";
 import { ConnectivityProvider } from "./src/context/ConnectivityContext";
 import { SyncProvider, useSync } from "./src/context/SyncContext";
 
-import ConnectivityDebugger from "./src/components/ConnectivityDebugger";
 import SyncLoadingOverlay from "./src/components/SyncLoadingOverlay";
 import LaunchScreen from "./src/components/LaunchScreen";
 import CustomHeader from "./src/components/CustomHeader";
@@ -41,6 +40,13 @@ const CasinoStack = createNativeStackNavigator();
 const JackpotStack = createNativeStackNavigator();
 
 const TAB_BAR_HEIGHT = 60;
+
+if (__DEV__ && !(global as any).__BETMUNDIAL_LOGS_SUPPRESSED__) {
+  (global as any).__BETMUNDIAL_LOGS_SUPPRESSED__ = true;
+  console.log = () => { };
+  console.info = () => { };
+  console.debug = () => { };
+}
 
 /* ================= HOME STACK ================= */
 function HomeStackScreen() {
@@ -98,7 +104,7 @@ function BetslipButton() {
 
 /* ================= MAIN TABS ================= */
 function MainTabs() {
-  const [, dispatch] = useContext(Context);
+  const dispatch = useAppDispatch();
 
   return (
     <MainLayout>
@@ -188,7 +194,6 @@ function RootNavigator({ navigationRef }) {
 
   return (
     <>
-      <ConnectivityDebugger />
       <NavigationContainer ref={navigationRef}>
         <RootStack.Navigator initialRouteName="Main" screenOptions={{ headerShown: false }}>
           <RootStack.Screen name="Main" component={MainTabs} />

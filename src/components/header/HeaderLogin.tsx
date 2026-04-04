@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React from "react";
 import {
     View,
     Text,
@@ -6,13 +6,22 @@ import {
     StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Context } from "../../context/store";
+import { useAppDispatch } from "../../context/store";
 
-const HeaderLogin = () => {
+interface HeaderLoginProps {
+    onLoginPress?: () => void;
+}
+
+const HeaderLogin: React.FC<HeaderLoginProps> = ({ onLoginPress }) => {
     const navigation: any = useNavigation();
-    const [, dispatch] = useContext(Context);
+    const dispatch = useAppDispatch();
 
     const handleLogin = () => {
+        if (onLoginPress) {
+            onLoginPress();
+            return;
+        }
+
         dispatch({
             type: "SET",
             key: "showloginmodal",
@@ -35,7 +44,7 @@ const HeaderLogin = () => {
             {/* Login Button */}
             <TouchableOpacity
                 style={styles.loginButton}
-                onPress={() => handleLogin()} // call your login function here
+                onPress={handleLogin}
             >
                 <Text style={styles.loginText}>Login</Text>
             </TouchableOpacity>
