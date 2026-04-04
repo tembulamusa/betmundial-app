@@ -23,6 +23,7 @@ import HighlightsBoard from "../components/highlights-board";
 import MatchList from "../components/matches";
 import CarouselLoader from "../components/carousel/Carousel";
 import MainTabs from "../components/header/MainTabs";
+import ShimmerLoader from "../components/common/ShimmerLoader";
 // import PopupBanner from "../components/pop_up_banner";
 
 import socket from "../components/utils/SocketConnect";
@@ -54,12 +55,13 @@ const HomeScreen: React.FC = () => {
     const [allSportId, setAllSportId] = useState<number | undefined>();
     const [threeWay, setThreeWay] = useState<boolean>(true);
     const [matches, setMatches] = useState<Match[]>([]);
-    const [limit] = useState<number>(3);
+    const [limit] = useState<number>(20);
     const [page, setPage] = useState<number>(1);
 
     const [state] = useContext<any>(Context);
 
     const [fetching, setFetching] = useState<boolean>(false);
+    const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
     const [fetchingCount, setFetchingCount] = useState<number>(0);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -67,16 +69,23 @@ const HomeScreen: React.FC = () => {
 
     const homePageRef = useRef<View>(null);
 
-    const fetchData = async (controlText?: string) => {
+    const fetchData = async (controlText?: string, pageNo?: number) => {
 
-        setFetching(true);
+        const isInitialFetch = !pageNo || pageNo === 1;
+        
+        if (isInitialFetch) {
+            setFetching(true);
+        } else {
+            setPaginationLoading(true);
+        }
+        
         setFetchError(null);
 
         let fetchcount = fetchingCount + 1;
 
         let filtersport = state?.filtersport || await getItem("filtersport");
 
-        let pageNo = 1;
+        let currentPageNo = pageNo || 1;
         let limitSize = limit;
 
         let tab = "highlights";
@@ -85,7 +94,7 @@ const HomeScreen: React.FC = () => {
         let endpoint =
             "/sports/matches/pre-match/" +
             (filtersport?.sport_id || allSportId || 79) +
-            `?page=${pageNo}&size=${limitSize}`;
+            `?page=${currentPageNo}&size=${limitSize}`;
 
         if (state?.filtercategory) {
             endpoint += "&category_id=" + state?.filtercategory?.category_id;
@@ -141,26 +150,44 @@ const HomeScreen: React.FC = () => {
             setFetchingCount(fetchcount);
 
             if ([200, 201].includes(res.status)) {
-                setMatches([]);
-                // const result = res.data;
-                // setMatches((result as any)?.data?.items || (result as any) || []);
-                // setProducers((result as any)?.producer_statuses || []);
+                const result = res.data;
+                const newItems = (result as any)?.data?.items || (result as any) || [];
+                
+                // If this is pagination (page > 1), append to existing data
+                if (isInitialFetch) {
+                    setMatches(newItems);
+                } else {
+                    setMatches(prevMatches => [...prevMatches, ...newItems]);
+                }
+                
+                setProducers((result as any)?.producer_statuses || []);
             } else {
-                setMatches([]);
+                if (isInitialFetch) {
+                    setMatches([]);
+                }
+                if (!isInitialFetch) {
+                    // Keep existing data if pagination fetch fails
+                }
                 setProducers([]);
                 setFetchError(res.error || `Request failed (status ${res.status})`);
             }
         } finally {
-            setFetching(false);
+            if (isInitialFetch) {
+                setFetching(false);
+            } else {
+                setPaginationLoading(false);
+            }
         }
     };
 
     useEffect(() => {
 
         if (sportid) {
-            fetchData("fetchAll");
+            setPage(1);
+            fetchData("fetchAll", 1);
         } else {
-            fetchData("filtered");
+            setPage(1);
+            fetchData("filtered", 1);
             setFetchingCount(0);
         }
 
@@ -171,6 +198,13 @@ const HomeScreen: React.FC = () => {
         state?.active_tab,
         state?.searchterm,
     ]);
+
+    // Handle pagination
+    useEffect(() => {
+        if (page > 1) {
+            fetchData(undefined, page);
+        }
+    }, [page]);
 
     useInterval(() => {
         if (!socket.connected) {
@@ -199,8 +233,7 @@ const HomeScreen: React.FC = () => {
             layoutMeasurement.height + contentOffset.y >=
             contentSize.height - 50;
 
-        if (isEndReached && !fetching) {
-            setFetching(true);
+        if (isEndReached && !fetching && !paginationLoading) {
             setPage(prev => prev + 1);
         }
     };
@@ -219,7 +252,10 @@ const HomeScreen: React.FC = () => {
                     <HighlightsBoard />
                 </View>
 
-                <MainTabs tab={"highlights"} />
+                <MainTabs 
+                    tab={state?.active_tab || "highlights"} 
+                    fetching={fetching}
+                />
 
                 {fetchError ? (
                     <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -248,6 +284,8 @@ const HomeScreen: React.FC = () => {
                     betslip_key={"betslip"}
                     fetchingcount={fetchingCount}
                 />
+
+                {paginationLoading && <ShimmerLoader count={3} height={100} marginVertical={8} />}
 
                 {/* <PopupBanner /> */}
 

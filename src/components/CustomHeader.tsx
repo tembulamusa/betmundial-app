@@ -73,7 +73,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }
             } else {
-                setLoginError(response.result?.message || response?.error?.message || 'Login failed');
+                setLoginError(response.result?.message || response?.error?.message || response?.error || 'Login failed');
             }
         } catch (err) {
             console.error('Login error:', err);

@@ -7,15 +7,17 @@ import React, {
 
 import {
     View,
-    ScrollView,
     StyleSheet,
-    Alert,
     Text,
     Animated,
-    ActivityIndicator
+    ActivityIndicator,
+    ScrollView,
+    NativeSyntheticEvent,
+    NativeScrollEvent
 } from "react-native";
 
 import MatchList from "../../components/matches";
+import ShimmerLoader from "../../components/common/ShimmerLoader";
 import useInterval from "../../hooks/set-interval.hook";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { Context } from "../../context/store";
@@ -30,11 +32,11 @@ const LiveScreen: React.FC<any> = ({ route }) => {
     const [state, dispatch] = useContext(Context);
 
     const [fetching, setFetching] = useState<boolean>(false);
-    const [limit] = useState<number>(300);
+    const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
+    const [limit] = useState<number>(20);
+    const [page, setPage] = useState<number>(1);
     const [producers, setProducers] = useState<any[]>([]);
     const [threeWay, setThreeWay] = useState<boolean>(true);
-
-    const [page] = useState<number>(1);
     const [betradarSportId, setBetradarSportId] = useState<number>(1);
     const [reload, setReload] = useState<boolean>(false);
 
@@ -167,7 +169,8 @@ const LiveScreen: React.FC<any> = ({ route }) => {
 
     }, [betradarSportId, socket.connected]);
 
-    const fetchData = async () => {
+    const fetchData = async (pageNo?: number, isInitial?: boolean) => {
+        const currentPageNo = pageNo || 1;
         const selectedSport = await state?.selectedLivesport || await getItem("selectedLivesport");
         let endpoint =
             "/sports/matches/live/" +
@@ -180,11 +183,15 @@ const LiveScreen: React.FC<any> = ({ route }) => {
                 }`
             ) +
             "?page=" +
-            (page || 1) +
-            `&size=${limit || 200}`;
+            currentPageNo +
+            `&size=${limit || 20}`;
 
-        if (isFirstLoad.current) {
+        const isPaginationRequest = currentPageNo > 1;
+
+        if (isInitial || currentPageNo === 1) {
             setFetching(true);
+        } else {
+            setPaginationLoading(true);
         }
 
         const response = await makeRequest({
@@ -193,43 +200,60 @@ const LiveScreen: React.FC<any> = ({ route }) => {
             apiVersion: 2
         });
 
-        if (isFirstLoad.current) {
+        if (isInitial || currentPageNo === 1) {
             setFetching(false);
             isFirstLoad.current = false;
+        } else {
+            setPaginationLoading(false);
         }
 
         if (response?.status == 200) {
 
             const result = response?.data;
+            const newItems = result?.data?.items?.sort(
+                (a: any, b: any) =>
+                    (a.start_time - b.start_time) ||
+                    (b.match_time - a.match_time)
+            ) || result;
 
-            setMatches(
-                result?.data?.items?.sort(
-                    (a: any, b: any) =>
-                        (a.start_time - b.start_time) ||
-                        (b.match_time - a.match_time)
-                ) || result
-            );
+            // If pagination request, append to existing data
+            if (isPaginationRequest) {
+                setMatches(prevMatches => [...prevMatches, ...newItems]);
+            } else {
+                setMatches(newItems);
+            }
 
             setProducers(result?.producer_statuses);
 
         } else {
 
-            setMatches([]);
+            if (currentPageNo === 1) {
+                setMatches([]);
+            }
 
         }
 
     };
 
     useEffect(() => {
-        fetchData();
+        setPage(1);
+        fetchData(1, true);
     }, [spid]);
+
+    // Handle pagination
+    useEffect(() => {
+        if (page > 1) {
+            fetchData(page, false);
+        }
+    }, [page]);
 
     useEffect(() => {
 
         if (state?.selectedLivesport) {
 
             if (spid) {
-                fetchData();
+                setPage(1);
+                fetchData(1, true);
             }
 
             setBetradarSportId(
@@ -253,8 +277,9 @@ const LiveScreen: React.FC<any> = ({ route }) => {
 
     useEffect(() => {
 
-        if (reload == true) {
-            fetchData();
+        if (reload === true) {
+            setPage(1);
+            fetchData(1, true);
         }
 
         setReload(false);
@@ -304,10 +329,24 @@ const LiveScreen: React.FC<any> = ({ route }) => {
 
     }, []);
 
-    return (
+    const handleScroll = (
+        event: NativeSyntheticEvent<NativeScrollEvent>
+    ) => {
 
-        <ScrollView style={styles.container}>
+        const { layoutMeasurement, contentOffset, contentSize } =
+            event.nativeEvent;
 
+        const isEndReached =
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - 50;
+
+        if (isEndReached && !fetching && !paginationLoading) {
+            setPage(prev => prev + 1);
+        }
+    };
+
+    const listHeader = (
+        <>
             <Carousel />
 
             <View style={styles.liveHeader}>
@@ -334,33 +373,38 @@ const LiveScreen: React.FC<any> = ({ route }) => {
                     </Text>
                 </View>
             )}
+        </>
+    );
 
-            {!fetching && matches?.length > 0 && (
-                <MatchList
-                    socket={socket}
-                    live={true}
-                    matches={matches}
-                    producers={producers}
-                    three_way={threeWay}
-                    fetching={fetching}
-                    setReload={setReload}
-                    betslip_key={"betslip"}
-                    fetchingcount={matches?.length}
-                    subTypes={
-                        state?.selectedLivesport
+    return (
+        <View style={styles.container}>
+            <MatchList
+                socket={socket}
+                live={true}
+                matches={!fetching ? matches : []}
+                producers={producers}
+                three_way={threeWay}
+                fetching={fetching}
+                setReload={setReload}
+                betslip_key={"betslip"}
+                fetchingcount={matches?.length}
+                ListHeaderComponent={listHeader}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                subTypes={
+                    state?.selectedLivesport
+                        ?
+                        state?.selectedLivesport?.sport_name?.toLowerCase() !== "soccer"
                             ?
-                            state?.selectedLivesport?.sport_name?.toLowerCase() !== "soccer"
-                                ?
-                                [state?.selectedLivesport?.default_market]
-                                :
-                                [1, 10, 18]
+                            [state?.selectedLivesport?.default_market]
                             :
                             [1, 10, 18]
-                    }
-                />
-            )}
-
-        </ScrollView>
+                        :
+                        [1, 10, 18]
+                }
+            />
+            {paginationLoading && <View style={styles.shimmerContainer}><ShimmerLoader count={3} height={100} marginVertical={8} /></View>}
+        </View>
 
     );
 
@@ -373,7 +417,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.background,
-        paddinghorizontal: 8,
+        paddingHorizontal: 0,
     },
 
     liveHeader: {
@@ -414,6 +458,11 @@ const styles = StyleSheet.create({
     emptyText: {
         color: "#777",
         fontSize: 16
+    },
+
+    shimmerContainer: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     }
 
 });

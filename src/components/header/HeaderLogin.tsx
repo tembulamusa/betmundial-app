@@ -4,6 +4,7 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
+    Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAppDispatch } from "../../context/store";
@@ -17,11 +18,11 @@ const HeaderLogin: React.FC<HeaderLoginProps> = ({ onLoginPress }) => {
     const dispatch = useAppDispatch();
 
     const handleLogin = () => {
-        if (onLoginPress) {
-            onLoginPress();
-            return;
-        }
-
+        // if (onLoginPress) {
+        //     onLoginPress();
+        //     return;
+        // }
+        // Alert.alert("Login Required", "Please log in to access this feature.")
         dispatch({
             type: "SET",
             key: "showloginmodal",

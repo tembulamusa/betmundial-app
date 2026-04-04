@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState, useContext } from "react";
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
+import React, { useRef, useEffect, useState, useContext, Suspense } from "react";
+import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -24,6 +24,8 @@ import RegisterScreen from "./src/screens/auth/RegisterScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MatchAllMarketsScreen from "./src/screens/home/MatchAllMarketsScreen";
 import ProfileScreen from "./src/screens/home/ProfileScreen";
+const MemoizedProfileScreen = React.memo(ProfileScreen);
+
 import CasinoScreen from "./src/screens/home/CasinoScreen";
 import DepositScreen from "./src/screens/home/DepositScreen";
 import WithdrawScreen from "./src/screens/home/WithdrawScreen";
@@ -48,11 +50,38 @@ if (__DEV__ && !(global as any).__BETMUNDIAL_LOGS_SUPPRESSED__) {
   console.debug = () => { };
 }
 
+/* ================= LAZY TAB SCREEN COMPONENT ================= */
+const LazyTabScreen = React.memo(function LazyTabScreen({ Component, name }: { Component: React.ComponentType<any>, name: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Load the component after a short delay to allow tab switch to complete
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <View style={styles.lazyLoadingContainer}>
+        <ActivityIndicator size="large" color="#a71f66" />
+        <Text style={styles.lazyLoadingText}>Loading {name}...</Text>
+      </View>
+    );
+  }
+
+  return <Component />;
+});
+
 /* ================= HOME STACK ================= */
-function HomeStackScreen() {
+const HomeStackScreen = React.memo(function HomeStackScreen() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="HomeMain" component={HomeScreen} />
+      <HomeStack.Screen name="HomeMain">
+        {() => <LazyTabScreen Component={HomeScreen} name="Sports" />}
+      </HomeStack.Screen>
       <HomeStack.Screen name="LoginScreen" component={LoginScreen} />
       <HomeStack.Screen name="RegisterScreen" component={RegisterScreen} />
       <HomeStack.Screen name="MatchAllMarketsScreen" component={MatchAllMarketsScreen} />
@@ -63,26 +92,30 @@ function HomeStackScreen() {
       <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
     </HomeStack.Navigator>
   );
-}
+});
 
 /* ================= CASINO STACK ================= */
-function CasinoStackScreen() {
+const CasinoStackScreen = React.memo(function CasinoStackScreen() {
   return (
     <CasinoStack.Navigator screenOptions={{ headerShown: false }}>
-      <CasinoStack.Screen name="CasinoMain" component={CasinoScreen} />
+      <CasinoStack.Screen name="CasinoMain">
+        {() => <LazyTabScreen Component={CasinoScreen} name="Casino" />}
+      </CasinoStack.Screen>
       <CasinoStack.Screen name="CasinoLaunchedGameScreen" component={CasinoLaunchedGameScreen} />
     </CasinoStack.Navigator>
   );
-}
+});
 
 /* ================= JACKPOT STACK ================= */
-function JackpotStackScreen() {
+const JackpotStackScreen = React.memo(function JackpotStackScreen() {
   return (
     <JackpotStack.Navigator screenOptions={{ headerShown: false }}>
-      <JackpotStack.Screen name="JackpotMain" component={JackpotScreen} />
+      <JackpotStack.Screen name="JackpotMain">
+        {() => <LazyTabScreen Component={JackpotScreen} name="Jackpot" />}
+      </JackpotStack.Screen>
     </JackpotStack.Navigator>
   );
-}
+})
 
 /* ================= CENTER BETSLIP BUTTON ================= */
 function BetslipButton() {
@@ -112,7 +145,7 @@ function MainTabs() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             header: (props) => <CustomHeader {...props} />,
-
+            lazy: true,
             tabBarIcon: ({ color, size }) => {
               const icons = {
                 Sports: "home",
@@ -141,7 +174,7 @@ function MainTabs() {
             name="Sports"
             component={HomeStackScreen}
             listeners={{
-              tabPress: () => {
+              tabPress: (e) => {
                 dispatch({ type: "SET", key: "playType", payload: "sports" });
               },
             }}
@@ -150,19 +183,9 @@ function MainTabs() {
           <Tab.Screen
             name="Casino"
             component={CasinoStackScreen}
-            listeners={({ navigation, route }) => ({
-              tabPress: () => {
-                const navState = navigation.getState();
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
                 dispatch({ type: "SET", key: "playType", payload: "casino" });
-                const tab = navState.routes.find(r => r.name === route.name);
-
-                if (tab?.state?.index > 0) {
-                  navigation.dispatch({
-                    ...navigation.navigate(route.name),
-                    type: "POP_TO_TOP",
-                    target: tab.key,
-                  });
-                }
               },
             })}
           />
@@ -170,13 +193,15 @@ function MainTabs() {
             name="Jackpot"
             component={JackpotStackScreen}
             listeners={{
-              tabPress: () => {
+              tabPress: (e) => {
                 dispatch({ type: "SET", key: "playType", payload: "jackpot" });
               },
             }}
           />
 
-          <Tab.Screen name="Dashboard" component={ProfileScreen} />
+          <Tab.Screen name="Dashboard">
+            {() => <LazyTabScreen Component={MemoizedProfileScreen} name="Dashboard" />}
+          </Tab.Screen>
         </Tab.Navigator>
 
         {/* ✅ FLOATING BETSLIP BUTTON */}
@@ -290,5 +315,19 @@ const styles = StyleSheet.create({
     fontSize: 14,       // slightly bigger for visibility
     fontWeight: "700",
     color: "#fff",
+  },
+
+  lazyLoadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#020617",
+  },
+
+  lazyLoadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#ffffff",
+    fontWeight: "500",
   },
 });

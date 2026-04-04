@@ -6,7 +6,8 @@ import {
     ScrollView,
     Image,
     StyleSheet,
-    Alert
+    Alert,
+    ActivityIndicator
 } from "react-native";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,9 +24,10 @@ interface Competition {
 
 interface Props {
     tab: string;
+    fetching?: boolean;
 }
 
-const MainTabs: React.FC<Props> = ({ tab }) => {
+const MainTabs: React.FC<Props> = ({ tab, fetching = false }) => {
 
     const navigation: any = useNavigation();
     const route = useRoute();
@@ -75,8 +77,6 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
 
     }, []);
 
-
-
     const setActiveTabSpace = (selectedTab: string) => {
 
         dispatch({
@@ -118,8 +118,14 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
                         activeTab === "highlights" && styles.activeTab
                     ]}
                     onPress={() => setActiveTabSpace("highlights")}
+                    disabled={fetching}
                 >
-                    <Text style={styles.tabText}>Highlights</Text>
+                    <View style={styles.tabContent}>
+                        <Text style={styles.tabText}>Highlights</Text>
+                        {activeTab === "highlights" && fetching && (
+                            <ActivityIndicator size="small" color="#a71f66" style={styles.tabLoader} />
+                        )}
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -128,8 +134,14 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
                         activeTab === "today" && styles.activeTab
                     ]}
                     onPress={() => setActiveTabSpace("today")}
+                    disabled={fetching}
                 >
-                    <Text style={styles.tabText}>Today's</Text>
+                    <View style={styles.tabContent}>
+                        <Text style={styles.tabText}>Today's</Text>
+                        {activeTab === "today" && fetching && (
+                            <ActivityIndicator size="small" color="#a71f66" style={styles.tabLoader} />
+                        )}
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -138,8 +150,14 @@ const MainTabs: React.FC<Props> = ({ tab }) => {
                         activeTab === "tomorrow" && styles.activeTab
                     ]}
                     onPress={() => setActiveTabSpace("tomorrow")}
+                    disabled={fetching}
                 >
-                    <Text style={styles.tabText}>Tomorrow</Text>
+                    <View style={styles.tabContent}>
+                        <Text style={styles.tabText}>Tomorrow</Text>
+                        {activeTab === "tomorrow" && fetching && (
+                            <ActivityIndicator size="small" color="#a71f66" style={styles.tabLoader} />
+                        )}
+                    </View>
                 </TouchableOpacity>
 
             </View>
@@ -216,6 +234,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12
     },
 
+    tabContent: {
+        flexDirection: "row",
+        alignItems: "center"
+    },
+
     activeTab: {
         borderBottomWidth: 3,
         borderBottomColor: "#a71f66"
@@ -224,6 +247,10 @@ const styles = StyleSheet.create({
     tabText: {
         color: "white",
         fontWeight: "bold"
+    },
+
+    tabLoader: {
+        marginLeft: 4
     },
 
     competitionScroll: {

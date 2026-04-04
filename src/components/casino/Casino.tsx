@@ -28,7 +28,7 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
     const [state, dispatch] = useContext(Context);
 
     const [games, setGames] = useState<any[] | null>(null);
-    const [fetching, setFetching] = useState(false);
+    const [fetching, setFetching] = useState(true);
     const [filtersReady, setFiltersReady] = useState(false);
 
     useEffect(() => {
@@ -74,6 +74,7 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
 
         const fetchCasinoGames = async () => {
             setFetching(true);
+            setGames(null);
 
             try {
                 let endpoint = "games-list";

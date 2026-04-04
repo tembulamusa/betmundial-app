@@ -217,6 +217,9 @@ export default React.memo(CasinoGame);
 const styles = StyleSheet.create({
     container: {
         marginBottom: 20,
+        backgroundColor: "rgba(255,255,255,0.1)",
+        borderRadius: 4,
+        // padding: 10,
     },
     image: {
         width: "100%",
@@ -257,6 +260,8 @@ const styles = StyleSheet.create({
     title: {
         color: "#fff",
         fontWeight: "600",
-        marginTop: 8,
+        // marginTop: 8,
+        textAlign: "center",
+        padding: 8
     },
 });
