@@ -11,8 +11,8 @@ import {
     SafeAreaView,
     ScrollView,
     AppState,
+    Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
 import { Context } from "../../context/store";
@@ -21,6 +21,8 @@ import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
 import { makeRequest } from "../utils/makeRequest";
+import useInterval from "../../hooks/set-interval.hook";
+import { getItem, setItem, removeItem } from "../utils/local-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -32,7 +34,14 @@ const HeaderUser = () => {
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
-    const user = state?.user;
+    const [user, setUser] = useState(state?.user);
+
+    const updateStoredUser = useCallback(async (nextUser: any) => {
+        if (!nextUser) return;
+        setUser(nextUser);
+        dispatch({ type: "SET", key: "user", payload: nextUser });
+        await setItem("user", nextUser);
+    }, [dispatch]);
 
     const refreshUserBalance = useCallback(async () => {
         if (!user?.member_id) return;
@@ -66,44 +75,84 @@ const HeaderUser = () => {
             payload: nextUser,
         });
 
-        await AsyncStorage.setItem("user", JSON.stringify(nextUser));
+        await setItem("user", nextUser);
     }, [dispatch, user]);
 
-    useEffect(() => {
-        const handleConnect = () => {
-            refreshUserBalance();
-        };
+    const handleTokenRefresh = useCallback(async () => {
+        if (!user) return;
 
-        const handleReconnect = () => {
-            refreshUserBalance();
-        };
+        const endpoint = "/auth/token/refresh";
+        const values = { refresh_token: user?.refresh_token };
 
-        const handleAppStateChange = (nextState: string) => {
-            if (nextState === "active") {
-                refreshUserBalance();
-            }
-        };
+        const result = await makeRequest<any>({
+            url: endpoint,
+            method: "POST",
+            data: values,
+            apiVersion: 2,
+        });
 
-        if (!socket.connected) {
-            socket.connect();
+        if ([200, 201, 204].includes(result.status)) {
+            await updateStoredUser(result.data ?? user);
+            return;
         }
 
-        socket.on("connect", handleConnect);
-        socket.io.on("reconnect", handleReconnect);
+        await removeItem("user");
+        dispatch({ type: "DEL", key: "user" });
+        dispatch({ type: "SET", key: "showloginmodal", payload: true });
+        dispatch({ type: "SET", key: "sessionMessage", payload: "User Session Expired. Please Login Again" });
+    }, [dispatch, updateStoredUser]);
 
-        const appStateSubscription = AppState.addEventListener(
-            "change",
-            handleAppStateChange
-        );
+    // useInterval(async () => {
+    //     if (user?.balance && !socket.connected) {
+    //         refreshUserBalance();
+    //     }
+    // }, user ? 1000 * 60 : null);
 
-        refreshUserBalance();
+    useInterval(async () => {
+        try {
+            const storedUser = await getItem("user");
+            if (!storedUser) {
+                dispatch({ type: "DEL", key: "user" });
+                if (state?.showloginmodal === false) {
+                    dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                }
+            }
+        } catch (err) {
+            console.error("Expiry check failed:", err);
+        }
+    }, 1000 * 60 * 60);
 
-        return () => {
-            socket.off("connect", handleConnect);
-            socket.io.off("reconnect", handleReconnect);
-            appStateSubscription.remove();
+    useInterval(async () => {
+        if (user) {
+            await handleTokenRefresh();
+        }
+    }, user ? 60 * 60 * 1000 * 7 : null);
+
+
+    useEffect(() => {
+        if (!user?.profile_id) return undefined;
+
+        socket.emit("user.profile", user.profile_id);
+
+        const profileEvent = `user#profile#${user.profile_id}`;
+        const handleProfileUpdate = (data: any) => {
+            // Alert.alert("Profile Update", JSON.stringify(data));
+            if (!data) return;
+            const nextUser = {
+                ...user,
+                balance: data.balance,
+                bonus: data.bonus,
+            };
+            updateStoredUser(nextUser);
         };
-    }, [refreshUserBalance, state?.toggleuserbalance]);
+
+        socket.on(profileEvent, handleProfileUpdate);
+        return () => {
+            socket.off(profileEvent, handleProfileUpdate);
+        };
+    }, [user, updateStoredUser]);
+
+
 
     if (!user) return null;
 
@@ -124,7 +173,8 @@ const HeaderUser = () => {
         }).start(() => setDrawerVisible(false));
     };
 
-    const logout = () => {
+    const logout = async () => {
+        await removeItem("user");
         dispatch({ type: "DEL", key: "user" });
         closeDrawer();
         navigation.navigate("HomeScreen");
@@ -138,7 +188,7 @@ const HeaderUser = () => {
                     onPress={() => navigation.navigate("DepositScreen")}
                 >
                     <Text style={styles.depositText}>
-                        KES {formatToFloat(user.balance) || 0}
+                        KES {formatToFloat(user?.balance) || 0}
                     </Text>
                 </TouchableOpacity>
 

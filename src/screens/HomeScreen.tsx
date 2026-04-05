@@ -146,7 +146,6 @@ const HomeScreen: React.FC = () => {
                 data,
                 apiVersion: 2,
             });
-
             setFetchingCount(fetchcount);
 
             if ([200, 201].includes(res.status)) {
@@ -285,7 +284,7 @@ const HomeScreen: React.FC = () => {
                     fetchingcount={fetchingCount}
                 />
 
-                {paginationLoading && <ShimmerLoader count={3} height={100} marginVertical={8} />}
+                {paginationLoading && <ShimmerLoader count={3} height={50} marginVertical={8} />}
 
                 {/* <PopupBanner /> */}
 

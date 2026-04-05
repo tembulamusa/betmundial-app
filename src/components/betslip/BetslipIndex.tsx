@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   modalBody: { flex: 1 },
   betslipContainer: { padding: 10 },
   bonusBox: { padding: 8, backgroundColor: "#fbd702", marginBottom: 10 },
-  placeholderContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  placeholderContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, backgroundColor: "rgba(255,255,255,0.1)" },
   placeholderHeader: { marginBottom: 20 },
   placeholderTitle: { fontSize: 24, fontWeight: "bold", color: "#fff", textAlign: "center" },
   placeholderContent: { alignItems: "center", justifyContent: "center" },

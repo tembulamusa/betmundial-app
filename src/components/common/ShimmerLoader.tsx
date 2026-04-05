@@ -11,7 +11,7 @@ interface ShimmerLoaderProps {
 
 const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({
     count = 3,
-    height = 100,
+    height = 50,
     marginVertical = 8,
 }) => {
     return (
@@ -20,6 +20,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({
                 <ShimmerPlaceholder
                     key={index}
                     visible={false}
+                    shimmerColors={['rgba(12, 32, 76, 0.2)', 'rgba(24, 50, 110, 0.35)', 'rgba(12, 32, 76, 0.2)']}
                     shimmerStyle={styles.shimmerItem}
                     style={[styles.shimmerContainer, {
                         height,
@@ -35,17 +36,17 @@ export default ShimmerLoader;
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: 0,
+        paddingHorizontal: 4,
         paddingVertical: 8,
         width: '100%',
     },
     shimmerContainer: {
         width: '100%',
         borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(10, 32, 72, 0.45)',
     },
     shimmerItem: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 8,
+        backgroundColor: 'rgba(12, 38, 90, 0.35)',
+        borderRadius: 4,
     },
 });

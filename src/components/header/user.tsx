@@ -21,7 +21,7 @@ const LoggedInUser = () => {
                 onPress={() => navigation.navigate("Deposit" as never)}
             >
                 <Icon name="money" size={16} color="#FFD700" />
-                <Text style={styles.depositText}> Deposit</Text>
+                <Text style={styles.depositText}>Deposit</Text>
             </TouchableOpacity>
 
             {/* Login Button */}
