@@ -199,16 +199,14 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
         <View style={styles.container}>
 
             {matchwithmarkets && (
-                <>
-                    <MoreMarketsHeader match={matchwithmarkets} live={live} />
-                    <MarketList
-                        live={live}
-                        initialMatchwithmarkets={matchwithmarkets}
-                        producers={producers}
-                        betstopMessage={betstopMessage}
-                        setBetstopMessage={setBetstopMessage}
-                    />
-                </>
+                <MarketList
+                    live={live}
+                    initialMatchwithmarkets={matchwithmarkets}
+                    producers={producers}
+                    betstopMessage={betstopMessage}
+                    setBetstopMessage={setBetstopMessage}
+                    ListHeaderComponent={<MoreMarketsHeader match={matchwithmarkets} live={live} />}
+                />
             )}
 
             {(!matchwithmarkets && !isLoading) &&

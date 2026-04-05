@@ -31,9 +31,9 @@ interface Props {
     fetching?: boolean;
 }
 
-const MatchList: React.FC<Props> = ({ 
-    matches, 
-    live, 
+const MatchList: React.FC<Props> = ({
+    matches,
+    live,
     ListHeaderComponent,
     onScroll,
     scrollEventThrottle = 16,

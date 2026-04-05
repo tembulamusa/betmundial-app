@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-
 interface Props {
   parentMatchId: string | number;
 }
@@ -19,10 +18,12 @@ const MatchWidget: React.FC<Props> = ({ parentMatchId }) => {
             margin:0;
             padding:0;
             background:#111;
+            color:#fff;
           }
           .sr-widget {
             width:100%;
           }
+          
         </style>
       </head>
 
@@ -76,7 +77,7 @@ export default MatchWidget;
 
 const styles = StyleSheet.create({
   container: {
-    height: 320,
+    height: 280,
     width: "100%",
     backgroundColor: "#111",
   },

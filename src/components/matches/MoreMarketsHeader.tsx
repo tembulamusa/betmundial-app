@@ -89,15 +89,11 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
                     <Text style={styles.backIcon}>{"←"}</Text>
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
-
-                <Text style={styles.matchTitle}>
-                    {match?.home_team} - {match?.away_team}
-                </Text>
             </View>
 
             <MatchWidget parentMatchId={match?.parent_match_id} />
 
-            <LivescoreFooter />
+            {/* <LivescoreFooter /> */}
         </>
     );
 };
@@ -108,7 +104,7 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 12,
         paddingHorizontal: 12,
-        paddingBottom: 10,
+        // paddingBottom: 10,
         backgroundColor: "#111",
     },
 
@@ -116,6 +112,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         marginBottom: 6,
+        backgroundColor: "#000",
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        borderRadius: 6,
+        alignSelf: "flex-start",
     },
 
     backText: {
@@ -130,6 +131,35 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "700",
         lineHeight: 18,
+    },
+
+    teamRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+    },
+
+    teamBlock: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    teamJersey: {
+        fontSize: 18,
+        marginRight: 8,
+    },
+
+    teamName: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    vsText: {
+        color: "#ccc",
+        fontSize: 12,
+        marginHorizontal: 8,
     },
 
     matchTitle: {

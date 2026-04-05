@@ -461,8 +461,9 @@ const styles = StyleSheet.create({
     },
 
     shimmerContainer: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 0,
         paddingVertical: 8,
+        width: '100%',
     }
 
 });

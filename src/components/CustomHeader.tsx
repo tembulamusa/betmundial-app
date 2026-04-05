@@ -194,7 +194,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingBottom: 4, paddingTop: 12 },
+    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: 10, paddingBottom: 4, paddingTop: 12 },
     logo: {
         width: "100%",
         height: 60,

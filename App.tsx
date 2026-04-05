@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useContext, Suspense } from "react";
+import React, { useRef, useEffect, useState, useContext, Suspense, lazy } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -24,8 +24,6 @@ import RegisterScreen from "./src/screens/auth/RegisterScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MatchAllMarketsScreen from "./src/screens/home/MatchAllMarketsScreen";
 import ProfileScreen from "./src/screens/home/ProfileScreen";
-const MemoizedProfileScreen = React.memo(ProfileScreen);
-
 import CasinoScreen from "./src/screens/home/CasinoScreen";
 import DepositScreen from "./src/screens/home/DepositScreen";
 import WithdrawScreen from "./src/screens/home/WithdrawScreen";
@@ -34,6 +32,12 @@ import SelfExcludeScreen from "./src/screens/home/SelfExcludeScreen";
 import JackpotScreen from "./src/screens/home/JackpotScreen";
 import LiveScreen from "./src/screens/home/LiveScreen";
 import CasinoLaunchedGameScreen from "./src/components/casino/CasinoLaunchedGameScreen";
+
+// Lazy load heavy components
+const LazyHomeScreen = lazy(() => import("./src/screens/HomeScreen"));
+const LazyCasinoScreen = lazy(() => import("./src/screens/home/CasinoScreen"));
+const LazyJackpotScreen = lazy(() => import("./src/screens/home/JackpotScreen"));
+const LazyProfileScreen = lazy(() => import("./src/screens/home/ProfileScreen"));
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -50,20 +54,28 @@ if (__DEV__ && !(global as any).__BETMUNDIAL_LOGS_SUPPRESSED__) {
   console.debug = () => { };
 }
 
-/* ================= LAZY TAB SCREEN COMPONENT ================= */
-const LazyTabScreen = React.memo(function LazyTabScreen({ Component, name }: { Component: React.ComponentType<any>, name: string }) {
-  const [isLoaded, setIsLoaded] = useState(false);
+/* ================= PRELOAD WRAPPER COMPONENT ================= */
+/**
+ * Shows a preload screen first, then loads the actual heavy component
+ * This creates a multi-stage loading experience:
+ * 1. Instant preload (fast perceived response)
+ * 2. After delay, heavy component mounts and initializes
+ * 3. Component shows its own loading states
+ */
+const PreloadWrapper = React.memo(function PreloadWrapper({ Component, name }: { Component: React.ComponentType<any>, name: string }) {
+  const [showComponent, setShowComponent] = useState(false);
 
   useEffect(() => {
-    // Load the component after a short delay to allow tab switch to complete
+    // Defer component rendering to allow initial preload to render
     const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 100);
+      setShowComponent(true);
+    }, 400); // 400ms preload delay before heavy component mounts
 
     return () => clearTimeout(timer);
   }, []);
 
-  if (!isLoaded) {
+  // Show preload screen while heavy component hasn't been set to load
+  if (!showComponent) {
     return (
       <View style={styles.lazyLoadingContainer}>
         <ActivityIndicator size="large" color="#a71f66" />
@@ -72,16 +84,30 @@ const LazyTabScreen = React.memo(function LazyTabScreen({ Component, name }: { C
     );
   }
 
-  return <Component />;
+  // Render the actual heavy component (with its own loading states)
+  return (
+    <Suspense fallback={
+      <View style={styles.lazyLoadingContainer}>
+        <ActivityIndicator size="large" color="#a71f66" />
+        <Text style={styles.lazyLoadingText}>Loading {name}...</Text>
+      </View>
+    }>
+      <Component />
+    </Suspense>
+  );
 });
+
+/* ================= LAZY LOADED COMPONENTS ================= */
+const LazyHomeScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyHomeScreen} name="Sports" />);
+const LazyCasinoScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyCasinoScreen} name="Casino" />);
+const LazyJackpotScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyJackpotScreen} name="Jackpot" />);
+const LazyProfileScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyProfileScreen} name="Dashboard" />);
 
 /* ================= HOME STACK ================= */
 const HomeStackScreen = React.memo(function HomeStackScreen() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="HomeMain">
-        {() => <LazyTabScreen Component={HomeScreen} name="Sports" />}
-      </HomeStack.Screen>
+      <HomeStack.Screen name="HomeMain" component={LazyHomeScreenWrapper} />
       <HomeStack.Screen name="LoginScreen" component={LoginScreen} />
       <HomeStack.Screen name="RegisterScreen" component={RegisterScreen} />
       <HomeStack.Screen name="MatchAllMarketsScreen" component={MatchAllMarketsScreen} />
@@ -98,9 +124,7 @@ const HomeStackScreen = React.memo(function HomeStackScreen() {
 const CasinoStackScreen = React.memo(function CasinoStackScreen() {
   return (
     <CasinoStack.Navigator screenOptions={{ headerShown: false }}>
-      <CasinoStack.Screen name="CasinoMain">
-        {() => <LazyTabScreen Component={CasinoScreen} name="Casino" />}
-      </CasinoStack.Screen>
+      <CasinoStack.Screen name="CasinoMain" component={LazyCasinoScreenWrapper} />
       <CasinoStack.Screen name="CasinoLaunchedGameScreen" component={CasinoLaunchedGameScreen} />
     </CasinoStack.Navigator>
   );
@@ -110,9 +134,7 @@ const CasinoStackScreen = React.memo(function CasinoStackScreen() {
 const JackpotStackScreen = React.memo(function JackpotStackScreen() {
   return (
     <JackpotStack.Navigator screenOptions={{ headerShown: false }}>
-      <JackpotStack.Screen name="JackpotMain">
-        {() => <LazyTabScreen Component={JackpotScreen} name="Jackpot" />}
-      </JackpotStack.Screen>
+      <JackpotStack.Screen name="JackpotMain" component={LazyJackpotScreenWrapper} />
     </JackpotStack.Navigator>
   );
 })
@@ -199,9 +221,7 @@ function MainTabs() {
             }}
           />
 
-          <Tab.Screen name="Dashboard">
-            {() => <LazyTabScreen Component={MemoizedProfileScreen} name="Dashboard" />}
-          </Tab.Screen>
+          <Tab.Screen name="Dashboard" component={LazyProfileScreenWrapper} />
         </Tab.Navigator>
 
         {/* ✅ FLOATING BETSLIP BUTTON */}

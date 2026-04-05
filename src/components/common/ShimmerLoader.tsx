@@ -21,11 +21,10 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({
                     key={index}
                     visible={false}
                     shimmerStyle={styles.shimmerItem}
-                    style={{
+                    style={[styles.shimmerContainer, {
                         height,
                         marginVertical,
-                        borderRadius: 8,
-                    }}
+                    }]}
                 />
             ))}
         </View>
@@ -36,8 +35,14 @@ export default ShimmerLoader;
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 0,
         paddingVertical: 8,
+        width: '100%',
+    },
+    shimmerContainer: {
+        width: '100%',
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     shimmerItem: {
         backgroundColor: 'rgba(255, 255, 255, 0.1)',

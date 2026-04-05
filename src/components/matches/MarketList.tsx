@@ -11,6 +11,7 @@ interface MarketListProps {
     producers?: any;
     betstopMessage?: any;
     setBetstopMessage?: (msg: any) => void;
+    ListHeaderComponent?: React.ReactElement | null;
 }
 
 interface MarketFilter {
@@ -34,6 +35,7 @@ const MarketList: React.FC<MarketListProps> = ({
     producers,
     betstopMessage,
     setBetstopMessage,
+    ListHeaderComponent,
 }) => {
     const [marketsFilter, setMarketsFilter] = useState<MarketFilter | null>(null);
     const [matchwithmarkets, setMatchWithMarkets] = useState<any>({ ...initialMatchwithmarkets });
@@ -90,6 +92,8 @@ const MarketList: React.FC<MarketListProps> = ({
                     <FlatList
                         data={Object.entries(matchwithmarkets?.odds || [])}
                         keyExtractor={([mkt_id]) => mkt_id}
+                        ListHeaderComponent={ListHeaderComponent}
+                        ListHeaderComponentStyle={styles.headerComponent}
                         renderItem={({ item }) => {
                             const [mkt_id, markets] = item;
                             if (
@@ -129,7 +133,7 @@ const MarketList: React.FC<MarketListProps> = ({
 export default MarketList;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 8 },
+    container: { flex: 1 },
     unavailableContainer: { alignItems: "center", justifyContent: "center", padding: 16 },
     shimmer: { width: "100%", height: 100, marginBottom: 12 },
     unavailableText: { color: "#999", fontSize: 14 },

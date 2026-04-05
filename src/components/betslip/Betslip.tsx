@@ -4,7 +4,8 @@ import {
     Text,
     FlatList,
     StyleSheet,
-    Pressable
+    Pressable,
+    ActivityIndicator
 } from 'react-native';
 
 import BetslipSubmitForm from './BetslipSubmitForm';
@@ -24,10 +25,13 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
 
     const [state, dispatch] = useContext(Context);
     const [betslipsData, setBetslipsData] = useState<any>({});
+    const [isLoading, setIsLoading] = useState(true);
 
     const betslipKey = jackpot ? 'jackpotbetslip' : 'betslip';
 
     const loadSlip = async () => {
+        setIsLoading(true);
+
         const slip = jackpot
             ? await getJackpotBetslip()
             : await getBetslip();
@@ -41,6 +45,8 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
             key: betslipKey,
             payload: cleanSlip
         });
+
+        setIsLoading(false);
     };
 
     useEffect(() => {
@@ -76,8 +82,13 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
     return (
         <View style={styles.container}>
 
-            {data.length === 0 ? (
-                <Text style={styles.empty}>No selections yet</Text>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#a71f66" />
+                    <Text style={styles.loadingText}>Loading betslip...</Text>
+                </View>
+            ) : data.length === 0 ? (
+                <Text style={styles.empty}>No bets found</Text>
             ) : (
                 <FlatList
                     data={data}
@@ -206,5 +217,16 @@ const styles = StyleSheet.create({
         color: '#de0808',
         fontWeight: '700',
         fontSize: 16
+    },
+
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20
+    },
+    loadingText: {
+        color: '#ccc',
+        marginTop: 8,
+        fontSize: 14
     }
 });

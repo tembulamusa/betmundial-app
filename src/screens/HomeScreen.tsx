@@ -72,13 +72,13 @@ const HomeScreen: React.FC = () => {
     const fetchData = async (controlText?: string, pageNo?: number) => {
 
         const isInitialFetch = !pageNo || pageNo === 1;
-        
+
         if (isInitialFetch) {
             setFetching(true);
         } else {
             setPaginationLoading(true);
         }
-        
+
         setFetchError(null);
 
         let fetchcount = fetchingCount + 1;
@@ -152,14 +152,14 @@ const HomeScreen: React.FC = () => {
             if ([200, 201].includes(res.status)) {
                 const result = res.data;
                 const newItems = (result as any)?.data?.items || (result as any) || [];
-                
+
                 // If this is pagination (page > 1), append to existing data
                 if (isInitialFetch) {
                     setMatches(newItems);
                 } else {
                     setMatches(prevMatches => [...prevMatches, ...newItems]);
                 }
-                
+
                 setProducers((result as any)?.producer_statuses || []);
             } else {
                 if (isInitialFetch) {
@@ -252,8 +252,8 @@ const HomeScreen: React.FC = () => {
                     <HighlightsBoard />
                 </View>
 
-                <MainTabs 
-                    tab={state?.active_tab || "highlights"} 
+                <MainTabs
+                    tab={state?.active_tab || "highlights"}
                     fetching={fetching}
                 />
 
