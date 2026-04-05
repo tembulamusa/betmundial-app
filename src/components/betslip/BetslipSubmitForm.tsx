@@ -1,8 +1,7 @@
 import React, {
     useState,
     useEffect,
-    useContext,
-    useCallback
+    useContext
 } from "react";
 
 import {
@@ -19,10 +18,8 @@ import { Context } from "../../context/store";
 
 import {
     removeFromSlip,
-    getBetslip,
     clearSlip,
     removeFromJackpotSlip,
-    getJackpotBetslip,
     clearJackpotSlip,
     formatNumber
 } from "../utils/betslip";
@@ -53,11 +50,32 @@ const BetslipSubmitForm: React.FC<Props> = ({
         state?.mobilefooteramount || jackpotData?.bet_amount || 100
     );
 
-    const [possibleWin, setPossibleWin] = useState(0);
-    const [netWin, setNetWin] = useState(0);
     const [bonus, setBonus] = useState(0);
-    const [totalOdds, setTotalOdds] = useState(1);
     const [message, setMessage] = useState<any>(null);
+
+    const slips = React.useMemo(
+        () => Object.values(state?.[betslipkey] || {}),
+        [state?.[betslipkey]]
+    );
+
+    const calculations = React.useMemo(() => {
+        const odds = slips.reduce(
+            (prev: number, item: any) => prev * (item?.odd_value || 1),
+            1
+        );
+
+        let rawWin = Float(stake * odds);
+
+        if (jackpot) rawWin = jackpotData?.jackpot_amount;
+
+        if (rawWin > 500000 && !jackpot) rawWin = 500000;
+
+        return {
+            totalOdds: odds,
+            possibleWin: Float(rawWin, 2),
+            netWin: Float(rawWin, 2)
+        };
+    }, [slips, stake, jackpot, jackpotData]);
     const [ipInfo, setIpInfo] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -68,23 +86,6 @@ const BetslipSubmitForm: React.FC<Props> = ({
             .then(data => setIpInfo(data.ip))
             .catch(() => setIpInfo(null));
     }, []);
-
-    // --- Sync betslip from storage to state ---
-    useEffect(() => {
-        const loadBetslip = async () => {
-            const storedSlip = jackpot
-                ? await getJackpotBetslip()
-                : await getBetslip();
-
-            dispatch({
-                type: "SET",
-                key: betslipkey,
-                payload: storedSlip || {}
-            });
-        };
-
-        loadBetslip();
-    }, [jackpot]);
 
     // --- Rebet ---
     const rebet = async () => {
@@ -114,33 +115,6 @@ const BetslipSubmitForm: React.FC<Props> = ({
             dispatch({ type: "DEL", key: "rebetslip" });
         }
     };
-
-    // --- Calculate winnings ---
-    const updateWinnings = useCallback(() => {
-
-        const slips = Object.values(state?.[betslipkey] || {});
-
-        const odds = slips.reduce(
-            (prev: number, item: any) => prev * (item?.odd_value || 1),
-            1
-        );
-
-        setTotalOdds(odds);
-
-        let rawWin = Float(stake * odds);
-
-        if (jackpot) rawWin = jackpotData?.jackpot_amount;
-
-        if (rawWin > 500000 && !jackpot) rawWin = 500000;
-
-        setPossibleWin(Float(rawWin, 2));
-        setNetWin(Float(rawWin, 2));
-
-    }, [state?.[betslipkey], stake]);
-
-    useEffect(() => {
-        updateWinnings();
-    }, [updateWinnings]);
 
     // --- Remove all ---
     const handleRemoveAll = async () => {
@@ -224,10 +198,10 @@ const BetslipSubmitForm: React.FC<Props> = ({
             const payload = {
                 bet_string: "mobile",
                 app_name: "mobile",
-                possible_win: possibleWin,
+                possible_win: calculations.possibleWin,
                 stake_amount: stake,
                 amount: stake,
-                bet_total_odds: Float(totalOdds, 2),
+                bet_total_odds: Float(calculations.totalOdds, 2),
                 ip_address: ipInfo,
                 slip: cleanedSlip,
                 profile_id: user?.profile_id,
@@ -326,7 +300,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
             <View style={styles.row}>
                 <Text style={styles.label}>TOTAL ODDS</Text>
-                <Text style={styles.value}>{totalOdds.toFixed(2)}</Text>
+                <Text style={styles.value}>{calculations.totalOdds.toFixed(2)}</Text>
             </View>
 
             <View style={styles.row}>
@@ -351,7 +325,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
             <View style={styles.row}>
                 <Text style={styles.label}>Possible Win</Text>
                 <Text style={styles.value}>
-                    KSH {formatNumber(netWin + bonus)}
+                    KSH {formatNumber(calculations.netWin + bonus)}
                 </Text>
             </View>
 
@@ -366,7 +340,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 <TouchableOpacity
                     style={styles.placeBtn}
                     onPress={handlePlaceBet}
-                    disabled={Object.keys(state?.[betslipkey] || {}).length === 0 || stake <= 10 || isSubmitting}
+                    disabled={slips.length === 0 || stake <= 10 || isSubmitting}
                 >
                     <Text style={styles.btnText}>{isSubmitting ? "WAIT..." : "PLACE BET"}</Text>
                 </TouchableOpacity>

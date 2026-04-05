@@ -24,36 +24,48 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
 }) => {
 
     const [state, dispatch] = useContext(Context);
-    const [betslipsData, setBetslipsData] = useState<any>({});
-    const [isLoading, setIsLoading] = useState(true);
-
     const betslipKey = jackpot ? 'jackpotbetslip' : 'betslip';
-
-    const loadSlip = async () => {
-        setIsLoading(true);
-
-        const slip = jackpot
-            ? await getJackpotBetslip()
-            : await getBetslip();
-
-        const cleanSlip = slip || {};
-
-        setBetslipsData(cleanSlip);
-
-        dispatch({
-            type: "SET",
-            key: betslipKey,
-            payload: cleanSlip
-        });
-
-        setIsLoading(false);
-    };
+    const betslipsData = state?.[betslipKey] || {};
+    const [isLoading, setIsLoading] = useState(Object.keys(betslipsData).length === 0);
 
     useEffect(() => {
-        loadSlip();
-    }, [jackpot]);
+        if (Object.keys(betslipsData).length > 0) {
+            setIsLoading(false);
+            return;
+        }
 
-    const handleRemove = async (item: any) => {
+        let isMounted = true;
+
+        const loadSlip = async () => {
+            setIsLoading(true);
+
+            const slip = jackpot
+                ? await getJackpotBetslip()
+                : await getBetslip();
+
+            if (!isMounted) {
+                return;
+            }
+
+            const cleanSlip = slip || {};
+
+            dispatch({
+                type: 'SET',
+                key: betslipKey,
+                payload: cleanSlip
+            });
+
+            setIsLoading(false);
+        };
+
+        loadSlip();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [jackpot, betslipsData, dispatch, betslipKey]);
+
+    const handleRemove = React.useCallback(async (item: any) => {
         if (!item) return;
 
         if (jackpot) {
@@ -68,16 +80,17 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
 
         const cleanSlip = updatedSlip || {};
 
-        setBetslipsData(cleanSlip);
-
         dispatch({
             type: 'SET',
             key: betslipKey,
             payload: cleanSlip
         });
-    };
+    }, [jackpot, betslipKey, dispatch]);
 
-    const data = Object.values(betslipsData || {}).filter(Boolean);
+    const data = React.useMemo(
+        () => Object.values(betslipsData || {}).filter(Boolean),
+        [betslipsData]
+    );
 
     return (
         <View style={styles.container}>
@@ -146,7 +159,7 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
     );
 };
 
-export default Betslip;
+export default React.memo(Betslip);
 
 const styles = StyleSheet.create({
     container: {
