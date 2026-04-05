@@ -38,7 +38,7 @@ const LiveScreen: React.FC<any> = ({ route }) => {
     const [producers, setProducers] = useState<any[]>([]);
     const [threeWay, setThreeWay] = useState<boolean>(true);
     const [betradarSportId, setBetradarSportId] = useState<number>(1);
-    const [reload, setReload] = useState<boolean>(false);
+    // const [reload, setReload] = useState<boolean>(false);
 
     const [socketIsConnected, setSockectIsConnected] =
         useState<boolean>(socket.connected);
@@ -275,16 +275,6 @@ const LiveScreen: React.FC<any> = ({ route }) => {
 
     }, [state?.selectedLivesport]);
 
-    useEffect(() => {
-
-        if (reload === true) {
-            setPage(1);
-            fetchData(1, true);
-        }
-
-        setReload(false);
-
-    }, [reload]);
 
     useEffect(() => {
 
@@ -385,7 +375,7 @@ const LiveScreen: React.FC<any> = ({ route }) => {
                 producers={producers}
                 three_way={threeWay}
                 fetching={fetching}
-                setReload={setReload}
+                // setReload={setReload}
                 betslip_key={"betslip"}
                 fetchingcount={matches?.length}
                 ListHeaderComponent={listHeader}
