@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Context } from "../../context/store";
 import BetSlip from "./Betslip";
@@ -27,6 +28,22 @@ const BetslipIndex: React.FC<Props> = ({
 }) => {
   const [state, dispatch] = useContext(Context);
   const [bongeBonusMessage] = useState("Select 3 or more games to win big bonus");
+  const [showBetslip, setShowBetslip] = useState(false);
+
+  // Show loading placeholder immediately, then load the heavy component
+  useEffect(() => {
+    if (state?.showmobileslip && !showBetslip) {
+      // Show placeholder first
+      const timer = setTimeout(() => {
+        setShowBetslip(true);
+      }, 200); // 200ms placeholder before heavy component loads
+
+      return () => clearTimeout(timer);
+    } else if (!state?.showmobileslip) {
+      // Reset when modal closes
+      setShowBetslip(false);
+    }
+  }, [state?.showmobileslip, showBetslip]);
 
   const showShareModalDialog = () => {
     const loggedInUser = getItem("user") ?? null;
@@ -43,6 +60,23 @@ const BetslipIndex: React.FC<Props> = ({
     }
     return null;
   };
+
+  const BetslipPlaceholder = () => (
+    <View style={styles.placeholderContainer}>
+      <View style={styles.placeholderHeader}>
+        <Text style={styles.placeholderTitle}>
+          {state?.isjackpot ? "Jackpot" : "Betslip"}
+        </Text>
+      </View>
+      <View style={styles.placeholderContent}>
+        <ActivityIndicator size="large" color="#a71f66" />
+        <Text style={styles.placeholderText}>Loading betslip...</Text>
+        <Text style={styles.placeholderSubtext}>
+          Preparing your selections
+        </Text>
+      </View>
+    </View>
+  );
 
   const MobileSlipHeader = () => (
     <View style={styles.modalHeader}>
@@ -76,12 +110,18 @@ const BetslipIndex: React.FC<Props> = ({
           <MobileSlipHeader />
           <ScrollView style={styles.modalBody}>
             <View style={styles.betslipContainer}>
-              {Object.keys(state?.betslip || {}).length === 0 && <BongeBetMarkupMessage />}
-              <BetSlip
-                jackpot={state?.isjackpot}
-                betslipValidationData={betslipValidationData}
-                jackpotData={jackpotData}
-              />
+              {!showBetslip ? (
+                <BetslipPlaceholder />
+              ) : (
+                <>
+                  {Object.keys(state?.betslip || {}).length === 0 && <BongeBetMarkupMessage />}
+                  <BetSlip
+                    jackpot={state?.isjackpot}
+                    betslipValidationData={betslipValidationData}
+                    jackpotData={jackpotData}
+                  />
+                </>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -146,6 +186,12 @@ const styles = StyleSheet.create({
   modalBody: { flex: 1 },
   betslipContainer: { padding: 10 },
   bonusBox: { padding: 8, backgroundColor: "#fbd702", marginBottom: 10 },
+  placeholderContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  placeholderHeader: { marginBottom: 20 },
+  placeholderTitle: { fontSize: 24, fontWeight: "bold", color: "#fff", textAlign: "center" },
+  placeholderContent: { alignItems: "center", justifyContent: "center" },
+  placeholderText: { fontSize: 18, color: "#fff", marginTop: 20, textAlign: "center" },
+  placeholderSubtext: { fontSize: 14, color: "#ccc", marginTop: 10, textAlign: "center" },
   footer: { position: "absolute", left: 0, right: 0, backgroundColor: "#111", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 10 },
   footerItem: { flex: 1, alignItems: "center" },
   footerText: { color: "#fff" },
