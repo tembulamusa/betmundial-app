@@ -1,4 +1,11 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+    memo,
+} from "react";
 import {
     View,
     Text,
@@ -10,7 +17,6 @@ import {
     Pressable,
     SafeAreaView,
     ScrollView,
-    AppState,
     Alert,
 } from "react-native";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -20,9 +26,7 @@ import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
-import { makeRequest } from "../utils/makeRequest";
-import useInterval from "../../hooks/set-interval.hook";
-import { getItem, setItem, removeItem } from "../utils/local-storage";
+import { setItem, removeItem } from "../utils/local-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -32,163 +36,127 @@ const HeaderUser = () => {
 
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
+    const hasSubscribed = useRef(false);
+
+    // 🔥 LOCAL COPY (prevents global re-render lag)
+    const [localUser, setLocalUser] = useState(state?.user);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
-    const [user, setUser] = useState(state?.user);
 
-    const updateStoredUser = useCallback(async (nextUser: any) => {
-        if (!nextUser) return;
-        setUser(nextUser);
-        dispatch({ type: "SET", key: "user", payload: nextUser });
-        await setItem("user", nextUser);
-    }, [dispatch]);
-
-    const refreshUserBalance = useCallback(async () => {
-        if (!user?.member_id) return;
-
-        const response = await makeRequest<any>({
-            url: `wallet-details-balance?owner=member&&member_id=${user.member_id}`,
-            method: "GET",
-        });
-
-        if (![200, 201].includes(response.status) || !response.data) {
-            return;
-        }
-
-        const nextUser = {
-            ...user,
-            balance:
-                response.data?.data?.currentBalance ??
-                response.data?.currentBalance ??
-                user.balance,
-            bonus:
-                response.data?.data?.bonusBalance ??
-                response.data?.data?.bonus_balance ??
-                response.data?.bonusBalance ??
-                response.data?.bonus_balance ??
-                user.bonus,
-        };
-
-        dispatch({
-            type: "SET",
-            key: "user",
-            payload: nextUser,
-        });
-
-        await setItem("user", nextUser);
-    }, [dispatch, user]);
-
-    const handleTokenRefresh = useCallback(async () => {
-        if (!user) return;
-
-        const endpoint = "/auth/token/refresh";
-        const values = { refresh_token: user?.refresh_token };
-
-        const result = await makeRequest<any>({
-            url: endpoint,
-            method: "POST",
-            data: values,
-            apiVersion: 2,
-        });
-
-        if ([200, 201, 204].includes(result.status)) {
-            await updateStoredUser(result.data ?? user);
-            return;
-        }
-
-        await removeItem("user");
-        dispatch({ type: "DEL", key: "user" });
-        dispatch({ type: "SET", key: "showloginmodal", payload: true });
-        dispatch({ type: "SET", key: "sessionMessage", payload: "User Session Expired. Please Login Again" });
-    }, [dispatch, updateStoredUser]);
-
-    // useInterval(async () => {
-    //     if (user?.balance && !socket.connected) {
-    //         refreshUserBalance();
-    //     }
-    // }, user ? 1000 * 60 : null);
-
-    useInterval(async () => {
-        try {
-            const storedUser = await getItem("user");
-            if (!storedUser) {
-                dispatch({ type: "DEL", key: "user" });
-                if (state?.showloginmodal === false) {
-                    dispatch({ type: "SET", key: "showloginmodal", payload: true });
-                }
-            }
-        } catch (err) {
-            console.error("Expiry check failed:", err);
-        }
-    }, 1000 * 60 * 60);
-
-    useInterval(async () => {
-        if (user) {
-            await handleTokenRefresh();
-        }
-    }, user ? 60 * 60 * 1000 * 7 : null);
-
-
+    /* ================= SYNC GLOBAL USER ================= */
     useEffect(() => {
-        if (!user?.profile_id) return undefined;
+        setLocalUser(state?.user);
+    }, [state?.user]);
 
-        socket.emit("user.profile", user.profile_id);
-
-        const profileEvent = `user#profile#${user.profile_id}`;
-        const handleProfileUpdate = (data: any) => {
-            // Alert.alert("Profile Update", JSON.stringify(data));
-            if (!data) return;
-            const nextUser = {
-                ...user,
-                balance: data.balance,
-                bonus: data.bonus,
-            };
-            updateStoredUser(nextUser);
-        };
-
-        socket.on(profileEvent, handleProfileUpdate);
-        return () => {
-            socket.off(profileEvent, handleProfileUpdate);
-        };
-    }, [user, updateStoredUser]);
-
-
-
-    if (!user) return null;
-
-    const openDrawer = () => {
+    /* ================= FAST DRAWER ================= */
+    const openDrawer = useCallback(() => {
+        // ⚡ Immediate UI response
         setDrawerVisible(true);
-        Animated.timing(slideAnim, {
-            toValue: width - 260,
-            duration: 250,
-            useNativeDriver: false,
-        }).start();
-    };
 
-    const closeDrawer = () => {
+        requestAnimationFrame(() => {
+            Animated.timing(slideAnim, {
+                toValue: width - 260,
+                duration: 250,
+                useNativeDriver: true,
+            }).start();
+        });
+    }, []);
+
+    const closeDrawer = useCallback(() => {
         Animated.timing(slideAnim, {
             toValue: width,
             duration: 200,
-            useNativeDriver: false,
+            useNativeDriver: true,
         }).start(() => setDrawerVisible(false));
-    };
+    }, []);
 
-    const logout = async () => {
-        await removeItem("user");
-        dispatch({ type: "DEL", key: "user" });
+    /* ================= SOCKET ================= */
+    useEffect(() => {
+        if (!localUser?.profile_id || hasSubscribed.current) return;
+        hasSubscribed.current = true;
+
+        if (!socket.connected) {
+            socket.connect();
+        }
+
+        const event = `user#profile#${localUser.profile_id}`;
+
+        const handleConnect = () => {
+            console.log("✅ SOCKET CONNECTED");
+
+            // 🔥 EMIT ONLY AFTER CONNECT
+            socket.emit("user.profile", localUser.profile_id);
+        };
+
+        const handler = (data: any) => {
+            if (!data) return;
+
+            console.log("📩 SOCKET DATA:", data);
+
+            const nextUser = {
+                ...localUser,
+                balance: data.balance,
+                bonus: data.bonus,
+            };
+
+            // ⚡ FAST UI UPDATE
+            setLocalUser(nextUser);
+
+            // 💤 DEFER HEAVY GLOBAL UPDATE
+            setTimeout(() => {
+                dispatch({
+                    type: "SET",
+                    key: "user",
+                    payload: nextUser,
+                });
+
+                setItem("user", nextUser);
+            }, 0);
+        };
+
+        // ✅ Attach listeners ONCE
+        socket.on("connect", handleConnect);
+        socket.on(event, handler);
+
+        return () => {
+            socket.off("connect", handleConnect);
+            socket.off(event, handler);
+        };
+
+    }, [localUser?.profile_id]);
+
+    /* ================= NAVIGATION ================= */
+    const goTo = useCallback((screen: string) => {
         closeDrawer();
+
+        requestAnimationFrame(() => {
+            navigation.navigate("Sports", { screen });
+        });
+    }, [navigation]);
+
+    /* ================= LOGOUT ================= */
+    const logout = useCallback(async () => {
+        await removeItem("user");
+
+        dispatch({ type: "DEL", key: "user" });
+
+        closeDrawer();
+
         navigation.navigate("HomeScreen");
-    };
+    }, [dispatch, navigation]);
+
+    if (!localUser) return null;
 
     return (
         <>
+            {/* ✅ HEADER (RESTORED) */}
             <View style={styles.container}>
                 <TouchableOpacity
                     style={styles.depositBtn}
-                    onPress={() => navigation.navigate("DepositScreen")}
+                    onPress={() => goTo("DepositScreen")}
                 >
                     <Text style={styles.depositText}>
-                        KES {formatToFloat(user?.balance) || 0}
+                        KES {formatToFloat(localUser?.balance) || 0}
                     </Text>
                 </TouchableOpacity>
 
@@ -197,79 +165,40 @@ const HeaderUser = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* Drawer Modal */}
+            {/* ✅ DRAWER */}
             <Modal visible={drawerVisible} transparent animationType="none">
                 <Pressable style={styles.overlay} onPress={closeDrawer} />
 
-                <Animated.View style={[styles.drawer, { left: slideAnim }]}>
+                <Animated.View
+                    style={[
+                        styles.drawer,
+                        { transform: [{ translateX: slideAnim }] },
+                    ]}
+                >
                     <View style={styles.drawerHeader}>
                         <FontAwesome name="user-circle" size={40} color="#fff" />
 
-                        {/* BALANCE */}
                         <Text style={styles.drawerBalance}>
-                            KES {formatToFloat(user.balance) || 0}
+                            KES {formatToFloat(localUser.balance) || 0}
                         </Text>
 
-                        {/* ✅ BONUS ADDED */}
                         <Text style={styles.drawerBonus}>
-                            Bonus: KES {formatToFloat(user?.bonus || 0)}
+                            Bonus: KES {formatToFloat(localUser?.bonus || 0)}
                         </Text>
                     </View>
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                            closeDrawer();
-                            navigation.navigate("Sports", { screen: "DepositScreen" });
-                        }}
-                    >
-                        <FontAwesome name="money" size={18} color="#fff" />
-                        <Text style={styles.menuText}>Deposit</Text>
-                    </TouchableOpacity>
+                    <MenuItem label="Deposit" onPress={() => goTo("DepositScreen")} />
+                    <MenuItem label="Withdraw" onPress={() => goTo("WithdrawScreen")} />
+                    <MenuItem label="My Bets" onPress={() => goTo("MyBetsScreen")} />
+                    <MenuItem label="Self Exclusion" onPress={() => goTo("SelfExcludeScreen")} />
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                            closeDrawer();
-                            navigation.navigate("Sports", { screen: "WithdrawScreen" });
-                        }}
-                    >
-                        <FontAwesome name="user" size={18} color="#fff" />
-                        <Text style={styles.menuText}>Withdraw</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                            closeDrawer();
-                            navigation.navigate("Sports", { screen: "MyBetsScreen" });
-                        }}
-                    >
-                        <FontAwesome name="user" size={18} color="#fff" />
-                        <Text style={styles.menuText}>My Bets</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => {
-                            closeDrawer();
-                            navigation.navigate("Sports", { screen: "SelfExcludeScreen" });
-                        }}
-                    >
-                        <FontAwesome name="user" size={18} color="#fff" />
-                        <Text style={styles.menuText}>Self Exclusion</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.menuItem}
+                    <MenuItem
+                        label="Check Mpesa Deposit status"
                         onPress={() => {
                             closeDrawer();
                             setMpesaModalVisible(true);
                         }}
-                    >
-                        <FontAwesome name="user" size={18} color="#fff" />
-                        <Text style={styles.menuText}>Check Mpesa Deposit status</Text>
-                    </TouchableOpacity>
+                    />
 
                     <TouchableOpacity style={styles.menuItem} onPress={logout}>
                         <FontAwesome name="sign-out" size={18} color="#ff4d4d" />
@@ -278,20 +207,17 @@ const HeaderUser = () => {
                 </Animated.View>
             </Modal>
 
-            {/* MPESA Modal */}
+            {/* ✅ MPESA MODAL */}
             <Modal visible={mpesaModalVisible} transparent animationType="slide">
                 <SafeAreaView style={styles.mpesaModalContainer}>
                     <View style={styles.mpesaModalBody}>
-                        <ScrollView
-                            contentContainerStyle={styles.mpesaScrollContent}
-                        >
+                        <ScrollView contentContainerStyle={styles.mpesaScrollContent}>
                             <Text style={styles.mpesaModalTitle}>
                                 Check Deposit Status
                             </Text>
 
                             <ConfirmMpesaStatus />
 
-                            {/* ✅ FIXED CLOSE BUTTON */}
                             <TouchableOpacity
                                 style={styles.closeButton}
                                 onPress={() => setMpesaModalVisible(false)}
@@ -306,7 +232,15 @@ const HeaderUser = () => {
     );
 };
 
-export default React.memo(HeaderUser);
+/* ================= MENU ITEM ================= */
+const MenuItem = memo(({ label, onPress }) => (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+        <FontAwesome name="circle" size={8} color="#fff" />
+        <Text style={styles.menuText}>{label}</Text>
+    </TouchableOpacity>
+));
+
+export default memo(HeaderUser);
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
@@ -327,8 +261,7 @@ const styles = StyleSheet.create({
     },
 
     depositText: {
-        color: "#000000",
-        marginLeft: 6,
+        color: "#000",
         fontWeight: "bold",
     },
 
@@ -361,7 +294,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
 
-    /* ✅ BONUS STYLE */
     drawerBonus: {
         color: "#FFD700",
         marginTop: 4,
@@ -388,7 +320,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
 
-    /* MODAL */
     mpesaModalContainer: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
@@ -401,6 +332,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         maxHeight: "80%",
     },
+
     mpesaScrollContent: {
         padding: 20,
         paddingBottom: 40,
@@ -415,7 +347,7 @@ const styles = StyleSheet.create({
     },
 
     closeButton: {
-        backgroundColor: "#e70654", // brighter for visibility
+        backgroundColor: "#e70654",
         marginTop: 20,
         padding: 14,
         borderRadius: 10,

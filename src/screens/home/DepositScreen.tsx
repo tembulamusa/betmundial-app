@@ -133,7 +133,8 @@ const DepositScreen = () => {
                             value={values.amount}
                             onChangeText={handleChange("amount")}
                             keyboardType="numeric"
-                            placeholder="Enter amount"
+                            placeholder="Enter Amount"
+                            placeholderTextColor="#ccc"
                         />
 
                         {errors.amount && (

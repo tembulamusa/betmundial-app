@@ -45,7 +45,9 @@ const MyBetsScreen = () => {
     };
 
     useEffect(() => {
-        fetchBets();
+        InteractionManager.runAfterInteractions(() => {
+            fetchBets();
+        });
     }, []);
 
     const toggleExpand = (id) => {

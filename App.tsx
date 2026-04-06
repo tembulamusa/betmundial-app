@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useContext, Suspense, lazy } from "react";
+import React, { useRef, useEffect, useState, useContext, Suspense, lazy, useMemo } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -69,7 +69,7 @@ const PreloadWrapper = React.memo(function PreloadWrapper({ Component, name }: {
     // Defer component rendering to allow initial preload to render
     const timer = setTimeout(() => {
       setShowComponent(true);
-    }, 400); // 400ms preload delay before heavy component mounts
+    }, 0); // 400ms preload delay before heavy component mounts
 
     return () => clearTimeout(timer);
   }, []);
@@ -143,8 +143,9 @@ const JackpotStackScreen = React.memo(function JackpotStackScreen() {
 function BetslipButton() {
   const [state, dispatch] = useContext(Context);
 
-  const count = Object.keys(state?.betslip || {}).length || 0;
-
+  const count = useMemo(() => {
+    return Object.keys(state?.betslip || {}).length || 0;
+  }, [state?.betslip]);
   return (
     <TouchableOpacity
       style={styles.betslipButton}

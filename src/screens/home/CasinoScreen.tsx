@@ -13,7 +13,7 @@ const CasinoScreen: React.FC = () => {
     );
 };
 
-export default CasinoScreen;
+export default React.memo(CasinoScreen);
 
 const styles = StyleSheet.create({
     safeArea: {

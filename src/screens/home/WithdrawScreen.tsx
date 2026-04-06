@@ -54,7 +54,7 @@ const WithdrawScreen = () => {
                 url: "v2/withdrawals/new",
                 method: "POST",
                 data: {
-                    msisdn: normalizedMsisdn,
+                    msisdn: initialValues.msisdn,
                     amount: values.amount
                 },
                 apiVersion: 3
@@ -109,6 +109,7 @@ const WithdrawScreen = () => {
                             style={[styles.input, styles.disabledInput]}
                             value={values.msisdn}
                             editable={false}
+                            placeholderTextColor={"#ccc"}
                         />
 
                         {errors.msisdn && (
@@ -123,7 +124,7 @@ const WithdrawScreen = () => {
                             onChangeText={handleChange("amount")}
                             keyboardType="numeric"
                             placeholder="Enter amount"
-                            placeholderTextColor="#777"
+                            placeholderTextColor="#ccc"
                         />
 
                         {errors.amount && (
@@ -229,7 +230,9 @@ const styles = StyleSheet.create({
     },
 
     disabledInput: {
-        opacity: 0.7
+        opacity: 1,
+        backgroundColor: "#1a1a2e",
+        borderColor: "#333"
     },
 
     error: {

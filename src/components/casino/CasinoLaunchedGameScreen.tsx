@@ -6,7 +6,8 @@ import {
     StyleSheet,
     ActivityIndicator,
     Alert,
-    Linking
+    Linking,
+    InteractionManager
 } from "react-native";
 
 import { WebView } from "react-native-webview";
@@ -164,7 +165,9 @@ const CasinoLaunchedGameScreen = () => {
         });
 
         if (directLaunch.includes(gameName.toLowerCase())) {
-            launchDirectGame();
+            InteractionManager.runAfterInteractions(() => {
+                launchDirectGame();
+            });
         } else {
             const loadCasinoLaunch = async () => {
                 try {
@@ -214,8 +217,10 @@ const CasinoLaunchedGameScreen = () => {
                     setTimeout(() => setLoading(false), 100);
                 }
             };
+            InteractionManager.runAfterInteractions(() => {
+                loadCasinoLaunch();
+            });
 
-            loadCasinoLaunch();
         }
 
         return () => {

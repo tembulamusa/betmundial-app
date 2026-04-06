@@ -8,7 +8,8 @@ import {
     View,
     ActivityIndicator,
     StyleSheet,
-    Alert
+    Alert,
+    InteractionManager
 } from "react-native";
 
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -66,12 +67,15 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
     };
 
     useEffect(() => {
-
+        setIsLoading(true);
         socket.connect();
-        fetchPagedData();
+        InteractionManager.runAfterInteractions(() => {
+            fetchPagedData();
+        });
 
         return () => {
             socket.disconnect();
+            setIsLoading(false);
         };
 
     }, [matchId, live]);
@@ -145,7 +149,9 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
     useInterval(() => {
 
         if (!socketIsConnected) {
-            fetchPagedData();
+            InteractionManager.runAfterInteractions(() => {
+                fetchPagedData();
+            });
         }
 
     }, !socketIsConnected ? 10000 : null);
@@ -226,7 +232,7 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
 
 };
 
-export default MatchAllMarketsScreen;
+export default React.memo(MatchAllMarketsScreen);
 
 const styles = StyleSheet.create({
 

@@ -4,7 +4,8 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
+    InteractionManager
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -111,7 +112,9 @@ const CasinoHome: React.FC = () => {
             fetchCasinoGames();
         };
 
-        loadLocalGames();
+        InteractionManager.runAfterInteractions(() => {
+            loadLocalGames();
+        });
 
     }, []);
 
@@ -264,7 +267,7 @@ const CasinoHome: React.FC = () => {
     );
 };
 
-export default CasinoHome;
+export default React.memo(CasinoHome);
 
 const styles = StyleSheet.create({
 

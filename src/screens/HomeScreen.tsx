@@ -1,4 +1,5 @@
 import React, {
+    useMemo,
     useContext,
     useEffect,
     useState,
@@ -6,6 +7,7 @@ import React, {
 } from "react";
 
 import {
+    InteractionManager,
     View,
     ScrollView,
     StyleSheet,
@@ -19,17 +21,16 @@ import { useRoute, RouteProp } from "@react-navigation/native";
 import { Context } from "../context/store";
 import useInterval from "../hooks/set-interval.hook";
 
-import HighlightsBoard from "../components/highlights-board";
 import MatchList from "../components/matches";
 import CarouselLoader from "../components/carousel/Carousel";
 import MainTabs from "../components/header/MainTabs";
 import ShimmerLoader from "../components/common/ShimmerLoader";
 // import PopupBanner from "../components/pop_up_banner";
-
 import socket from "../components/utils/SocketConnect";
 import { getItem } from "../components/utils/local-storage";
 import { makeRequest } from "../components/utils/makeRequest";
 import { theme } from "../theme";
+import HighlightsBoard from "../components/HighlightsBoard";
 
 type RootStackParamList = {
     Home: {
@@ -180,15 +181,17 @@ const HomeScreen: React.FC = () => {
     };
 
     useEffect(() => {
+        InteractionManager.runAfterInteractions(() => {
+            if (sportid) {
+                setPage(1);
+                fetchData("fetchAll", 1);
+            } else {
+                setPage(1);
+                fetchData("filtered", 1);
+                setFetchingCount(0);
+            }
+        });
 
-        if (sportid) {
-            setPage(1);
-            fetchData("fetchAll", 1);
-        } else {
-            setPage(1);
-            fetchData("filtered", 1);
-            setFetchingCount(0);
-        }
 
     }, [
         sportid,
@@ -200,14 +203,19 @@ const HomeScreen: React.FC = () => {
 
     // Handle pagination
     useEffect(() => {
-        if (page > 1) {
-            fetchData(undefined, page);
-        }
+        InteractionManager.runAfterInteractions(() => {
+            if (page > 1) {
+                fetchData(undefined, page);
+            }
+        });
+
     }, [page]);
 
     useInterval(() => {
         if (!socket.connected) {
-            fetchData();
+            InteractionManager.runAfterInteractions(() => {
+                fetchData();
+            });
         }
     }, 60000);
 
@@ -294,7 +302,7 @@ const HomeScreen: React.FC = () => {
     );
 };
 
-export default HomeScreen;
+export default React.memo(HomeScreen);
 
 const styles = StyleSheet.create({
 

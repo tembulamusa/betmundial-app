@@ -1,13 +1,13 @@
-import React from "react";
+import React, { useState, memo, useCallback } from "react";
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Alert,
+    Modal,
+    SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useAppDispatch } from "../../context/store";
 
 interface HeaderLoginProps {
     onLoginPress?: () => void;
@@ -15,52 +15,84 @@ interface HeaderLoginProps {
 
 const HeaderLogin: React.FC<HeaderLoginProps> = ({ onLoginPress }) => {
     const navigation: any = useNavigation();
-    const dispatch = useAppDispatch();
 
-    const handleLogin = () => {
-        // if (onLoginPress) {
-        //     onLoginPress();
-        //     return;
-        // }
-        // Alert.alert("Login Required", "Please log in to access this feature.")
-        dispatch({
-            type: "SET",
-            key: "showloginmodal",
-            payload: true,
-        });
-    };
+    // ✅ LOCAL STATE (instead of global dispatch)
+    const [showLoginModal, setShowLoginModal] = useState(false);
+
+    const handleLogin = useCallback(() => {
+        if (onLoginPress) {
+            onLoginPress();
+            return;
+        }
+
+        // ⚡ instant UI update (no global re-render)
+        setShowLoginModal(true);
+    }, [onLoginPress]);
+
+    const closeModal = useCallback(() => {
+        setShowLoginModal(false);
+    }, []);
 
     return (
-        <View style={styles.container}>
-            {/* Deposit Button */}
-            {/* <TouchableOpacity
-                style={styles.depositButton}
-                onPress={() => navigation.navigate("Deposit" as never)}
-            >
-                <Icon name="money" size={16} color="#FFD700" />
-                 <Text style={styles.depositText}> Deposit</Text>
-        </TouchableOpacity>
-        */}
+        <>
+            <View style={styles.container}>
+                {/* LOGIN */}
+                <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={handleLogin}
+                >
+                    <Text style={styles.loginText}>Login</Text>
+                </TouchableOpacity>
 
-            {/* Login Button */}
-            <TouchableOpacity
-                style={styles.loginButton}
-                onPress={handleLogin}
-            >
-                <Text style={styles.loginText}>Login</Text>
-            </TouchableOpacity>
+                {/* REGISTER */}
+                <TouchableOpacity
+                    style={styles.registerButton}
+                    onPress={() =>
+                        navigation.navigate("Sports", {
+                            screen: "RegisterScreen",
+                        })
+                    }
+                >
+                    <Text style={styles.registerText}>Register</Text>
+                </TouchableOpacity>
+            </View>
 
-            {/* Register Button */}
-            <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => navigation.navigate("Sports", { screen: "RegisterScreen" })}
-            >
-                <Text style={styles.registerText}>Register</Text>
-            </TouchableOpacity>
-        </View >
+            {/* ✅ LOCAL MODAL */}
+            <Modal visible={showLoginModal} transparent animationType="slide">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Login Required</Text>
+
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => {
+                                closeModal();
+                                navigation.navigate("Sports", {
+                                    screen: "LoginScreen",
+                                });
+                            }}
+                        >
+                            <Text style={styles.modalButtonText}>
+                                Go to Login
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={closeModal}
+                        >
+                            <Text style={styles.closeText}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+            </Modal>
+        </>
     );
 };
 
+export default memo(HeaderLogin);
+
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
@@ -68,22 +100,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 4,
         paddingVertical: 4,
-    },
-
-    depositButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginRight: 4,
-        // backgroundColor: "rgba(242, 219, 11, 0.9)",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 6,
-    },
-
-    depositText: {
-        color: "#fff",
-        fontWeight: "500",
-
     },
 
     loginButton: {
@@ -112,5 +128,49 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         textTransform: "uppercase",
     },
+
+    /* MODAL */
+    modalContainer: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    modalContent: {
+        width: "85%",
+        backgroundColor: "#0c0c24",
+        padding: 20,
+        borderRadius: 10,
+    },
+
+    modalTitle: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "700",
+        marginBottom: 20,
+        textAlign: "center",
+    },
+
+    modalButton: {
+        backgroundColor: "#a71f66",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        marginBottom: 10,
+    },
+
+    modalButtonText: {
+        color: "#fff",
+        fontWeight: "600",
+    },
+
+    closeButton: {
+        padding: 10,
+        alignItems: "center",
+    },
+
+    closeText: {
+        color: "#aaa",
+    },
 });
-export default React.memo(HeaderLogin);

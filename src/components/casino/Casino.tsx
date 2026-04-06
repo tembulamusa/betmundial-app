@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import {
+    InteractionManager,
     View,
     ScrollView,
     StyleSheet,
@@ -182,7 +183,10 @@ const Casino: React.FC<CasinoProps> = ({ filterType, filterName }) => {
             }
         };
 
-        fetchCasinoGames();
+        InteractionManager.runAfterInteractions(() => {
+            fetchCasinoGames();
+        });
+
     }, [
         dispatch,
         filtersReady,

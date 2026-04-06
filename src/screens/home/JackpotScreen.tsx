@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useState, useContext } from "react";
 import {
+    InteractionManager,
     View,
     Text,
     StyleSheet,
@@ -82,9 +83,10 @@ const JackpotScreen: React.FC<any> = () => {
     };
 
     useEffect(() => {
-
-        fetchMatches();
-        fetchResults();
+        InteractionManager.runAfterInteractions(() => {
+            fetchMatches();
+            fetchResults();
+        });
 
     }, []);
 
@@ -102,7 +104,6 @@ const JackpotScreen: React.FC<any> = () => {
         if (jackpotData) {
 
             let betslip: any;
-
             Object.entries(jackpotData?.matches).map(([key, match]: any) => {
 
                 let reference = match.match_id + "_selected";
@@ -220,40 +221,40 @@ const JackpotScreen: React.FC<any> = () => {
                         </View>
                     ) : (
                         <>
-                    {(jackpotData?.status?.toLowerCase() === "active" &&
-                        jackpotData?.matches?.length === jackpotData?.total_games) && (
+                            {(jackpotData?.status?.toLowerCase() === "active" &&
+                                jackpotData?.matches?.length === jackpotData?.total_games) && (
 
-                            <View style={styles.autopickRow}>
+                                    <View style={styles.autopickRow}>
 
-                                <Text style={styles.jackpotAmount}>
-                                    KES{" "}
-                                    {Intl.NumberFormat("en-US").format(
-                                        jackpotData?.jackpot_amount
-                                    )}
-                                </Text>
+                                        <Text style={styles.jackpotAmount}>
+                                            KES{" "}
+                                            {Intl.NumberFormat("en-US").format(
+                                                jackpotData?.jackpot_amount
+                                            )}
+                                        </Text>
 
-                                <TouchableOpacity
-                                    style={styles.autopickButton}
-                                    onPress={AutoPickAllMatches}
-                                >
-                                    <Text style={styles.autopickText}>Auto Pick</Text>
-                                </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.autopickButton}
+                                            onPress={AutoPickAllMatches}
+                                        >
+                                            <Text style={styles.autopickText}>Auto Pick</Text>
+                                        </TouchableOpacity>
 
-                            </View>
-                        )}
+                                    </View>
+                                )}
 
-                    {(jackpotData?.matches?.length > 0 &&
-                        jackpotData?.total_games) ? (
+                            {(jackpotData?.matches?.length > 0 &&
+                                jackpotData?.total_games) ? (
 
-                        <JackpotMatchList matches={jackpotData} />
+                                <JackpotMatchList matches={jackpotData} />
 
-                    ) : (
+                            ) : (
 
-                        <View style={styles.noEvents}>
-                            <Text style={styles.noEventsText}>There are no jackpots at the moment.</Text>
-                        </View>
+                                <View style={styles.noEvents}>
+                                    <Text style={styles.noEventsText}>There are no jackpots at the moment.</Text>
+                                </View>
 
-                    )}
+                            )}
                         </>
                     )}
 
@@ -282,7 +283,7 @@ const JackpotScreen: React.FC<any> = () => {
     );
 };
 
-export default JackpotScreen;
+export default React.memo(JackpotScreen);
 
 const styles = StyleSheet.create({
 

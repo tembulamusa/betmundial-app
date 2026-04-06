@@ -5,7 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Pressable
+  Pressable,
+  InteractionManager
 } from "react-native";
 import { makeRequest } from "../utils/makeRequest";
 import { Context } from "../../context/store";
@@ -71,7 +72,9 @@ const CasinoJackpots: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCasinoJackpots();
+    InteractionManager.runAfterInteractions(() => {
+      fetchCasinoJackpots();
+    });
   }, []);
 
   useEffect(() => {
