@@ -29,16 +29,16 @@ const banners: CarouselBanner[] = [
         provider: "unicraft",
         game: "mundial-league",
     },
-    {
-        id: "karibu-bonus",
-        src: require("../../assets/images/banners/carousel/Karibu-Bonus-opt.jpeg"),
-        action: "promo",
-    },
-    {
-        id: "deposit-bonus",
-        src: require("../../assets/images/banners/carousel/Deposit-Bonus-opt.jpeg"),
-        action: "promo",
-    },
+    // {
+    //     id: "karibu-bonus",
+    //     src: require("../../assets/images/banners/carousel/Karibu-Bonus-opt.jpeg"),
+    //     action: "promo",
+    // },
+    // {
+    //     id: "deposit-bonus",
+    //     src: require("../../assets/images/banners/carousel/Deposit-Bonus-opt.jpeg"),
+    //     action: "promo",
+    // },
     {
         id: "aviatrix",
         src: require("../../assets/images/banners/carousel/aviatrix-opt.jpeg"),
