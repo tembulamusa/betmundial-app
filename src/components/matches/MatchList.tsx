@@ -1,10 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import {
     View,
     Text,
     FlatList,
     StyleSheet,
-    Alert,
     NativeSyntheticEvent,
     NativeScrollEvent,
     ActivityIndicator
@@ -31,6 +30,13 @@ interface Props {
     fetching?: boolean;
 }
 
+/* ================= MEMOIZED ROW ================= */
+const MemoMatchRow = React.memo(
+    ({ item, live }: { item: Match; live?: boolean }) => {
+        return <MatchRow match={item} live={live} />;
+    }
+);
+
 const MatchList: React.FC<Props> = ({
     matches,
     live,
@@ -39,62 +45,109 @@ const MatchList: React.FC<Props> = ({
     scrollEventThrottle = 16,
     fetching = false
 }) => {
-    const [state, dispatch] = React.useContext(Context);
+    const [state] = React.useContext(Context);
 
     useEffect(() => {
-        // Alert.alert("the betslip", JSON.stringify(state?.betslip));
+        // keep your existing debug logic if needed
     }, [state?.betslip, state?.jackpotbetslip]);
 
-
-    const renderItem = ({ item }: { item: Match }) => (
-        <MatchRow match={item} live={live} />
+    /* ================= RENDER ITEM ================= */
+    const renderItem = useCallback(
+        ({ item }: { item: Match }) => {
+            return <MemoMatchRow item={item} live={live} />;
+        },
+        [live]
     );
 
-    const listFooter = () => {
-        // Show shimmer only if fetching and there are no matches yet
-        if (fetching && matches.length === 0) {
-            return <ShimmerLoader count={5} height={100} marginVertical={8} />;
-        }
-        return null;
-    };
+    /* ================= KEY EXTRACTOR ================= */
+    const keyExtractor = useCallback(
+        (item: Match) => `${item?.match_id}`,
+        []
+    );
 
-    const listHeader = () => {
+    /* ================= HEADER ================= */
+    const listHeader = useMemo(() => {
         return (
             <>
                 {ListHeaderComponent}
+
                 {fetching && matches.length > 0 && (
                     <View style={styles.updatingBar}>
                         <ActivityIndicator size="small" color="#a71f66" />
-                        <Text style={styles.updatingText}>Updating matches...</Text>
+                        <Text style={styles.updatingText}>
+                            Updating matches...
+                        </Text>
                     </View>
                 )}
             </>
         );
-    };
+    }, [ListHeaderComponent, fetching, matches.length]);
+
+    /* ================= FOOTER ================= */
+    const listFooter = useMemo(() => {
+        if (fetching && matches.length === 0) {
+            return (
+                <ShimmerLoader
+                    count={5}
+                    height={100}
+                    marginVertical={8}
+                />
+            );
+        }
+        return null;
+    }, [fetching, matches.length]);
+
+    /* ================= OPTIMIZATION CONFIG ================= */
+    const getItemLayout = useCallback(
+        (_: any, index: number) => ({
+            length: 100, // approximate row height (IMPORTANT)
+            offset: 100 * index,
+            index,
+        }),
+        []
+    );
 
     return (
         <FlatList
             data={matches}
             renderItem={renderItem}
-            key={live ? "live-match-list" : "prematch-list"}
-            keyExtractor={(item) =>
-                `${live ? "live" : "prematch"}-${item.match_id}`
-            }
+            keyExtractor={keyExtractor}
+
+            /* ================= PERFORMANCE BOOST ================= */
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
+
+            /* ⚡ BIG ONE: prevents re-render storm */
+            extraData={null}
+
+            /* OPTIONAL: if row height is stable */
+            getItemLayout={getItemLayout}
+
+            /* ================= UI ================= */
             contentContainerStyle={styles.container}
-            ListHeaderComponent={listHeader()}
-            ListFooterComponent={listFooter()}
+            ListHeaderComponent={listHeader}
+            ListFooterComponent={listFooter}
+
             onScroll={onScroll}
             scrollEventThrottle={scrollEventThrottle}
+
+            /* Smooth scrolling */
+            showsVerticalScrollIndicator={false}
         />
     );
 };
 
 export default React.memo(MatchList);
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
     container: {
         paddingBottom: 20
     },
+
     updatingBar: {
         flexDirection: "row",
         alignItems: "center",
@@ -106,6 +159,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
         gap: 8
     },
+
     updatingText: {
         color: "#a71f66",
         fontSize: 13,

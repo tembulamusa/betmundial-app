@@ -6,7 +6,7 @@ import HeaderUser from './common/HeaderUser';
 import HeaderLogin from './header/HeaderLogin';
 import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
-import { setItem } from './utils/local-storage';
+import { getItem, setItem } from './utils/local-storage';
 import { normalizeKenyanPhoneNumber } from './utils/phone';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
@@ -22,6 +22,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         dispatch({ type: 'DEL', key: 'loginmodalprefill' });
         dispatch({ type: 'DEL', key: 'loginmodalmessage' });
     }, [dispatch]);
+    const [localUser, setLocalUser] = useState<any>(null);
 
     const closeLoginModal = useCallback(() => {
         setIsLoginModalVisible(false);
@@ -37,7 +38,18 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         setLoginNotice(null);
         setIsLoginModalVisible(true);
     }, []);
+    /* ================= LOAD USER FAST ================= */
+    useEffect(() => {
+        const loadUser = async () => {
+            const cached = await getItem("user");
 
+            if (cached) {
+                setLocalUser(cached); // ⚡ instant UI
+            }
+        };
+
+        loadUser();
+    }, []);
     useEffect(() => {
         if (state?.showloginmodal) {
             setIsLoginModalVisible(true);
@@ -133,7 +145,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 </View>
                 <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {/* <Search /> */}
-                    {state?.user ? <HeaderUser /> : <HeaderLogin onLoginPress={openHeaderLoginModal} />}
+                    {(localUser || state?.user) ? <HeaderUser user={localUser} /> : <HeaderLogin onLoginPress={openHeaderLoginModal} />}
                 </View>
             </View>
 

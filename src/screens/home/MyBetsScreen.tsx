@@ -1,4 +1,13 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, {
+    useContext,
+    useEffect,
+    useState,
+    useCallback,
+    memo,
+    useMemo,
+    useRef,
+} from "react";
+
 import {
     View,
     Text,
@@ -7,57 +16,105 @@ import {
     StyleSheet,
     RefreshControl,
     Modal,
-    Animated,
+    InteractionManager,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 
+import { Picker } from "@react-native-picker/picker";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 
 import { makeRequest } from "../../components/utils/makeRequest";
 import { Context } from "../../context/store";
+import { getItem, setItem } from "../../components/utils/local-storage";
+
+const CACHE_KEY = "mybets_cache";
 
 const MyBetsScreen = () => {
     const [state] = useContext(Context);
-    const [bets, setBets] = useState([]);
+
+    const [bets, setBets] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [expandedBet, setExpandedBet] = useState(null);
+    const [expandedBet, setExpandedBet] = useState<number | null>(null);
     const [shareModal, setShareModal] = useState(false);
-    const [shareBet, setShareBet] = useState(null);
+    const [shareBet, setShareBet] = useState<any>(null);
     const [betFilter, setBetFilter] = useState("all");
 
-    const fetchBets = async () => {
+    const mountedRef = useRef(true);
+    const expandingRef = useRef(false);
+    const loadingRef = useRef(false);
+    const hasFetchedRef = useRef(false);
+
+    /* ================= LOAD CACHE ================= */
+    useEffect(() => {
+        (async () => {
+            const cached = await getItem(CACHE_KEY);
+            if (cached && mountedRef.current) {
+                setBets(cached);
+            }
+        })();
+
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    /* ================= FETCH ================= */
+    const fetchBets = useCallback(async () => {
+        if (loadingRef.current) return;
+
+        loadingRef.current = true;
         setRefreshing(true);
+
         try {
-            const response = await makeRequest({
+            const res = await makeRequest({
                 url: "/user/bets?size=20&page=1",
                 method: "GET",
                 apiVersion: 2,
             });
 
-            if ([200, 201].includes(response.status)) {
-                setBets(response?.data?.data || []);
+            if ([200, 201].includes(res.status)) {
+                const data = res?.data?.data || [];
+
+                if (mountedRef.current) {
+                    setBets(data);
+                }
+
+                setItem(CACHE_KEY, data);
             }
         } catch (e) {
             console.log("Error fetching bets", e);
         } finally {
-            setRefreshing(false);
+            loadingRef.current = false;
+            mountedRef.current && setRefreshing(false);
         }
-    };
-
-    useEffect(() => {
-        InteractionManager.runAfterInteractions(() => {
-            fetchBets();
-        });
     }, []);
 
-    const toggleExpand = (id) => {
-        setExpandedBet((prev) => (prev === id ? null : id));
-    };
+    /* ================= SAFE INTERACTION MANAGER ================= */
+    useEffect(() => {
+        if (hasFetchedRef.current) return;
 
-    const getBetCategory = (item) => {
-        if (item?.jackpot_bet_id) {
-            return "jackpot";
-        }
+        const task = InteractionManager.runAfterInteractions(() => {
+            fetchBets();
+            hasFetchedRef.current = true;
+        });
+
+        return () => task.cancel();
+    }, [fetchBets]);
+
+    /* ================= HELPERS ================= */
+    const toggleExpand = useCallback((id: number) => {
+        if (expandingRef.current) return;
+
+        expandingRef.current = true;
+
+        setExpandedBet((prev) => (prev === id ? null : id));
+
+        setTimeout(() => {
+            expandingRef.current = false;
+        }, 200);
+    }, []);
+
+    const getBetCategory = useCallback((item: any) => {
+        if (item?.jackpot_bet_id) return "jackpot";
 
         const typeHints = [
             item?.bet_type,
@@ -70,46 +127,35 @@ const MyBetsScreen = () => {
             .join(" ")
             .toLowerCase();
 
-        const hasCasinoSlip = Array.isArray(item?.betslip) && item.betslip.some((slip) =>
-            slip?.provider_name ||
-            slip?.game_name ||
-            slip?.aggregator
-        );
+        const hasCasinoSlip =
+            Array.isArray(item?.betslip) &&
+            item.betslip.some(
+                (slip: any) =>
+                    slip?.provider_name ||
+                    slip?.game_name ||
+                    slip?.aggregator
+            );
 
         if (typeHints.includes("casino") || hasCasinoSlip) {
             return "casino";
         }
 
         return "sports";
-    };
+    }, []);
 
-    const filteredBets = betFilter === "all"
-        ? bets
-        : bets.filter((item) => getBetCategory(item) === betFilter);
+    const filteredBets = useMemo(() => {
+        if (betFilter === "all") return bets;
+        return bets.filter((item) => getBetCategory(item) === betFilter);
+    }, [bets, betFilter, getBetCategory]);
 
-    const cancelBet = async (betId) => {
-        try {
-            const [status] = await makeRequest({
-                url: `/user/bet/cancel?bet-id=${betId}`,
-                method: "POST",
-                api_version: 2,
-            });
-
-            if (status === 200) fetchBets();
-        } catch (err) {
-            console.log(err);
-        }
-    };
-
-    // ✅ FIXED ICON + STATUS
-    const renderStatus = (status) => {
+    /* ================= STATUS ================= */
+    const renderStatus = useCallback((status: string) => {
         let icon = "circle";
         let color = "#00A8FA";
 
         switch (status?.toLowerCase()) {
             case "pending":
                 icon = "clock-o";
-                color = "#00A8FA";
                 break;
             case "won":
                 icon = "check-circle";
@@ -128,100 +174,103 @@ const MyBetsScreen = () => {
         return (
             <View style={styles.statusContainer}>
                 <Text style={styles.statusText}>{status}</Text>
-                <FontAwesome name={icon} size={16} color={color} />
+                <FontAwesome name={icon} size={14} color={color} />
             </View>
         );
-    };
+    }, []);
 
-    const BetCard = ({ item }) => {
-        const expanded = expandedBet === item.bet_id;
+    /* ================= CARD ================= */
+    const BetCard = memo(
+        ({ item, isExpanded }: { item: any; isExpanded: boolean }) => {
+            const expanded = isExpanded;
 
-        const betType = item.jackpot_bet_id
-            ? "JACKPOT"
-            : item.total_games > 1
-                ? "MULTI"
-                : "SINGLE";
+            const betType = item.jackpot_bet_id
+                ? "JACKPOT"
+                : item.total_games > 1
+                    ? "MULTI"
+                    : "SINGLE";
 
-        return (
-            <View style={styles.card}>
-                <TouchableOpacity
-                    onPress={() => toggleExpand(item.bet_id)}
-                    style={styles.cardHeader}
-                >
-                    <View>
-                        <Text style={styles.date}>{item.created}</Text>
-                        <Text style={styles.betId}>#{item.bet_id}</Text>
-                    </View>
+            const visibleSlips = expanded
+                ? item.betslip?.slice(0, 5)
+                : [];
 
-                    <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{betType}</Text>
-                    </View>
+            return (
+                <View style={styles.card}>
+                    <TouchableOpacity
+                        onPress={() => toggleExpand(item.bet_id)}
+                        style={styles.cardHeader}
+                    >
+                        <View>
+                            <Text style={styles.date}>{item.created}</Text>
+                            <Text style={styles.betId}>#{item.bet_id}</Text>
+                        </View>
 
-                    <View>
-                        <Text style={styles.amount}>Stake: {item.bet_amount}</Text>
-                        <Text style={styles.win}>Win: {item.possible_win}</Text>
-                    </View>
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{betType}</Text>
+                        </View>
 
-                    {/* ✅ STATUS + ICON */}
-                    {renderStatus(item.status)}
-                </TouchableOpacity>
+                        <View>
+                            <Text style={styles.amount}>
+                                Stake: {item.bet_amount}
+                            </Text>
+                            <Text style={styles.win}>
+                                Win: {item.possible_win}
+                            </Text>
+                        </View>
 
-                {expanded && (
-                    <Animated.View style={styles.details}>
-                        {item.betslip?.map((slip) => (
-                            <View key={slip.game_id} style={styles.slipRow}>
-                                <Text style={styles.team}>
-                                    {slip.home_team} vs {slip.away_team}
-                                </Text>
+                        {renderStatus(item.status)}
+                    </TouchableOpacity>
 
-                                <Text style={styles.pick}>
-                                    {slip.bet_pick}
-                                    {slip.special_bet_value
-                                        ? ` (${slip.special_bet_value})`
-                                        : ""}
-                                </Text>
-
-                                <View style={styles.slipFooter}>
-                                    <Text style={styles.result}>
-                                        {slip.result ?? "n/a"}
+                    {expanded && (
+                        <View style={styles.details}>
+                            {visibleSlips?.map((slip: any) => (
+                                <View key={slip.game_id} style={styles.slipRow}>
+                                    <Text style={styles.team}>
+                                        {slip.home_team} vs {slip.away_team}
                                     </Text>
 
-                                    {/* ✅ SLIP STATUS + ICON */}
-                                    {renderStatus(slip.status)}
+                                    <Text style={styles.pick}>
+                                        {slip.bet_pick}
+                                        {slip.special_bet_value
+                                            ? ` (${slip.special_bet_value})`
+                                            : ""}
+                                    </Text>
+
+                                    <View style={styles.slipFooter}>
+                                        <Text style={styles.result}>
+                                            {slip.result ?? "n/a"}
+                                        </Text>
+                                        {renderStatus(slip.status)}
+                                    </View>
                                 </View>
-                            </View>
-                        ))}
+                            ))}
 
-                        <View style={styles.actions}>
-                            {item.cancelable && (
-                                <TouchableOpacity
-                                    onPress={() => cancelBet(item.bet_id)}
-                                    style={styles.actionBtn}
-                                >
-                                    <FontAwesome name="trash" size={16} color="orangered" />
-                                    <Text style={styles.actionText}>Cancel</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {item.sharable === 1 && (
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setShareBet(item);
-                                        setShareModal(true);
-                                    }}
-                                    style={styles.actionBtn}
-                                >
-                                    <FontAwesome name="share" size={16} color="#FFB200" />
-                                    <Text style={styles.actionText}>Share</Text>
-                                </TouchableOpacity>
+                            {item.betslip?.length > 5 && (
+                                <Text style={styles.moreText}>
+                                    +{item.betslip.length - 5} more
+                                </Text>
                             )}
                         </View>
-                    </Animated.View>
-                )}
-            </View>
-        );
-    };
+                    )}
+                </View>
+            );
+        },
+        (prev, next) =>
+            prev.item.bet_id === next.item.bet_id &&
+            prev.isExpanded === next.isExpanded
+    );
 
+    const renderItem = useCallback(
+        ({ item }) => (
+            <BetCard
+                item={item}
+                isExpanded={expandedBet === item.bet_id}
+            />
+        ),
+        [expandedBet]
+    );
+
+    /* ================= RENDER ================= */
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -230,7 +279,7 @@ const MyBetsScreen = () => {
                 <View style={styles.pickerWrap}>
                     <Picker
                         selectedValue={betFilter}
-                        onValueChange={(value) => setBetFilter(value)}
+                        onValueChange={setBetFilter}
                         style={styles.picker}
                         dropdownIconColor="#fff"
                     >
@@ -245,25 +294,35 @@ const MyBetsScreen = () => {
             <FlatList
                 data={filteredBets}
                 keyExtractor={(item) => item.bet_id.toString()}
-                renderItem={({ item }) => <BetCard item={item} />}
+                renderItem={renderItem}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={fetchBets} />
                 }
+                initialNumToRender={5}
+                maxToRenderPerBatch={5}
+                windowSize={7}
+                updateCellsBatchingPeriod={50}
+                showsVerticalScrollIndicator={false}
             />
 
-            <Modal visible={shareModal} transparent animationType="slide">
+            <Modal visible={shareModal} transparent animationType="fade">
                 <View style={styles.modal}>
                     <View style={styles.modalCard}>
                         <Text style={styles.modalTitle}>Share Bet</Text>
 
-                        <Text style={styles.modalText}>Bet ID: {shareBet?.bet_id}</Text>
-                        <Text style={styles.modalText}>Odds: {shareBet?.total_odd}</Text>
+                        <Text style={styles.modalText}>
+                            Bet ID: {shareBet?.bet_id}
+                        </Text>
+
+                        <Text style={styles.modalText}>
+                            Odds: {shareBet?.total_odd}
+                        </Text>
 
                         <TouchableOpacity
                             style={styles.closeBtn}
                             onPress={() => setShareModal(false)}
                         >
-                            <Text style={{ color: "white" }}>Close</Text>
+                            <Text style={styles.closeText}>Close</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -272,32 +331,34 @@ const MyBetsScreen = () => {
     );
 };
 
-export default React.memo(MyBetsScreen);
+export default memo(MyBetsScreen);
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#0f172a" },
+    container: {
+        flex: 1,
+        backgroundColor: "#0f172a",
+    },
 
     header: {
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
-        padding: 16,
-        marginBottom: 8,
-        backgroundColor: "rgba(255,255,255,0.1)",
+        alignItems: "center",
+        marginBottom: 10,
+        padding: 14,
+        backgroundColor: "rgba(255,255,255,0.08)",
     },
 
     title: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "white",
-        textAlign: "left",
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "700",
     },
 
     pickerWrap: {
-        width: 150,
-        height: 40,
-        borderRadius: 8,
+        width: 140,
+        height: 36,
+        borderRadius: 0,
         overflow: "hidden",
         backgroundColor: "#1e293b",
     },
@@ -309,10 +370,12 @@ const styles = StyleSheet.create({
     },
 
     card: {
-        backgroundColor: "#1e293b",
-        margin: 4,
-        borderRadius: 4,
-        padding: 12,
+        backgroundColor: "rgba(255,255,255,0.15)",
+        marginHorizontal: 4,
+        marginVertical: 2,
+        borderRadius: 2,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
     },
 
     cardHeader: {
@@ -321,32 +384,32 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 
-    date: { color: "#aaa", fontSize: 12 },
+    date: { color: "#aaa", fontSize: 11 },
     betId: { color: "#fff", fontWeight: "bold" },
 
     badge: {
         backgroundColor: "#a71f66",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 5,
     },
 
-    badgeText: { color: "white", fontSize: 10 },
+    badgeText: { color: "#fff", fontSize: 10 },
 
-    amount: { color: "#ccc", fontSize: 12 },
-    win: { color: "#2ecc71", fontSize: 12 },
+    amount: { color: "#ccc", fontSize: 11 },
+    win: { color: "#2ecc71", fontSize: 11 },
 
-    details: { marginTop: 10 },
+    details: { marginTop: 8 },
 
     slipRow: {
-        backgroundColor: "#334155",
-        padding: 8,
-        borderRadius: 6,
-        marginBottom: 6,
+        backgroundColor: "rgba(255,255,255,0.1)",
+        padding: 6,
+        borderRadius: 5,
+        marginBottom: 5,
     },
 
-    team: { color: "white", fontSize: 12 },
-    pick: { color: "#ddd", fontSize: 12 },
+    team: { color: "#fff", fontSize: 11 },
+    pick: { color: "#ddd", fontSize: 11 },
 
     slipFooter: {
         flexDirection: "row",
@@ -354,30 +417,19 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
 
-    result: { color: "#aaa", fontSize: 12 },
+    result: { color: "#aaa", fontSize: 11 },
 
     statusContainer: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
     },
 
     statusText: {
         color: "#ccc",
-        fontSize: 12,
+        fontSize: 11,
         marginRight: 4,
         textTransform: "capitalize",
     },
-
-    actions: { flexDirection: "row", marginTop: 10 },
-
-    actionBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginRight: 20,
-    },
-
-    actionText: { color: "white", marginLeft: 5 },
 
     modal: {
         flex: 1,
@@ -393,8 +445,8 @@ const styles = StyleSheet.create({
     },
 
     modalTitle: {
-        fontSize: 18,
-        color: "white",
+        color: "#fff",
+        fontSize: 16,
         marginBottom: 10,
     },
 
@@ -407,7 +459,12 @@ const styles = StyleSheet.create({
         marginTop: 20,
         backgroundColor: "#a71f66",
         padding: 10,
-        alignItems: "center",
         borderRadius: 6,
+        alignItems: "center",
+    },
+
+    closeText: {
+        color: "#fff",
+        fontWeight: "700",
     },
 });

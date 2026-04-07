@@ -6,6 +6,7 @@ import React, {
     useState,
     memo,
 } from "react";
+
 import {
     View,
     Text,
@@ -17,46 +18,52 @@ import {
     Pressable,
     SafeAreaView,
     ScrollView,
-    Alert,
+    InteractionManager,
 } from "react-native";
+
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
+
 import { Context } from "../../context/store";
 import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
-import { setItem, removeItem } from "../utils/local-storage";
+import { setItem, removeItem, getItem } from "../utils/local-storage";
 
 const { width } = Dimensions.get("window");
 
-const HeaderUser = () => {
+const HeaderUser = ({ user }: { user: any }) => {
     const [state, dispatch] = useContext(Context);
     const navigation = useNavigation();
 
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
-    const hasSubscribed = useRef(false);
-
-    // 🔥 LOCAL COPY (prevents global re-render lag)
-    const [localUser, setLocalUser] = useState(state?.user);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
 
-    /* ================= SYNC GLOBAL USER ================= */
-    useEffect(() => {
-        setLocalUser(state?.user);
-    }, [state?.user]);
+    // ✅ LOCAL FAST STATE
+    const [localUser, setLocalUser] = useState<any>(user);
 
-    /* ================= FAST DRAWER ================= */
+    const socketSubscribed = useRef(false);
+
+
+
+    /* ================= SYNC GLOBAL ================= */
+    useEffect(() => {
+        if (state?.user || user) {
+            setLocalUser(state?.user || user);
+        }
+    }, [state?.user, user]);
+
+    /* ================= DRAWER ================= */
     const openDrawer = useCallback(() => {
-        // ⚡ Immediate UI response
         setDrawerVisible(true);
 
         requestAnimationFrame(() => {
             Animated.timing(slideAnim, {
                 toValue: width - 260,
-                duration: 250,
+                duration: 220,
                 useNativeDriver: true,
             }).start();
         });
@@ -65,15 +72,16 @@ const HeaderUser = () => {
     const closeDrawer = useCallback(() => {
         Animated.timing(slideAnim, {
             toValue: width,
-            duration: 200,
+            duration: 180,
             useNativeDriver: true,
         }).start(() => setDrawerVisible(false));
     }, []);
 
-    /* ================= SOCKET ================= */
+    /* ================= SOCKET (ONCE ONLY) ================= */
     useEffect(() => {
-        if (!localUser?.profile_id || hasSubscribed.current) return;
-        hasSubscribed.current = true;
+        if (!localUser?.profile_id || socketSubscribed.current) return;
+
+        socketSubscribed.current = true;
 
         if (!socket.connected) {
             socket.connect();
@@ -81,17 +89,8 @@ const HeaderUser = () => {
 
         const event = `user#profile#${localUser.profile_id}`;
 
-        const handleConnect = () => {
-            console.log("✅ SOCKET CONNECTED");
-
-            // 🔥 EMIT ONLY AFTER CONNECT
-            socket.emit("user.profile", localUser.profile_id);
-        };
-
         const handler = (data: any) => {
             if (!data) return;
-
-            console.log("📩 SOCKET DATA:", data);
 
             const nextUser = {
                 ...localUser,
@@ -99,11 +98,11 @@ const HeaderUser = () => {
                 bonus: data.bonus,
             };
 
-            // ⚡ FAST UI UPDATE
+            // ⚡ instant UI
             setLocalUser(nextUser);
 
-            // 💤 DEFER HEAVY GLOBAL UPDATE
-            setTimeout(() => {
+            // 💤 defer global update
+            InteractionManager.runAfterInteractions(() => {
                 dispatch({
                     type: "SET",
                     key: "user",
@@ -111,28 +110,25 @@ const HeaderUser = () => {
                 });
 
                 setItem("user", nextUser);
-            }, 0);
+            });
         };
 
-        // ✅ Attach listeners ONCE
-        socket.on("connect", handleConnect);
         socket.on(event, handler);
 
         return () => {
-            socket.off("connect", handleConnect);
             socket.off(event, handler);
         };
 
     }, [localUser?.profile_id]);
 
-    /* ================= NAVIGATION ================= */
+    /* ================= FAST NAV ================= */
     const goTo = useCallback((screen: string) => {
         closeDrawer();
 
-        requestAnimationFrame(() => {
+        InteractionManager.runAfterInteractions(() => {
             navigation.navigate("Sports", { screen });
         });
-    }, [navigation]);
+    }, []);
 
     /* ================= LOGOUT ================= */
     const logout = useCallback(async () => {
@@ -142,14 +138,16 @@ const HeaderUser = () => {
 
         closeDrawer();
 
-        navigation.navigate("HomeScreen");
-    }, [dispatch, navigation]);
+        InteractionManager.runAfterInteractions(() => {
+            navigation.navigate("HomeScreen");
+        });
+    }, []);
 
     if (!localUser) return null;
 
     return (
         <>
-            {/* ✅ HEADER (RESTORED) */}
+            {/* HEADER */}
             <View style={styles.container}>
                 <TouchableOpacity
                     style={styles.depositBtn}
@@ -165,7 +163,7 @@ const HeaderUser = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* ✅ DRAWER */}
+            {/* DRAWER */}
             <Modal visible={drawerVisible} transparent animationType="none">
                 <Pressable style={styles.overlay} onPress={closeDrawer} />
 
@@ -207,7 +205,7 @@ const HeaderUser = () => {
                 </Animated.View>
             </Modal>
 
-            {/* ✅ MPESA MODAL */}
+            {/* MPESA MODAL */}
             <Modal visible={mpesaModalVisible} transparent animationType="slide">
                 <SafeAreaView style={styles.mpesaModalContainer}>
                     <View style={styles.mpesaModalBody}>
@@ -241,8 +239,6 @@ const MenuItem = memo(({ label, onPress }) => (
 ));
 
 export default memo(HeaderUser);
-
-/* ================= STYLES ================= */
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
