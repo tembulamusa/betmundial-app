@@ -169,7 +169,7 @@ const LiveScreen: React.FC<any> = ({ route }) => {
         <View style={styles.container}>
             <MatchList
                 socket={socket}
-                live
+                live={true}
                 matches={!fetching ? matches : []}
                 fetching={fetching}
                 onEndReached={loadMore}   // ✅ better than scroll detection

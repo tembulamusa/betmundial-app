@@ -14,6 +14,7 @@ import {
     NativeSyntheticEvent,
     NativeScrollEvent,
     Text,
+    Alert,
 } from "react-native";
 
 import { useRoute, RouteProp } from "@react-navigation/native";
@@ -148,7 +149,7 @@ const HomeScreen: React.FC = () => {
                 apiVersion: 2,
             });
             setFetchingCount(fetchcount);
-
+            // Alert.alert("Notice", `Endpoint: ${endpoint}\nMethod: ${method}\nFetchCount: ${fetchcount}\nData: ${JSON.stringify(res)}`);
             if ([200, 201].includes(res.status)) {
                 const result = res.data;
                 const newItems = (result as any)?.data?.items || (result as any) || [];

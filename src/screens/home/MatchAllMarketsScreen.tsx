@@ -29,10 +29,10 @@ import { theme } from "../../theme";
 import MoreMarketsHeader from "../../components/matches/MoreMarketsHeader";
 
 interface Props {
-    live?: boolean;
+    // live?: boolean;
 }
 
-const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
+const MatchAllMarketsScreen: React.FC<Props> = () => {
 
     const [page, setPage] = useState(1);
     const [producers, setProducers] = useState<any[]>([]);
@@ -46,7 +46,7 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
     const navigation: any = useNavigation();
     const route: any = useRoute();
 
-    const { id, match_id } = route.params || {};
+    const { id, match_id, live } = route.params || {};
     const matchId = id ?? match_id;
 
     // clear when id changes
@@ -99,6 +99,8 @@ const MatchAllMarketsScreen: React.FC<Props> = ({ live }) => {
                     method: "GET",
                     apiVersion: 2,
                 });
+
+                Alert.alert("Notice", `Endpoint: ${endpoint}\nMethod: GET\n Response: ${JSON.stringify(response)}`);
 
                 const status = response?.status;
                 const result = response?.data;

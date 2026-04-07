@@ -4,10 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Alert
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import OddButton from "./OddButton";
+// import Alert from "../utils/Alert";
 
 interface Props {
   match: any;
@@ -31,9 +33,9 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
     if (jackpot) {
       return;
     }
-
     navigation.navigate("MatchAllMarketsScreen", {
       id: match?.match_id,
+      live: live,
     });
   };
 

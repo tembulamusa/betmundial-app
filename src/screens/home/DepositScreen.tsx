@@ -199,7 +199,10 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#fff",
         textAlign: "center",
-        marginBottom: 20
+        marginBottom: 20,
+        backgroundColor: "rgba(255,255,255,0.1)",
+        padding: 8,
+        borderRadius: 2
     },
 
     logo: {
