@@ -100,8 +100,6 @@ const MatchAllMarketsScreen: React.FC<Props> = () => {
                     apiVersion: 2,
                 });
 
-                Alert.alert("Notice", `Endpoint: ${endpoint}\nMethod: GET\n Response: ${JSON.stringify(response)}`);
-
                 const status = response?.status;
                 const result = response?.data;
                 if (status && [200, 201].includes(status)) {
