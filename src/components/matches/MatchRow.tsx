@@ -97,11 +97,13 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
         </View>
 
         <View style={styles.bottomRight}>
-          {match?.sidebets > 0 && !jackpot && (
-            <Text style={styles.moreMarkets}>
-              +{match?.sidebets || 0}
-            </Text>
-          )}
+          <TouchableOpacity onPress={openMatchDetails}>
+            {match?.sidebets > 0 && !jackpot && (
+              <Text style={styles.moreMarkets}>
+                +{match?.sidebets || 0}
+              </Text>
+            )}
+          </TouchableOpacity>
 
           <Text style={styles.liveIcon}>📊</Text>
         </View>

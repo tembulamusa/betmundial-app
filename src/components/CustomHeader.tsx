@@ -42,9 +42,9 @@ const CustomHeader = ({ scene, previous, navigation }) => {
     useEffect(() => {
         const loadUser = async () => {
             const cached = await getItem("user");
+
             if (cached) {
-                setLocalUser(cached); // ⚡ instant UI
-                dispatch({ type: 'SET', key: 'user', payload: cached }); // sync global
+                dispatch({ type: 'SET', key: 'user', payload: cached });
             }
         };
 
@@ -143,9 +143,13 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                         style={{ width: "100%", height: 50, resizeMode: "contain" }}
                     />
                 </View>
+                // ONLY CHANGE THIS PART
+
                 <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    {/* <Search /> */}
-                    {(localUser || state?.user) ? <HeaderUser user={localUser} /> : <HeaderLogin onLoginPress={openHeaderLoginModal} />}
+                    {state?.user
+                        ? <HeaderUser />
+                        : <HeaderLogin onLoginPress={openHeaderLoginModal} />
+                    }
                 </View>
             </View>
 

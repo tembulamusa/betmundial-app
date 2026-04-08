@@ -101,7 +101,7 @@ const PreloadWrapper = React.memo(function PreloadWrapper({ Component, name }: {
 const LazyHomeScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyHomeScreen} name="Sports" />);
 const LazyCasinoScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyCasinoScreen} name="Casino" />);
 const LazyJackpotScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyJackpotScreen} name="Jackpot" />);
-const LazyProfileScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyProfileScreen} name="Dashboard" />);
+const LazyProfileScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyProfileScreen} name="Account" />);
 
 /* ================= HOME STACK ================= */
 const HomeStackScreen = React.memo(function HomeStackScreen() {
@@ -174,7 +174,7 @@ function MainTabs() {
                 Sports: "home",
                 Casino: "gamepad",
                 Jackpot: "trophy",
-                Dashboard: "user",
+                "Account": "user",
               };
 
               return (
@@ -222,7 +222,7 @@ function MainTabs() {
             }}
           />
 
-          <Tab.Screen name="Dashboard" component={LazyProfileScreenWrapper} />
+          <Tab.Screen name="Account" component={LazyProfileScreenWrapper} />
         </Tab.Navigator>
 
         {/* ✅ FLOATING BETSLIP BUTTON */}

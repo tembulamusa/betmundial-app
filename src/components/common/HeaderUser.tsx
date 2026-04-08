@@ -19,6 +19,7 @@ import {
     SafeAreaView,
     ScrollView,
     InteractionManager,
+    Alert,
 } from "react-native";
 
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -29,32 +30,21 @@ import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
-import { setItem, removeItem, getItem } from "../utils/local-storage";
+import { setItem, removeItem } from "../utils/local-storage";
 
 const { width } = Dimensions.get("window");
 
-const HeaderUser = ({ user }: { user: any }) => {
+const HeaderUser = () => {
     const [state, dispatch] = useContext(Context);
     const navigation = useNavigation();
+
+    const user = state?.user;
 
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
-
-    // ✅ LOCAL FAST STATE
-    const [localUser, setLocalUser] = useState<any>(user);
-
-    const socketSubscribed = useRef(false);
-
-
-
-    /* ================= SYNC GLOBAL ================= */
-    useEffect(() => {
-        if (state?.user || user) {
-            setLocalUser(state?.user || user);
-        }
-    }, [state?.user, user]);
+    const socketSubscribed = useRef<string | null>(null);
 
     /* ================= DRAWER ================= */
     const openDrawer = useCallback(() => {
@@ -77,51 +67,38 @@ const HeaderUser = ({ user }: { user: any }) => {
         }).start(() => setDrawerVisible(false));
     }, []);
 
-    /* ================= SOCKET (ONCE ONLY) ================= */
+    /* ================= SOCKET ================= */
     useEffect(() => {
-        if (!localUser?.profile_id || socketSubscribed.current) return;
+        if (!user?.profile_id) return;
+        const event = `user#profile#${user.profile_id}`;
 
-        socketSubscribed.current = true;
-
-        if (!socket.connected) {
-            socket.connect();
+        if (socketSubscribed.current === event) return;
+        socketSubscribed.current = event;
+        if (!socket.connected) socket.connect();
+        if (socket.connected) {
+            socket.emit('user.profile', user?.profile_id);
         }
-
-        const event = `user#profile#${localUser.profile_id}`;
-
         const handler = (data: any) => {
             if (!data) return;
-
             const nextUser = {
-                ...localUser,
+                ...user,
                 balance: data.balance,
                 bonus: data.bonus,
             };
 
-            // ⚡ instant UI
-            setLocalUser(nextUser);
-
-            // 💤 defer global update
-            InteractionManager.runAfterInteractions(() => {
-                dispatch({
-                    type: "SET",
-                    key: "user",
-                    payload: nextUser,
-                });
-
-                setItem("user", nextUser);
-            });
+            dispatch({ type: "SET", key: "user", payload: nextUser });
+            setItem("user", nextUser);
         };
 
         socket.on(event, handler);
 
         return () => {
-            socket.off(event, handler);
+            // socket.off(event, handler);
+            // socketSubscribed.current = null;
         };
+    }, [user?.profile_id]);
 
-    }, [localUser?.profile_id]);
-
-    /* ================= FAST NAV ================= */
+    /* ================= NAV ================= */
     const goTo = useCallback((screen: string) => {
         closeDrawer();
 
@@ -133,17 +110,19 @@ const HeaderUser = ({ user }: { user: any }) => {
     /* ================= LOGOUT ================= */
     const logout = useCallback(async () => {
         await removeItem("user");
-
         dispatch({ type: "DEL", key: "user" });
 
         closeDrawer();
 
         InteractionManager.runAfterInteractions(() => {
-            navigation.navigate("HomeScreen");
+            navigation.reset({
+                index: 0,
+                routes: [{ name: "Sports" }],
+            });
         });
     }, []);
 
-    if (!localUser) return null;
+    if (!user) return null;
 
     return (
         <>
@@ -154,7 +133,7 @@ const HeaderUser = ({ user }: { user: any }) => {
                     onPress={() => goTo("DepositScreen")}
                 >
                     <Text style={styles.depositText}>
-                        KES {formatToFloat(localUser?.balance) || 0}
+                        KES {formatToFloat(user?.balance) || 0}
                     </Text>
                 </TouchableOpacity>
 
@@ -177,11 +156,11 @@ const HeaderUser = ({ user }: { user: any }) => {
                         <FontAwesome name="user-circle" size={40} color="#fff" />
 
                         <Text style={styles.drawerBalance}>
-                            KES {formatToFloat(localUser.balance) || 0}
+                            KES {formatToFloat(user.balance) || 0}
                         </Text>
 
                         <Text style={styles.drawerBonus}>
-                            Bonus: KES {formatToFloat(localUser?.bonus || 0)}
+                            Bonus: KES {formatToFloat(user?.bonus || 0)}
                         </Text>
                     </View>
 
@@ -239,13 +218,14 @@ const MenuItem = memo(({ label, onPress }) => (
 ));
 
 export default memo(HeaderUser);
+
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: 10,
     },
-
     depositBtn: {
         flexDirection: "row",
         alignItems: "center",
@@ -255,19 +235,16 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginRight: 10,
     },
-
     depositText: {
         color: "#000",
         fontWeight: "bold",
     },
-
     overlay: {
         position: "absolute",
         width: "100%",
         height: "100%",
         backgroundColor: "rgba(0,0,0,0.4)",
     },
-
     drawer: {
         position: "absolute",
         top: 0,
@@ -277,63 +254,53 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingHorizontal: 20,
     },
-
     drawerHeader: {
         alignItems: "center",
         marginBottom: 30,
     },
-
     drawerBalance: {
         color: "#fff",
         marginTop: 8,
         fontSize: 16,
         fontWeight: "bold",
     },
-
     drawerBonus: {
         color: "#FFD700",
         marginTop: 4,
         fontSize: 14,
         fontWeight: "600",
     },
-
     menuItem: {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 14,
     },
-
     menuText: {
         color: "#fff",
         marginLeft: 12,
         fontSize: 15,
     },
-
     logoutText: {
         color: "#ff4d4d",
         marginLeft: 12,
         fontSize: 15,
         fontWeight: "bold",
     },
-
     mpesaModalContainer: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
     },
-
     mpesaModalBody: {
         backgroundColor: "#0c0c24",
         marginHorizontal: 20,
         borderRadius: 10,
         maxHeight: "80%",
     },
-
     mpesaScrollContent: {
         padding: 20,
         paddingBottom: 40,
     },
-
     mpesaModalTitle: {
         fontSize: 20,
         fontWeight: "700",
@@ -341,7 +308,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginBottom: 20,
     },
-
     closeButton: {
         backgroundColor: "#e70654",
         marginTop: 20,
@@ -349,7 +315,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: "center",
     },
-
     closeText: {
         color: "#fff",
         fontWeight: "700",
