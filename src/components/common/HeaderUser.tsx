@@ -50,6 +50,9 @@ const HeaderUser = () => {
     const openDrawer = useCallback(() => {
         setDrawerVisible(true);
 
+        // 🔥 ensure animation always starts from hidden
+        slideAnim.setValue(width);
+
         requestAnimationFrame(() => {
             Animated.timing(slideAnim, {
                 toValue: width - 260,
@@ -57,7 +60,7 @@ const HeaderUser = () => {
                 useNativeDriver: true,
             }).start();
         });
-    }, []);
+    }, [slideAnim]);
 
     const closeDrawer = useCallback(() => {
         Animated.timing(slideAnim, {
@@ -65,21 +68,26 @@ const HeaderUser = () => {
             duration: 180,
             useNativeDriver: true,
         }).start(() => setDrawerVisible(false));
-    }, []);
+    }, [slideAnim]);
 
     /* ================= SOCKET ================= */
     useEffect(() => {
         if (!user?.profile_id) return;
+
         const event = `user#profile#${user.profile_id}`;
 
         if (socketSubscribed.current === event) return;
         socketSubscribed.current = event;
+
         if (!socket.connected) socket.connect();
+
         if (socket.connected) {
             socket.emit('user.profile', user?.profile_id);
         }
+
         const handler = (data: any) => {
             if (!data) return;
+
             const nextUser = {
                 ...user,
                 balance: data.balance,
@@ -93,8 +101,8 @@ const HeaderUser = () => {
         socket.on(event, handler);
 
         return () => {
-            // socket.off(event, handler);
-            // socketSubscribed.current = null;
+            socket.off(event, handler);
+            socketSubscribed.current = null;
         };
     }, [user?.profile_id]);
 
@@ -105,7 +113,7 @@ const HeaderUser = () => {
         InteractionManager.runAfterInteractions(() => {
             navigation.navigate("Sports", { screen });
         });
-    }, []);
+    }, [closeDrawer, navigation]);
 
     /* ================= LOGOUT ================= */
     const logout = useCallback(async () => {
@@ -120,7 +128,7 @@ const HeaderUser = () => {
                 routes: [{ name: "Sports" }],
             });
         });
-    }, []);
+    }, [dispatch, closeDrawer, navigation]);
 
     if (!user) return null;
 
@@ -167,6 +175,7 @@ const HeaderUser = () => {
                     <MenuItem label="Deposit" onPress={() => goTo("DepositScreen")} />
                     <MenuItem label="Withdraw" onPress={() => goTo("WithdrawScreen")} />
                     <MenuItem label="My Bets" onPress={() => goTo("MyBetsScreen")} />
+                    <MenuItem label="Promotions" onPress={() => goTo("PromotionsScreen")} />
                     <MenuItem label="Self Exclusion" onPress={() => goTo("SelfExcludeScreen")} />
 
                     <MenuItem

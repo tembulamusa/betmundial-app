@@ -32,6 +32,7 @@ import SelfExcludeScreen from "./src/screens/home/SelfExcludeScreen";
 import JackpotScreen from "./src/screens/home/JackpotScreen";
 import LiveScreen from "./src/screens/home/LiveScreen";
 import CasinoLaunchedGameScreen from "./src/components/casino/CasinoLaunchedGameScreen";
+import PromotionsScreen from "./src/screens/home/PromotionsScreen";
 
 // Lazy load heavy components
 const LazyHomeScreen = lazy(() => import("./src/screens/HomeScreen"));
@@ -116,6 +117,7 @@ const HomeStackScreen = React.memo(function HomeStackScreen() {
       <HomeStack.Screen name="MyBetsScreen" component={MyBetsScreen} />
       <HomeStack.Screen name="SelfExcludeScreen" component={SelfExcludeScreen} />
       <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
+      <HomeStack.Screen name="PromotionsScreen" component={PromotionsScreen} />
     </HomeStack.Navigator>
   );
 });
