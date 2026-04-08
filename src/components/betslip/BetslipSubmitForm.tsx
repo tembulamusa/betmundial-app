@@ -238,7 +238,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
                     setMessage({
                         status: 200,
-                        message: "Your place bet request received successfully"
+                        message: res?.data?.message || res?.data?.result || "Your place bet request received successfully"
                     });
 
                 } else {
