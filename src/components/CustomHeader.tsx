@@ -42,9 +42,9 @@ const CustomHeader = ({ scene, previous, navigation }) => {
     useEffect(() => {
         const loadUser = async () => {
             const cached = await getItem("user");
-
             if (cached) {
                 setLocalUser(cached); // ⚡ instant UI
+                dispatch({ type: 'SET', key: 'user', payload: cached }); // sync global
             }
         };
 

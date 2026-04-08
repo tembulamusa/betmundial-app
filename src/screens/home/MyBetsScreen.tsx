@@ -148,6 +148,23 @@ const MyBetsScreen = () => {
         return bets.filter((item) => getBetCategory(item) === betFilter);
     }, [bets, betFilter, getBetCategory]);
 
+    /* ================= EMPTY STATE ================= */
+    const EmptyState = useMemo(() => {
+        if (refreshing) return null;
+
+        return (
+            <View style={styles.emptyWrap}>
+                <FontAwesome name="inbox" size={40} color="#555" />
+                <Text style={styles.emptyTitle}>No Bets Found</Text>
+                <Text style={styles.emptySubtitle}>
+                    {betFilter === "all"
+                        ? "You haven’t placed any bets yet."
+                        : `No ${betFilter} bets available.`}
+                </Text>
+            </View>
+        );
+    }, [refreshing, betFilter]);
+
     /* ================= STATUS ================= */
     const renderStatus = useCallback((status: string) => {
         let icon = "circle";
@@ -295,6 +312,10 @@ const MyBetsScreen = () => {
                 data={filteredBets}
                 keyExtractor={(item) => item.bet_id.toString()}
                 renderItem={renderItem}
+                ListEmptyComponent={EmptyState}
+                contentContainerStyle={
+                    filteredBets.length === 0 && styles.emptyContainer
+                }
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={fetchBets} />
                 }
@@ -358,8 +379,6 @@ const styles = StyleSheet.create({
     pickerWrap: {
         width: 140,
         height: 36,
-        borderRadius: 0,
-        overflow: "hidden",
         backgroundColor: "#1e293b",
     },
 
@@ -373,7 +392,6 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255,255,255,0.15)",
         marginHorizontal: 4,
         marginVertical: 2,
-        borderRadius: 2,
         paddingVertical: 6,
         paddingHorizontal: 4,
     },
@@ -466,5 +484,30 @@ const styles = StyleSheet.create({
     closeText: {
         color: "#fff",
         fontWeight: "700",
+    },
+
+    emptyContainer: {
+        flexGrow: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    emptyWrap: {
+        alignItems: "center",
+        paddingHorizontal: 20,
+    },
+
+    emptyTitle: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+        marginTop: 10,
+    },
+
+    emptySubtitle: {
+        color: "#888",
+        fontSize: 13,
+        marginTop: 5,
+        textAlign: "center",
     },
 });

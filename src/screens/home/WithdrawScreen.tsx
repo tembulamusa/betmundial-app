@@ -16,6 +16,7 @@ import { Context } from "../../context/store";
 import { getItem } from "../../components/utils/local-storage";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
+import { theme } from "../../theme";
 
 const mpesa = require("../../assets/images/mpesa.png");
 
@@ -88,97 +89,99 @@ const WithdrawScreen = () => {
 
     return (
         <ScrollView
-            style={styles.container}
+            style={{ backgroundColor: theme.background, padding: 0 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
         >
             <Text style={styles.title}>Withdraw Funds</Text>
-
-            <Image source={mpesa} style={styles.logo} />
-
-            <Formik
-                initialValues={initialValues}
-                validate={validate}
-                onSubmit={handleSubmit}
+            <View style={styles.container}
             >
-                {({ values, errors, handleChange, handleSubmit }) => (
-                    <>
-                        <Text style={styles.label}>Phone Number</Text>
+                <Image source={mpesa} style={styles.logo} />
 
-                        <TextInput
-                            style={[styles.input, styles.disabledInput]}
-                            value={values.msisdn}
-                            editable={false}
-                            placeholderTextColor={"#ccc"}
-                        />
+                <Formik
+                    initialValues={initialValues}
+                    validate={validate}
+                    onSubmit={handleSubmit}
+                >
+                    {({ values, errors, handleChange, handleSubmit }) => (
+                        <>
+                            <Text style={styles.label}>Phone Number</Text>
 
-                        {errors.msisdn && (
-                            <Text style={styles.error}>{errors.msisdn}</Text>
-                        )}
+                            <TextInput
+                                style={[styles.input, styles.disabledInput]}
+                                value={values.msisdn}
+                                editable={false}
+                                placeholderTextColor={"#ccc"}
+                            />
 
-                        <Text style={styles.label}>Amount to Withdraw</Text>
-
-                        <TextInput
-                            style={styles.input}
-                            value={values.amount}
-                            onChangeText={handleChange("amount")}
-                            keyboardType="numeric"
-                            placeholder="Enter amount"
-                            placeholderTextColor="#ccc"
-                        />
-
-                        {errors.amount && (
-                            <Text style={styles.error}>{errors.amount}</Text>
-                        )}
-
-                        <TouchableOpacity
-                            style={styles.withdrawButton}
-                            onPress={() => handleSubmit()}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.withdrawText}>
-                                    Withdraw Funds
-                                </Text>
+                            {errors.msisdn && (
+                                <Text style={styles.error}>{errors.msisdn}</Text>
                             )}
-                        </TouchableOpacity>
-                    </>
-                )}
-            </Formik>
 
-            <View style={styles.instructions}>
-                <Text style={styles.instructionsTitle}>
-                    Withdrawal Instructions
-                </Text>
+                            <Text style={styles.label}>Amount to Withdraw</Text>
 
-                <Text style={styles.step}>
-                    1. Enter the M-Pesa phone number to receive funds.
-                </Text>
-                <Text style={styles.step}>
-                    2. Enter the amount you wish to withdraw.
-                </Text>
-                <Text style={styles.step}>
-                    3. Click the withdraw button.
-                </Text>
-                <Text style={styles.step}>
-                    4. Check your phone for M-Pesa confirmation.
-                </Text>
+                            <TextInput
+                                style={styles.input}
+                                value={values.amount}
+                                onChangeText={handleChange("amount")}
+                                keyboardType="numeric"
+                                placeholder="Enter amount"
+                                placeholderTextColor="#ccc"
+                            />
 
-                <View style={styles.divider} />
+                            {errors.amount && (
+                                <Text style={styles.error}>{errors.amount}</Text>
+                            )}
 
-                <Text style={styles.instructionsTitle}>Withdraw via SMS</Text>
+                            <TouchableOpacity
+                                style={styles.withdrawButton}
+                                onPress={() => handleSubmit()}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.withdrawText}>
+                                        Withdraw Funds
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </Formik>
 
-                <Text style={styles.step}>
-                    Send <Text style={styles.bold}>w#amount</Text> or{" "}
-                    <Text style={styles.bold}>withdraw#amount</Text>
-                </Text>
+                <View style={styles.instructions}>
+                    <Text style={styles.instructionsTitle}>
+                        Withdrawal Instructions
+                    </Text>
 
-                <Text style={styles.step}>
-                    Example: Send <Text style={styles.bold}>w#500</Text> to{" "}
-                    <Text style={styles.bold}>29488</Text>
-                </Text>
+                    <Text style={styles.step}>
+                        1. Enter the M-Pesa phone number to receive funds.
+                    </Text>
+                    <Text style={styles.step}>
+                        2. Enter the amount you wish to withdraw.
+                    </Text>
+                    <Text style={styles.step}>
+                        3. Click the withdraw button.
+                    </Text>
+                    <Text style={styles.step}>
+                        4. Check your phone for M-Pesa confirmation.
+                    </Text>
+
+                    <View style={styles.divider} />
+
+                    <Text style={styles.instructionsTitle}>Withdraw via SMS</Text>
+
+                    <Text style={styles.step}>
+                        Send <Text style={styles.bold}>w#amount</Text> or{" "}
+                        <Text style={styles.bold}>withdraw#amount</Text>
+                    </Text>
+
+                    <Text style={styles.step}>
+                        Example: Send <Text style={styles.bold}>w#500</Text> to{" "}
+                        <Text style={styles.bold}>29488</Text>
+                    </Text>
+                </View>
             </View>
         </ScrollView>
     );
@@ -189,20 +192,21 @@ export default WithdrawScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#0c0c24"
+        padding: 20,
     },
 
     scrollContent: {
-        padding: 20,
+        // padding: 20,
         paddingBottom: 80
     },
 
     title: {
-        fontSize: 22,
+        fontSize: 18,
         fontWeight: "700",
         color: "#ffffff",
         textAlign: "center",
-        marginBottom: 20
+        backgroundColor: "rgba(255,255,255,0.1)",
+        padding: 12,
     },
 
     logo: {

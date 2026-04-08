@@ -89,7 +89,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
 
     // --- Rebet ---
     const rebet = async () => {
-
+        setMessage({});
         if (state?.jackpotrebetslip) {
 
             dispatch({
@@ -148,8 +148,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
         setIsSubmitting(true);
         try {
 
-            const user = await getItem("user");
-
+            const user = state?.user || await getItem("user");
             if (!user) {
                 setMessage({ status: 400, message: "Login required" });
                 return;
@@ -221,9 +220,9 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 apiVersion: 2
             });
             // Alert.alert("Response", JSON.stringify(res));
-            if (res?.status === 200 || res?.status === 201) {
+            if (res?.status == 200 || res?.status == 201) {
 
-                if (res?.data?.status === 200) {
+                if (res?.data?.status == 200) {
                     dispatch({
                         type: "SET",
                         key: jackpot ? "jackpotrebetslip" : "rebetslip",
@@ -287,7 +286,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                         {message.message}
                     </Text>
 
-                    {message.status === 200 && (
+                    {message.status == 200 && (
                         <TouchableOpacity
                             style={styles.rebetBtn}
                             onPress={rebet}

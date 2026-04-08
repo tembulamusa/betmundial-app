@@ -108,80 +108,81 @@ const DepositScreen = () => {
     return (
         <ScrollView style={styles.container}>
             <Text style={styles.title}>Deposit Funds (Mobile Money)</Text>
+            <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
 
-            <Image source={mpesa} style={styles.logo} />
+                <Image source={mpesa} style={styles.logo} />
+                <Formik
+                    initialValues={initialValues}
+                    onSubmit={handleSubmit}
+                    validate={validate}
+                >
 
-            <Formik
-                initialValues={initialValues}
-                onSubmit={handleSubmit}
-                validate={validate}
-            >
-                {({ values, errors, handleChange, handleSubmit }) => (
-                    <>
-                        <Text style={styles.label}>Phone Number</Text>
+                    {({ values, errors, handleChange, handleSubmit }) => (
+                        <>
+                            <Text style={styles.label}>Phone Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={values.msisdn}
+                                editable={false}
+                            />
 
-                        <TextInput
-                            style={styles.input}
-                            value={values.msisdn}
-                            editable={false}
-                        />
+                            <Text style={styles.label}>Amount</Text>
 
-                        <Text style={styles.label}>Amount</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={values.amount}
+                                onChangeText={handleChange("amount")}
+                                keyboardType="numeric"
+                                placeholder="Enter Amount"
+                                placeholderTextColor="#ccc"
+                            />
 
-                        <TextInput
-                            style={styles.input}
-                            value={values.amount}
-                            onChangeText={handleChange("amount")}
-                            keyboardType="numeric"
-                            placeholder="Enter Amount"
-                            placeholderTextColor="#ccc"
-                        />
-
-                        {errors.amount && (
-                            <Text style={styles.error}>{errors.amount}</Text>
-                        )}
-
-                        <TouchableOpacity
-                            style={styles.depositButton}
-                            onPress={() => handleSubmit()}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.depositText}>Deposit</Text>
+                            {errors.amount && (
+                                <Text style={styles.error}>{errors.amount}</Text>
                             )}
-                        </TouchableOpacity>
-                    </>
-                )}
-            </Formik>
 
-            <View style={styles.instructions}>
-                <Text style={styles.instructionsTitle}>Direct Mpesa Deposit</Text>
+                            <TouchableOpacity
+                                style={styles.depositButton}
+                                onPress={() => handleSubmit()}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.depositText}>Deposit</Text>
+                                )}
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </Formik>
 
-                <Text style={styles.instructionsText}>1. Go to Mpesa</Text>
-                <Text style={styles.instructionsText}>2. Select Lipa na Mpesa</Text>
-                <Text style={styles.instructionsText}>3. Paybill Number: 444142</Text>
-                <Text style={styles.instructionsText}>4. Account Number: Your phone number</Text>
-                <Text style={styles.instructionsText}>5. Enter Amount</Text>
-                <Text style={styles.instructionsText}>6. Enter PIN and confirm</Text>
-            </View>
+                <View style={styles.instructions}>
+                    <Text style={styles.instructionsTitle}>Direct Mpesa Deposit</Text>
 
-            <TouchableOpacity
-                style={styles.missingDeposit}
-                onPress={() =>
-                    dispatch({
-                        type: "SET",
-                        key: "showcheckmpesadepositstatus",
-                        payload: true
-                    })
-                }
-            >
-                <Text style={styles.missingText}>
-                    Missing Deposit? Check Deposit Status
-                </Text>
-            </TouchableOpacity>
-        </ScrollView>
+                    <Text style={styles.instructionsText}>1. Go to Mpesa</Text>
+                    <Text style={styles.instructionsText}>2. Select Lipa na Mpesa</Text>
+                    <Text style={styles.instructionsText}>3. Paybill Number: 444142</Text>
+                    <Text style={styles.instructionsText}>4. Account Number: Your phone number</Text>
+                    <Text style={styles.instructionsText}>5. Enter Amount</Text>
+                    <Text style={styles.instructionsText}>6. Enter PIN and confirm</Text>
+                </View>
+
+                <TouchableOpacity
+                    style={styles.missingDeposit}
+                    onPress={() =>
+                        dispatch({
+                            type: "SET",
+                            key: "showcheckmpesadepositstatus",
+                            payload: true
+                        })
+                    }
+                >
+                    <Text style={styles.missingText}>
+                        Missing Deposit? Check Deposit Status
+                    </Text>
+                </TouchableOpacity>
+            </View >
+        </ScrollView >
     );
 };
 
@@ -190,7 +191,7 @@ export default DepositScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        // padding: 20,
         backgroundColor: "#0c0c24"
     },
 
@@ -200,8 +201,9 @@ const styles = StyleSheet.create({
         color: "#fff",
         textAlign: "center",
         marginBottom: 20,
-        backgroundColor: "rgba(255,255,255,0.1)",
+        backgroundColor: "rgba(255,255,255,0.05)",
         padding: 8,
+        paddingVertical: 12,
         borderRadius: 2
     },
 
