@@ -73,7 +73,7 @@ const HeaderNav: React.FC = () => {
     const linkItems = useMemo(() => [
         { name: "Home", icon: "home.svg", link: "HomeScreen" },
         { name: "live", icon: "livescore.svg", link: "LiveScreen" },
-        { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
+        // { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
         {
             name: "aviator",
             icon: "aviator.svg",
@@ -88,6 +88,20 @@ const HeaderNav: React.FC = () => {
             provider: "unicraft",
             gameName: "mundial-league",
         },
+        {
+            name: "aviatrix",
+            icon: "aviatrix.svg",
+            custom: true,
+            provider: "aviatrix",
+            gameName: "aviatrix",
+        },
+        {
+            name: "jetx",
+            icon: "jetx.svg",
+            custom: true,
+            provider: "smartsoft",
+            gameName: "jetx",
+        }
     ], []);
 
     /* ================= NAVIGATION HANDLER ================= */

@@ -47,7 +47,8 @@ import RallyIcon from "../../assets/images/colorsvgicons/rally.svg";
 import BandyIcon from "../../assets/images/colorsvgicons/bandy.svg";
 import GaelicFootballIcon from "../../assets/images/colorsvgicons/gaelic football.svg";
 import GaelicHurlingIcon from "../../assets/images/colorsvgicons/gaelic hurling.svg";
-
+import AviatrixIcon from "../../assets/images/casino/icons/Aviatrix.svg";
+import JetXIcon from "../../assets/images/casino/icons/JetX.svg";
 
 export const icons: Record<string, any> = {
     home: HomeIcon,
@@ -97,7 +98,9 @@ export const icons: Record<string, any> = {
     rally: RallyIcon,
     bandy: BandyIcon,
     "gaelic football": GaelicFootballIcon,
-    "gaelic hurling": GaelicHurlingIcon
+    "gaelic hurling": GaelicHurlingIcon,
+    aviatrix: AviatrixIcon,
+    jetx: JetXIcon,
 
 };
 

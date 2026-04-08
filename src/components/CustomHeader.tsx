@@ -143,7 +143,6 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                         style={{ width: "100%", height: 50, resizeMode: "contain" }}
                     />
                 </View>
-                // ONLY CHANGE THIS PART
 
                 <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {state?.user
