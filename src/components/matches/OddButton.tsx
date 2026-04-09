@@ -129,11 +129,9 @@ const OddButton: React.FC<Props> = ({
     const updateMatchPicked = useCallback(() => {
 
         if (state?.[reference]) {
-
             if (state?.[reference].startsWith("remove.")) {
                 setPicked("");
             } else {
-
                 const uc = clean(
                     match.match_id +
                     "" +
@@ -148,8 +146,18 @@ const OddButton: React.FC<Props> = ({
                 }
             }
         }
+        const ucn = clean(
+            match.match_id +
+            "" +
+            (match?.odds?.sub_type_id || match?.sub_type_id) +
+            (match?.[mkt || ""] || match?.odd_key || mkt)
+        );
+        if (ucn !== state?.[betslipKey]?.[match?.match_id]?.ucn) {
+            setPicked("");
+        }
 
-    }, [state?.[betslipKey]?.[match.match_id]]);
+
+    }, [state?.[betslipKey]?.[match.match_id]], state?.[betslipKey], state?.betslip, state?.[reference]);
 
     useEffect(() => {
         updateMatchPicked();
