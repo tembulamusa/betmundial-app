@@ -49,6 +49,7 @@ import GaelicFootballIcon from "../../assets/images/colorsvgicons/gaelic footbal
 import GaelicHurlingIcon from "../../assets/images/colorsvgicons/gaelic hurling.svg";
 import AviatrixIcon from "../../assets/images/casino/icons/Aviatrix.svg";
 import JetXIcon from "../../assets/images/casino/icons/JetX.svg";
+import CasinoIcon from "../../assets/images/casino/icons/casino.svg";
 
 export const icons: Record<string, any> = {
     home: HomeIcon,
@@ -101,6 +102,7 @@ export const icons: Record<string, any> = {
     "gaelic hurling": GaelicHurlingIcon,
     aviatrix: AviatrixIcon,
     jetx: JetXIcon,
+    casino: CasinoIcon,
 
 };
 

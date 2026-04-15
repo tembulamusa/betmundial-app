@@ -188,8 +188,8 @@ function MainTabs() {
               );
             },
 
-            tabBarActiveTintColor: "#ffffff",
-            tabBarInactiveTintColor: "#999999",
+            tabBarActiveTintColor: "rgba(255, 215, 0, 1)", // gold
+            tabBarInactiveTintColor: "#ffffff",
 
             tabBarStyle: styles.tabBar,
             tabBarLabelStyle: styles.tabLabel,
@@ -204,13 +204,16 @@ function MainTabs() {
               },
             }}
           />
-
           <Tab.Screen
             name="Casino"
             component={CasinoStackScreen}
             listeners={({ navigation }) => ({
               tabPress: (e) => {
+                e.preventDefault(); // stop default behavior
                 dispatch({ type: "SET", key: "playType", payload: "casino" });
+                navigation.navigate("Casino", {
+                  screen: "CasinoMain",
+                });
               },
             })}
           />

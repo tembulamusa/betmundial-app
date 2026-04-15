@@ -17,6 +17,7 @@ import {
     RefreshControl,
     Modal,
     InteractionManager,
+    Alert,
 } from "react-native";
 
 import { Picker } from "@react-native-picker/picker";
@@ -43,19 +44,19 @@ const MyBetsScreen = () => {
     const loadingRef = useRef(false);
     const hasFetchedRef = useRef(false);
 
-    /* ================= LOAD CACHE ================= */
-    useEffect(() => {
-        (async () => {
-            const cached = await getItem(CACHE_KEY);
-            if (cached && mountedRef.current) {
-                setBets(cached);
-            }
-        })();
+    // /* ================= LOAD CACHE ================= */
+    // useEffect(() => {
+    //     (async () => {
+    //         const cached = await getItem(CACHE_KEY);
+    //         if (cached && mountedRef.current) {
+    //             setBets(cached);
+    //         }
+    //     })();
 
-        return () => {
-            mountedRef.current = false;
-        };
-    }, []);
+    //     return () => {
+    //         mountedRef.current = false;
+    //     };
+    // }, []);
 
     /* ================= FETCH ================= */
     const fetchBets = useCallback(async () => {
@@ -70,15 +71,11 @@ const MyBetsScreen = () => {
                 method: "GET",
                 apiVersion: 2,
             });
-
+            // Alert.alert("Fetch Status", JSON.stringify(res));
             if ([200, 201].includes(res.status)) {
                 const data = res?.data?.data || [];
+                setBets(data);
 
-                if (mountedRef.current) {
-                    setBets(data);
-                }
-
-                setItem(CACHE_KEY, data);
             }
         } catch (e) {
             console.log("Error fetching bets", e);
@@ -197,6 +194,8 @@ const MyBetsScreen = () => {
     }, []);
 
     /* ================= CARD ================= */
+    // ONLY CHANGE IS INSIDE BetCard (details section)
+
     const BetCard = memo(
         ({ item, isExpanded }: { item: any; isExpanded: boolean }) => {
             const expanded = isExpanded;
@@ -211,15 +210,37 @@ const MyBetsScreen = () => {
                 ? item.betslip?.slice(0, 5)
                 : [];
 
+            const renderSlip = ({ item: slip }: { item: any }) => (
+                <View style={styles.slipRow}>
+                    <Text style={styles.team}>
+                        {slip.home_team} vs {slip.away_team}
+                    </Text>
+
+                    <Text style={styles.pick}>
+                        {slip.bet_pick}
+                        {slip.special_bet_value
+                            ? ` (${slip.special_bet_value})`
+                            : ""}
+                    </Text>
+
+                    <View style={styles.slipFooter}>
+                        <Text style={styles.result}>
+                            {slip.result ?? "n/a"}
+                        </Text>
+                        {renderStatus(slip.status)}
+                    </View>
+                </View>
+            );
+
             return (
                 <View style={styles.card}>
                     <TouchableOpacity
-                        onPress={() => toggleExpand(item.bet_id)}
+                        onPress={() => toggleExpand(item?.bet_id)}
                         style={styles.cardHeader}
                     >
                         <View>
-                            <Text style={styles.date}>{item.created}</Text>
-                            <Text style={styles.betId}>#{item.bet_id}</Text>
+                            <Text style={styles.date}>{item?.created}</Text>
+                            <Text style={styles.betId}>#{item?.bet_id}</Text>
                         </View>
 
                         <View style={styles.badge}>
@@ -228,39 +249,26 @@ const MyBetsScreen = () => {
 
                         <View>
                             <Text style={styles.amount}>
-                                Stake: {item.bet_amount}
+                                Stake: {item?.bet_amount}
                             </Text>
                             <Text style={styles.win}>
-                                Win: {item.possible_win}
+                                Win: {item?.possible_win}
                             </Text>
                         </View>
 
-                        {renderStatus(item.status)}
+                        {renderStatus(item?.status)}
                     </TouchableOpacity>
 
                     {expanded && (
                         <View style={styles.details}>
-                            {visibleSlips?.map((slip: any) => (
-                                <View key={slip.game_id} style={styles.slipRow}>
-                                    <Text style={styles.team}>
-                                        {slip.home_team} vs {slip.away_team}
-                                    </Text>
-
-                                    <Text style={styles.pick}>
-                                        {slip.bet_pick}
-                                        {slip.special_bet_value
-                                            ? ` (${slip.special_bet_value})`
-                                            : ""}
-                                    </Text>
-
-                                    <View style={styles.slipFooter}>
-                                        <Text style={styles.result}>
-                                            {slip.result ?? "n/a"}
-                                        </Text>
-                                        {renderStatus(slip.status)}
-                                    </View>
-                                </View>
-                            ))}
+                            <FlatList
+                                data={visibleSlips}
+                                keyExtractor={(slip, index) =>
+                                    slip.game_id?.toString() || index.toString()
+                                }
+                                renderItem={renderSlip}
+                                scrollEnabled={false} // IMPORTANT (nested list)
+                            />
 
                             {item.betslip?.length > 5 && (
                                 <Text style={styles.moreText}>
@@ -310,7 +318,7 @@ const MyBetsScreen = () => {
 
             <FlatList
                 data={filteredBets}
-                keyExtractor={(item) => item.bet_id.toString()}
+                keyExtractor={(item) => item?.bet_id?.toString() || Math.random().toString()}
                 renderItem={renderItem}
                 ListEmptyComponent={EmptyState}
                 contentContainerStyle={

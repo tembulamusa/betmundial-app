@@ -11,6 +11,7 @@ import KagamingIcon from "../../assets/images/casino/icons/kagaming.svg";
 import Oaks3Icon from "../../assets/images/casino/icons/3 oaks.svg";
 import SplitThePotIcon from "../../assets/images/casino/icons/splitthepot.svg";
 import SpribeIcon from "../../assets/images/casino/icons/spribe.svg";
+import JetXIcon from "../../assets/images/casino/icons/JetX.svg";
 
 
 export const casinoIcons: Record<string, any> = {
@@ -30,6 +31,7 @@ export const casinoIcons: Record<string, any> = {
     splitthepot: SplitThePotIcon,
     "split the pot": SplitThePotIcon,
     spribe: SpribeIcon,
+    jetx: JetXIcon,
 };
 
 export const CasinoIcon = (name: string) => {

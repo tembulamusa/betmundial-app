@@ -73,20 +73,13 @@ const HeaderNav: React.FC = () => {
     const linkItems = useMemo(() => [
         { name: "Home", icon: "home.svg", link: "HomeScreen" },
         { name: "live", icon: "livescore.svg", link: "LiveScreen" },
-        // { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
+        { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
         {
             name: "aviator",
             icon: "aviator.svg",
             custom: true,
             provider: "spribe",
             gameName: "aviator",
-        },
-        {
-            name: "mundial league",
-            icon: "mundial-league.svg",
-            custom: true,
-            provider: "unicraft",
-            gameName: "mundial-league",
         },
         {
             name: "aviatrix",
@@ -101,7 +94,19 @@ const HeaderNav: React.FC = () => {
             custom: true,
             provider: "smartsoft",
             gameName: "jetx",
-        }
+        },
+        {
+            name: "mundial league",
+            icon: "mundial-league.svg",
+            custom: true,
+            provider: "unicraft",
+            gameName: "mundial-league",
+        },
+        {
+            name: "Casino",
+            icon: "casino.svg",
+            link: "CasinoScreen",
+        },
     ], []);
 
     /* ================= NAVIGATION HANDLER ================= */
@@ -135,6 +140,14 @@ const HeaderNav: React.FC = () => {
 
             navigateDeferred(() => {
                 dispatch({ type: "SET", key: "playType", payload: "jackpot" });
+            });
+            return;
+        }
+        if (item.link === "CasinoScreen") {
+            navigation.navigate("Casino", { screen: "CasinoMain" });
+
+            navigateDeferred(() => {
+                dispatch({ type: "SET", key: "playType", payload: "casino" });
             });
             return;
         }

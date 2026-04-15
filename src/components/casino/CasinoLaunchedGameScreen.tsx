@@ -207,7 +207,7 @@ const CasinoLaunchedGameScreen = () => {
                         parsed?.aggregator?.toLowerCase() === "bitville" ||
                         parsed?.game?.aggregator?.toLowerCase() === "bitville"
                     ) {
-                        setBitvilleGame(parsed);
+                        setBitvilleGame(state?.bitvilleGame || parsed);
                     }
 
                 } catch (err) {

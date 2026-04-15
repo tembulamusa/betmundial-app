@@ -158,20 +158,18 @@ const PopularGames: React.FC = () => {
                     dispatch({
                         type: "SET",
                         key: "bitvilleGame",
-                        payload: res.data,
+                        payload: res?.data,
                     });
                 }
 
                 /* ✅ NAVIGATE AFTER STATE READY */
-                setTimeout(() => {
-                    navigation.navigate("Casino", {
-                        screen: "CasinoLaunchedGameScreen",
-                        params: {
-                            provider: game.provider_name,
-                            game: game.game_name,
-                        },
-                    });
-                }, 100);
+                navigation.navigate("Casino", {
+                    screen: "CasinoLaunchedGameScreen",
+                    params: {
+                        provider: game.provider_name,
+                        game: game.game_name,
+                    },
+                });
 
             } else {
                 Alert.alert("Error", "Unable to launch game");
@@ -241,7 +239,7 @@ const styles = StyleSheet.create({
     image: {
         width: 120,
         height: 80,
-        borderRadius: 8,
+        borderRadius: 8
     },
 
     loader: {
