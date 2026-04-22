@@ -92,6 +92,12 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile file('release.keystore')
+            storePassword 'Tembula2017'
+            keyAlias 'release'
+            keyPassword 'Tembula2017'
+        }
     }
     sourceSets {
     main {
@@ -105,7 +111,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -113,10 +119,7 @@ android {
     }
     splits {
         abi {
-            enable enableProguardInReleaseBuilds
-            reset()
-            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-            universalApk false
+            enable false   // ✅ disable splits
         }
     }
 }

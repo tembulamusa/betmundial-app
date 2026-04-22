@@ -107,6 +107,11 @@ const HeaderNav: React.FC = () => {
             icon: "casino.svg",
             link: "CasinoScreen",
         },
+        {
+            name: "Crash",
+            icon: "casino.svg",
+            link: "CasinoScreen",
+        },
     ], []);
 
     /* ================= NAVIGATION HANDLER ================= */
@@ -339,10 +344,12 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderBottomWidth: 2,
         borderBottomColor: "transparent",
+        textTransform: "capitalize",
     },
     name: {
         color: "#fff",
         fontSize: 12,
+        textTransform: "capitalize",
         textAlign: "center",
     },
     activeItem: {
