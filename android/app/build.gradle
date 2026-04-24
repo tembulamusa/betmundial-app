@@ -95,7 +95,7 @@ android {
         release {
             storeFile file('upload-keystore.jks')
             storePassword 'Tembula2017'
-            keyAlias 'release'
+            keyAlias 'upload'
             keyPassword 'Tembula2017'
         }
     }
