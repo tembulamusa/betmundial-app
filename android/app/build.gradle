@@ -93,9 +93,9 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('release.keystore')
+            storeFile file('upload-keystore.jks')
             storePassword 'Tembula2017'
-            keyAlias 'release'
+            keyAlias 'upload'
             keyPassword 'Tembula2017'
         }
     }
@@ -112,8 +112,8 @@ android {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.release
-            minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources true
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
