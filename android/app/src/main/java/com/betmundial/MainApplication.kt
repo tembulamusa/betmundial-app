@@ -1,4 +1,4 @@
-package com.betmundialapp
+package com.betmundial
 
 import android.app.Application
 import com.facebook.react.PackageList

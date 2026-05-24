@@ -77,13 +77,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdkVersion 36
 
-    namespace "com.betmundialapp"
+    namespace "com.betmundial"
     defaultConfig {
-        applicationId "com.betmundialapp"
+        applicationId "com.betmundial"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 12
-        versionName "1.0.12"
+        versionCode 15
+        versionName "1.0.15"
     }
     signingConfigs {
         debug {

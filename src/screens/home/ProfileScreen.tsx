@@ -11,11 +11,12 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme';
 import { getItem } from '../../components/utils/local-storage';
+import { logoutUser } from '../../components/utils/logout';
 import { Context } from '../../context/store';
 
 const ProfileScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const [state] = useContext<any>(Context);
+    const [, dispatch] = useContext<any>(Context);
 
     const [user, setUser] = useState<any>(null);
     const [profileData, setProfileData] = useState<any>(null);
@@ -97,9 +98,8 @@ const ProfileScreen: React.FC = () => {
         },
     ];
 
-    const handleLogout = () => {
-        // 👉 Replace with your actual logout logic if needed
-        navigation.navigate("Auth", { screen: "LoginScreen" });
+    const handleLogout = async () => {
+        await logoutUser({ dispatch, navigation });
     };
 
     if (loading) {

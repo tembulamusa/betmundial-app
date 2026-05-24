@@ -19,7 +19,6 @@ import {
     SafeAreaView,
     ScrollView,
     InteractionManager,
-    Alert,
 } from "react-native";
 
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -30,7 +29,9 @@ import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
-import { setItem, removeItem } from "../utils/local-storage";
+import { getItem, setItem } from "../utils/local-storage";
+import { logoutUser } from "../utils/logout";
+import { makeRequest } from "../utils/makeRequest";
 
 const { width } = Dimensions.get("window");
 
@@ -45,6 +46,105 @@ const HeaderUser = () => {
 
     const slideAnim = useRef(new Animated.Value(width)).current;
     const socketSubscribed = useRef<string | null>(null);
+    const latestUserRef = useRef(user);
+
+    useEffect(() => {
+        latestUserRef.current = user;
+    }, [user]);
+
+    /**
+     * Persist user data to AsyncStorage (and SQLite if credentials exist)
+     * without blocking UI. We keep this here to reuse for socket updates
+     * and silent re-auth on app launch.
+     */
+    const persistUserState = useCallback(async (userData: any) => {
+        try {
+            await setItem("user", userData);
+
+            // Update offline credentials if we have them (keeps SQLite cache fresh)
+            try {
+                const { getOfflineCredentials, saveOfflineCredentials } = await import("../../services/offlineDatabase");
+                const creds = await getOfflineCredentials();
+
+                if (creds?.phone_number && creds?.password) {
+                    await saveOfflineCredentials({
+                        phone_number: creds.phone_number,
+                        password: creds.password,
+                        token: userData?.access_token || userData?.token || creds.token,
+                        user_data: userData,
+                        stored_at: new Date().toISOString(),
+                    });
+                }
+            } catch (dbErr) {
+                console.warn("[HeaderUser] Failed to update offline credentials", dbErr);
+            }
+        } catch (storageErr) {
+            console.warn("[HeaderUser] Failed to persist user", storageErr);
+        }
+    }, []);
+
+    /**
+     * Silent session hydration on app launch:
+     * 1) Load user from AsyncStorage if present.
+     * 2) If missing, try offline credentials in SQLite and log in to refresh session.
+     */
+    useEffect(() => {
+        let mounted = true;
+
+        const hydrateUser = async () => {
+            if (latestUserRef.current) return; // already have user in state
+
+            // 1) Fast path: pull cached user
+            const cached = await getItem("user");
+            if (cached && mounted) {
+                const hydrated = {
+                    ...cached,
+                    token: cached?.token || cached?.access_token,
+                    access_token: cached?.access_token || cached?.token,
+                };
+                dispatch({ type: "SET", key: "user", payload: hydrated });
+                latestUserRef.current = hydrated;
+                return;
+            }
+
+            // 2) Fallback: offline credentials -> background login
+            try {
+                const { getOfflineCredentials } = await import("../../services/offlineDatabase");
+                const creds = await getOfflineCredentials();
+
+                if (!mounted || !creds?.phone_number || !creds?.password) return;
+
+                const response = await makeRequest({
+                    url: "member-token",
+                    method: "POST",
+                    data: { phone_number: creds.phone_number, password: creds.password },
+                });
+
+                if ([200, 201].includes(response.status) && response.data?.access_token) {
+                    const hydrated = {
+                        ...response.data,
+                        token: response.data.access_token, // normalize
+                        access_token: response.data.access_token,
+                    };
+
+                    if (!mounted) return;
+                    dispatch({ type: "SET", key: "user", payload: hydrated });
+                    latestUserRef.current = hydrated;
+
+                    // Persist to storage & refresh offline creds
+                    await persistUserState(hydrated);
+                }
+            } catch (err) {
+                console.warn("[HeaderUser] Silent login failed", err);
+            }
+        };
+
+        hydrateUser();
+
+        return () => {
+            mounted = false;
+        };
+    }, [dispatch, persistUserState]);
 
     /* ================= DRAWER ================= */
     const openDrawer = useCallback(() => {
@@ -85,17 +185,21 @@ const HeaderUser = () => {
             socket.emit('user.profile', user?.profile_id);
         }
 
-        const handler = (data: any) => {
+        const handler = async (data: any) => {
             if (!data) return;
 
+            const baseUser = latestUserRef.current || user;
             const nextUser = {
-                ...user,
+                ...baseUser,
                 balance: data.balance,
                 bonus: data.bonus,
+                token: baseUser?.token || baseUser?.access_token,
+                access_token: baseUser?.access_token || baseUser?.token,
             };
 
             dispatch({ type: "SET", key: "user", payload: nextUser });
-            setItem("user", nextUser);
+            latestUserRef.current = nextUser;
+            await persistUserState(nextUser);
         };
 
         socket.on(event, handler);
@@ -104,7 +208,7 @@ const HeaderUser = () => {
             socket.off(event, handler);
             socketSubscribed.current = null;
         };
-    }, [user?.profile_id]);
+    }, [user?.profile_id, dispatch, persistUserState]);
 
     /* ================= NAV ================= */
     const goTo = useCallback((screen: string) => {
@@ -117,16 +221,10 @@ const HeaderUser = () => {
 
     /* ================= LOGOUT ================= */
     const logout = useCallback(async () => {
-        await removeItem("user");
-        dispatch({ type: "DEL", key: "user" });
-
-        closeDrawer();
-
-        InteractionManager.runAfterInteractions(() => {
-            navigation.reset({
-                index: 0,
-                routes: [{ name: "Sports" }],
-            });
+        await logoutUser({
+            dispatch,
+            navigation,
+            beforeReset: closeDrawer,
         });
     }, [dispatch, closeDrawer, navigation]);
 
