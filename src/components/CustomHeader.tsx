@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { Context } from '../context/store';
 import HeaderNav from './common/HeaderNav';
 import HeaderUser from './common/HeaderUser';
@@ -8,9 +8,6 @@ import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
 import { getItem, setItem } from './utils/local-storage';
 import { normalizeKenyanPhoneNumber } from './utils/phone';
-import pkg from '../../package.json';
-import { Platform } from 'react-native';
-
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
@@ -26,51 +23,6 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         dispatch({ type: 'DEL', key: 'loginmodalmessage' });
     }, [dispatch]);
     const [localUser, setLocalUser] = useState<any>(null);
-    const APP_VERSION = pkg.version;
-    const VERSION_CACHE_KEY = "version_check_cache";
-    const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
-    const [updateUrl, setUpdateUrl] = useState("");
-
-    // Version CHeck and Alert
-    const checkAppVersion = useCallback(async () => {
-        try {
-            // Check cache first
-            const cache = await getItem(VERSION_CACHE_KEY);
-
-            if (cache) {
-                const parsed = typeof cache === "string" ? JSON.parse(cache) : cache;
-                const now = Date.now();
-                const twoDays = 2 * 24 * 60 * 60 * 1000;
-
-                if (parsed?.nextCheck && now < parsed.nextCheck) {
-                    // Skip check (user clicked "Later")
-                    return;
-                }
-            }
-
-            // Call API
-            const response = await makeRequest({
-                url: "/sports/app/apk/version", // 🔥 your endpoint
-                method: "GET",
-                apiVersion: 2,
-            });
-            const remoteVersion = response?.data?.version || response?.data?.data?.version;
-
-            if (!remoteVersion) return;
-            if (remoteVersion !== APP_VERSION) {
-                setUpdateUrl(`https://api.betmundial.com/v2/sports/app/apk/download?platform=${Platform.OS}`);
-                setIsUpdateModalVisible(true);
-            }
-        } catch (err) {
-            console.log("Version check failed:", err);
-        }
-    }, []);
-
-    useEffect(() => {
-        checkAppVersion();
-    }, []);
-
-
 
     // close modal
     const closeLoginModal = useCallback(() => {
@@ -182,25 +134,6 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         }
     }, [isLoginModalVisible, state?.loginmodalprefill, loginLoading]);
 
-
-    // Update Modal Handlers
-    const handleLaterUpdate = async () => {
-        const nextCheck = Date.now() + (2 * 24 * 60 * 60 * 1000);
-
-        await setItem(
-            VERSION_CACHE_KEY,
-            JSON.stringify({ nextCheck })
-        );
-
-        setIsUpdateModalVisible(false);
-    };
-
-    const handleUpdateNow = () => {
-        setIsUpdateModalVisible(false);
-        if (updateUrl) {
-            Linking.openURL(updateUrl);
-        }
-    };
     return (
         <View style={{ backgroundColor: theme.background }}>
             <View style={styles.header}>
@@ -271,41 +204,6 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                     </View>
                 </View>
             </Modal>
-
-            {/* Update Modal */}
-            <Modal
-                visible={isUpdateModalVisible}
-                transparent
-                animationType="fade"
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.updateModalContent}>
-                        <Text style={styles.updateTitle}>Update Available</Text>
-
-                        <Text style={styles.updateText}>
-                            A new version of the app is available. Please update for the best experience.
-                        </Text>
-
-                        <View style={styles.updateButtonRow}>
-                            {/* Later */}
-                            <TouchableOpacity
-                                style={styles.laterButton}
-                                onPress={handleLaterUpdate}
-                            >
-                                <Text style={styles.laterButtonText}>Later</Text>
-                            </TouchableOpacity>
-
-                            {/* Update */}
-                            <TouchableOpacity
-                                style={styles.updateButton}
-                                onPress={handleUpdateNow}
-                            >
-                                <Text style={styles.updateButtonText}>Update</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 };
@@ -337,70 +235,6 @@ const styles = StyleSheet.create({
     closeButtonText: { color: '#a71f66', fontWeight: 'bold' },
     noticeText: { color: '#86efac', marginTop: 10, textAlign: 'center', paddingHorizontal: 20 },
     errorText: { color: '#F44336', marginTop: 4, textAlign: 'center' },
-    updateModalContent: {
-        width: '100%',
-        maxWidth: 350,
-        backgroundColor: '#0c0c24',
-        borderRadius: 12,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-
-    updateTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-
-    updateText: {
-        color: '#ccc',
-        fontSize: 18,
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-
-    updateButtonRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-
-    laterButton: {
-        flex: 1,
-        backgroundColor: '#777d88', // gray
-        paddingVertical: 18,
-        borderRadius: 8,
-        marginRight: 8,
-        alignItems: 'center',
-        // paddingHorizontal: 8,
-    },
-
-    laterButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
-        textTransform: 'uppercase',
-    },
-
-    updateButton: {
-        flex: 1,
-        backgroundColor: 'rgb(190 24 93)', // green (success)
-        paddingVertical: 18,
-        borderRadius: 8,
-        marginLeft: 8,
-        paddingHorizontal: 8,
-        textTransform: 'uppercase',
-        alignItems: 'center',
-    },
-
-    updateButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        textTransform: 'uppercase',
-        fontWeight: 'bold',
-    },
 });
 
 export default CustomHeader;

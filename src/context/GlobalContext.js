@@ -1,7 +1,6 @@
 import React, { createContext, useEffect, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import DeviceInfo from 'react-native-device-info';
 import { Alert, BackHandler, StatusBar, AppState } from 'react-native';
 
 export const GlobalContext = createContext();
@@ -571,24 +570,6 @@ export const GlobalProvider = ({ children }) => {
     updateDateTime();
     const interval = setInterval(updateDateTime, 1000);
 
-    return () => clearInterval(interval); // Cleanup interval on unmount
-  }, []);
-
-  // Update the battery status every 30 seconds instead of every second
-  useEffect(() => {
-    const updateBatteryStatus = () => {
-      DeviceInfo.getPowerState()
-        .then(state => {
-          const newLevel = Math.round(state.batteryLevel * 100);
-          setBatteryLevel(newLevel);
-          setBatteryCharging(state.batteryState === 'charging');
-        })
-        .catch(error => {
-          console.log('Error fetching battery status', error);
-        });
-    };
-    updateBatteryStatus(); // Initial fetch
-    const interval = setInterval(updateBatteryStatus, 30000); // Poll every 30 seconds
     return () => clearInterval(interval); // Cleanup interval on unmount
   }, []);
 

@@ -84,6 +84,55 @@ const HeaderUser = () => {
     }, []);
 
     /**
+     * Fetch latest balance/bonus via HTTP as a fallback on launch.
+     * This complements socket updates to keep the stored user in sync.
+     */
+    const fetchLatestBalance = useCallback(async () => {
+        const baseUser = latestUserRef.current;
+        if (!baseUser) return;
+
+        const memberId = baseUser?.member_id || baseUser?.profile_id;
+        if (!memberId) return;
+
+        try {
+            const response = await makeRequest({
+                url: `wallet-details-balance?owner=member&&member_id=${memberId}`,
+                method: "GET",
+            });
+
+            const status = (response as any)?.status ?? (response as any)?.[0];
+            const payload = (response as any)?.data ?? (response as any)?.[1];
+
+            if (![200, 201].includes(status)) return;
+
+            const currentBalance =
+                payload?.data?.currentBalance ??
+                payload?.currentBalance ??
+                payload?.balance ??
+                baseUser?.balance;
+
+            const currentBonus =
+                payload?.data?.bonus ??
+                payload?.bonus ??
+                baseUser?.bonus;
+
+            const nextUser = {
+                ...baseUser,
+                balance: currentBalance,
+                bonus: currentBonus,
+                token: baseUser?.token || baseUser?.access_token,
+                access_token: baseUser?.access_token || baseUser?.token,
+            };
+
+            dispatch({ type: "SET", key: "user", payload: nextUser });
+            latestUserRef.current = nextUser;
+            await persistUserState(nextUser);
+        } catch (err) {
+            console.warn("[HeaderUser] Balance refresh failed", err);
+        }
+    }, [dispatch, persistUserState]);
+
+    /**
      * Silent session hydration on app launch:
      * 1) Load user from AsyncStorage if present.
      * 2) If missing, try offline credentials in SQLite and log in to refresh session.
@@ -104,6 +153,8 @@ const HeaderUser = () => {
                 };
                 dispatch({ type: "SET", key: "user", payload: hydrated });
                 latestUserRef.current = hydrated;
+                await persistUserState(hydrated);
+                await fetchLatestBalance();
                 return;
             }
 
@@ -133,6 +184,9 @@ const HeaderUser = () => {
 
                     // Persist to storage & refresh offline creds
                     await persistUserState(hydrated);
+
+                    // Fetch latest balance once we have a fresh token
+                    await fetchLatestBalance();
                 }
             } catch (err) {
                 console.warn("[HeaderUser] Silent login failed", err);
@@ -144,7 +198,7 @@ const HeaderUser = () => {
         return () => {
             mounted = false;
         };
-    }, [dispatch, persistUserState]);
+    }, [dispatch, persistUserState, fetchLatestBalance]);
 
     /* ================= DRAWER ================= */
     const openDrawer = useCallback(() => {
@@ -209,6 +263,12 @@ const HeaderUser = () => {
             socketSubscribed.current = null;
         };
     }, [user?.profile_id, dispatch, persistUserState]);
+
+    // Run a one-time balance refresh on launch when user is available
+    useEffect(() => {
+        if (!user?.profile_id && !user?.member_id) return;
+        fetchLatestBalance();
+    }, [user?.profile_id, user?.member_id, fetchLatestBalance]);
 
     /* ================= NAV ================= */
     const goTo = useCallback((screen: string) => {
