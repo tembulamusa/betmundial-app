@@ -161,7 +161,7 @@ const DepositScreen = () => {
 
                     <Text style={styles.instructionsText}>1. Go to Mpesa</Text>
                     <Text style={styles.instructionsText}>2. Select Lipa na Mpesa</Text>
-                    <Text style={styles.instructionsText}>3. Paybill Number: 444142</Text>
+                    <Text style={styles.instructionsText}>3. Paybill Number: 143444142</Text>
                     <Text style={styles.instructionsText}>4. Account Number: Your phone number</Text>
                     <Text style={styles.instructionsText}>5. Enter Amount</Text>
                     <Text style={styles.instructionsText}>6. Enter PIN and confirm</Text>

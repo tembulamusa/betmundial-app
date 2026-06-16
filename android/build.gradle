@@ -6,6 +6,9 @@ buildscript {
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
+        // Pin AndroidX versions (avoids 1.5.+ metadata lookups that fail when DNS/network is flaky)
+        androidXAnnotationVersion = "1.9.1"
+        androidXBrowserVersion = "1.8.0"
     }
 
     repositories {
