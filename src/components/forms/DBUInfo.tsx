@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Alert,
     Platform,
     KeyboardAvoidingView,
 } from "react-native";
@@ -18,6 +17,7 @@ import fetchCommonData from "../utils/fetchCommonData";
 import DropDownPicker from "react-native-dropdown-picker";
 import { renderDropdownItem } from "../../assets/styles/all";
 import { useFocusEffect } from "@react-navigation/native";
+import CustomAlert from "../utils/customAlert";
 
 interface DBUInfoFormProps {
     onNext: (data: any) => void;
@@ -50,6 +50,24 @@ const DBUInfoForm: React.FC<DBUInfoFormProps> = ({ onNext, onPrevious, initialDa
     });
 
     const [showDateRegisteredPicker, setShowDateRegisteredPicker] = React.useState(false);
+    const [alertState, setAlertState] = React.useState({
+        visible: false,
+        title: "",
+        message: "",
+        type: "error" as "error" | "info" | "success",
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        type: "error" | "info" | "success" = "error"
+    ) => {
+        setAlertState({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertState((prev) => ({ ...prev, visible: false }));
+    };
 
     const handleChange = (field: string, value: string) => {
         setForm((prevForm) => ({ ...prevForm, [field]: value }));
@@ -109,7 +127,7 @@ const DBUInfoForm: React.FC<DBUInfoFormProps> = ({ onNext, onPrevious, initialDa
 
                 setDataLoaded(true);
             } catch (err) {
-                Alert.alert("Error", `Failed to load common data ${JSON.stringify(err)}`);
+                showAlert("Error", `Failed to load common data ${JSON.stringify(err)}`);
                 setDataLoaded(true);
             }
         };
@@ -157,7 +175,7 @@ const DBUInfoForm: React.FC<DBUInfoFormProps> = ({ onNext, onPrevious, initialDa
             !form.numberOfCows ||
             !form.membershipNo
         ) {
-            Alert.alert("Missing Fields", "Please fill in all required fields.");
+            showAlert("Missing Fields", "Please fill in all required fields.");
             return;
         }
 
@@ -166,11 +184,11 @@ const DBUInfoForm: React.FC<DBUInfoFormProps> = ({ onNext, onPrevious, initialDa
 
     const validateMembership = () => {
         if (!form.membershipNo) {
-            Alert.alert("Validation", "Please enter a membership number first.");
+            showAlert("Validation", "Please enter a membership number first.");
             return;
         }
         // TODO: Replace with API call
-        Alert.alert("Validated", `Membership No ${form.membershipNo} is valid`);
+        showAlert("Validated", `Membership No ${form.membershipNo} is valid`, "success");
     };
 
     const onDateRegisteredChange = (event: Event, selectedDate?: Date) => {

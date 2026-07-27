@@ -72,29 +72,36 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
         switch (type) {
             case "success":
                 return {
-                    iconColor: "#22C55E", // Green
-                    titleColor: "#16A34A", // Darker green
-                    messageColor: "#15803D", // Even darker green
-                    buttonColor: "#22C55E", // Green
+                    iconColor: "#16A34A",
+                    titleColor: "#14532D",
+                    messageColor: "#166534",
+                    buttonColor: "#16A34A",
+                    backgroundColor: "#F0FDF4",
+                    borderColor: "#BBF7D0",
                 };
             case "error":
                 return {
-                    iconColor: "#EF4444", // Red
-                    titleColor: "#DC2626", // Darker red
-                    messageColor: "#B91C1C", // Even darker red
-                    buttonColor: "#EF4444", // Red
+                    iconColor: "#DC2626",
+                    titleColor: "#991B1B",
+                    messageColor: "#B91C1C",
+                    buttonColor: "#DC2626",
+                    backgroundColor: "#FEF2F2",
+                    borderColor: "#FECACA",
                 };
             default:
                 return {
-                    iconColor: "#009688", // Teal (default)
-                    titleColor: "#111", // Black
-                    messageColor: "#555", // Gray
-                    buttonColor: "#009688", // Teal
+                    iconColor: "#009688",
+                    titleColor: "#111827",
+                    messageColor: "#374151",
+                    buttonColor: "#009688",
+                    backgroundColor: "#FFFFFF",
+                    borderColor: "#E5E7EB",
                 };
         }
     };
 
     const colors = getColors();
+    const resolvedIcon = icon || (type === "error" ? "error-outline" : type === "success" ? "check-circle" : "info");
 
     return (
         <Modal
@@ -110,10 +117,15 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
                         <Animated.View
                             style={[
                                 styles.alertBox,
-                                { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
+                                {
+                                    opacity: opacityAnim,
+                                    transform: [{ scale: scaleAnim }],
+                                    backgroundColor: colors.backgroundColor,
+                                    borderColor: colors.borderColor,
+                                },
                             ]}
                         >
-                            <Icon name={icon} size={40} color={colors.iconColor} />
+                            <Icon name={resolvedIcon} size={40} color={colors.iconColor} />
                             <Text style={[styles.title, { color: colors.titleColor }]}>{title}</Text>
                             <Text style={[styles.message, { color: colors.messageColor }]}>{message}</Text>
 
@@ -159,8 +171,8 @@ const styles = StyleSheet.create({
     },
     alertBox: {
         width: "80%",
-        backgroundColor: "#fff",
         borderRadius: 16,
+        borderWidth: 1,
         padding: 20,
         alignItems: "center",
         elevation: 6,

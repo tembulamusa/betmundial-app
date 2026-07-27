@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { globalStyles } from '../../styles';
+import CustomAlert from '../utils/customAlert';
 
 interface NextOfKinProps {
     onNext: (data: { fullName: string; phone: string; relationship: string }) => void;
@@ -14,6 +15,24 @@ const NextOfKin: React.FC<NextOfKinProps> = ({ onNext, onPrevious, initialData }
         nextOfKinPhone: initialData?.nextOfKinPhone || '',
         nextOfKinRelationship: initialData?.nextOfKinRelationship || ''
     });
+    const [alertState, setAlertState] = React.useState({
+        visible: false,
+        title: "",
+        message: "",
+        type: "error" as "error" | "info" | "success",
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        type: "error" | "info" | "success" = "error"
+    ) => {
+        setAlertState({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertState((prev) => ({ ...prev, visible: false }));
+    };
 
     // Update form state dynamically
     const handleChange = (key: keyof typeof form, value: string) => {

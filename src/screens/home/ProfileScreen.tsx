@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,44 +8,158 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../theme';
-import { getItem } from '../../components/utils/local-storage';
+import { getItem, setItem } from '../../components/utils/local-storage';
 import { logoutUser } from '../../components/utils/logout';
 import { Context } from '../../context/store';
+import { makeRequest } from '../../components/utils/makeRequest';
+import { formatToFloat } from '../../components/utils/formatters';
 
 const ProfileScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const [, dispatch] = useContext<any>(Context);
+    const [state, dispatch] = useContext<any>(Context);
+    const user = state?.user;
+    const userRef = useRef(user);
+    userRef.current = user;
+    const refreshingRef = useRef(false);
 
-    const [user, setUser] = useState<any>(null);
-    const [profileData, setProfileData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [summary, setSummary] = useState<any | null>(null);
+    const [hydrating, setHydrating] = useState(!user);
+    const [betCount, setBetCount] = useState(0);
 
-    useEffect(() => {
-        const loadUser = async () => {
-            try {
-                const storedUser = await getItem('user');
-                setUser(storedUser);
-                setProfileData(storedUser);
-            } catch (error) {
-                console.error("Error loading user:", error);
-            } finally {
-                setLoading(false);
+    const refreshProfileData = useCallback(async (baseUser: any) => {
+        if (!baseUser || refreshingRef.current) {
+            return;
+        }
+
+        refreshingRef.current = true;
+
+        try {
+            const memberId = baseUser?.member_id || baseUser?.profile_id;
+            let nextUser = {
+                ...baseUser,
+                token: baseUser?.token || baseUser?.access_token,
+                access_token: baseUser?.access_token || baseUser?.token,
+            };
+
+            if (memberId) {
+                try {
+                    const response = await makeRequest({
+                        url: `wallet-details-balance?owner=member&&member_id=${memberId}`,
+                        method: "GET",
+                    });
+
+                    const status = (response as any)?.status ?? (response as any)?.[0];
+                    const payload = (response as any)?.data ?? (response as any)?.[1];
+
+                    if ([200, 201].includes(status)) {
+                        nextUser = {
+                            ...nextUser,
+                            balance:
+                                payload?.data?.currentBalance ??
+                                payload?.currentBalance ??
+                                payload?.balance ??
+                                nextUser?.balance,
+                            bonus:
+                                payload?.data?.bonus ??
+                                payload?.bonus ??
+                                nextUser?.bonus ??
+                                nextUser?.bonus_balance,
+                        };
+                    }
+                } catch (error) {
+                    console.warn("[ProfileScreen] Balance refresh failed", error);
+                }
             }
-        };
 
-        loadUser();
-    }, []);
+            dispatch({ type: "SET", key: "user", payload: nextUser });
+            await setItem("user", nextUser);
+
+            try {
+                const betsResponse = await makeRequest({
+                    url: "/user/bets?size=20&page=1",
+                    method: "GET",
+                    apiVersion: 2,
+                });
+
+                if ([200, 201].includes(betsResponse.status)) {
+                    const bets = betsResponse?.data?.data || [];
+                    setBetCount(Array.isArray(bets) ? bets.length : 0);
+                }
+            } catch (error) {
+                console.warn("[ProfileScreen] Bets refresh failed", error);
+            }
+        } finally {
+            refreshingRef.current = false;
+        }
+    }, [dispatch]);
+
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
+
+            const loadProfile = async () => {
+                let currentUser = userRef.current;
+
+                if (!currentUser) {
+                    currentUser = await getItem('user');
+                    if (!active) {
+                        return;
+                    }
+
+                    if (currentUser) {
+                        dispatch({ type: "SET", key: "user", payload: currentUser });
+                    }
+                }
+
+                if (!active) {
+                    return;
+                }
+
+                setHydrating(false);
+
+                if (!currentUser) {
+                    dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                    return;
+                }
+
+                // Refresh quietly in the background — don't block the UI
+                refreshProfileData(currentUser);
+            };
+
+            loadProfile();
+
+            return () => {
+                active = false;
+            };
+            // Only re-run when the screen gains focus, not when user object updates
+        }, [dispatch, refreshProfileData])
+    );
 
     const formatMoney = (value: any) =>
-        Number(parseFloat(value ?? 0)).toFixed(2);
+        formatToFloat(value ?? 0);
+
+    const displayName =
+        user?.member_details?.full_name ||
+        `${user?.first_name || ''} ${user?.last_name || ''}`.trim() ||
+        user?.username ||
+        user?.msisdn ||
+        'User';
+
+    const phone =
+        user?.member_details?.primary_phone ||
+        user?.phone_number ||
+        user?.msisdn ||
+        user?.primary_phone ||
+        'No phone';
+
+    const balance = user?.balance ?? 0;
+    const bonus = user?.bonus ?? user?.bonus_balance ?? 0;
 
     const statCards = [
         {
             title: 'My Bets',
-            value: summary?.total_collections ?? 0,
+            value: betCount,
             suffix: 'Bets',
             icon: 'receipt',
             color: '#0ea5e9',
@@ -53,7 +167,7 @@ const ProfileScreen: React.FC = () => {
         },
         {
             title: 'Deposit',
-            value: `Bal. ${formatMoney(profileData?.balance)}  Bonus. ${formatMoney(profileData?.bonus_balance)}`,
+            value: `Bal. ${formatMoney(balance)}  Bonus. ${formatMoney(bonus)}`,
             suffix: 'KES',
             icon: 'account-balance-wallet',
             color: '#f59e0b',
@@ -61,11 +175,54 @@ const ProfileScreen: React.FC = () => {
         },
         {
             title: 'Withdraw',
-            value: formatMoney(profileData?.balance),
+            value: formatMoney(balance),
             suffix: 'KES',
             icon: 'payments',
             color: '#16a34a',
             onPress: () => navigation.navigate("Sports", { screen: "WithdrawScreen" }),
+        },
+    ];
+
+    const policyLinks = [
+        {
+            label: "Licensing",
+            icon: "gpp-good",
+            onPress: () => navigation.navigate("LicensingScreen"),
+        },
+        {
+            label: "Responsible Gaming",
+            icon: "favorite",
+            onPress: () => navigation.navigate("ResponsibleGamblingScreen"),
+        },
+        {
+            label: "Getting Help",
+            icon: "help",
+            onPress: () => navigation.navigate("GettingHelpScreen"),
+        },
+        {
+            label: "Contact Us",
+            icon: "mail",
+            onPress: () => navigation.navigate("ContactUsScreen"),
+        },
+        {
+            label: "Self-Exclusion Info",
+            icon: "block",
+            onPress: () => navigation.navigate("SelfExclusionInfoScreen"),
+        },
+        {
+            label: "18+ Protection",
+            icon: "gpp-bad",
+            onPress: () => navigation.navigate("MinorsRestrictionsScreen"),
+        },
+        {
+            label: "Self-Assessment",
+            icon: "assessment",
+            onPress: () => navigation.navigate("SelfAssessmentScreen"),
+        },
+        {
+            label: "Support for Friends",
+            icon: "group",
+            onPress: () => navigation.navigate("SupportForFriendsScreen"),
         },
     ];
 
@@ -91,18 +248,17 @@ const ProfileScreen: React.FC = () => {
             isDanger: true,
             onPress: () => navigation.navigate("Sports", { screen: "SelfExcludeScreen" }),
         },
-        {
-            label: "Check Mpesa Status",
-            icon: "phone",
-            onPress: () => navigation.navigate("Sports", { screen: "MpesaStatusScreen" }),
-        },
     ];
 
     const handleLogout = async () => {
         await logoutUser({ dispatch, navigation });
     };
 
-    if (loading) {
+    const openLoginModal = () => {
+        dispatch({ type: "SET", key: "showloginmodal", payload: true });
+    };
+
+    if (hydrating) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.accent} />
@@ -114,20 +270,20 @@ const ProfileScreen: React.FC = () => {
     if (!user) {
         return (
             <View style={styles.emptyContainer}>
-                <Icon name="person-off" size={64} color="#fff" />
-                <Text style={styles.emptyTitle}>No profile found</Text>
+                <Icon name="lock" size={64} color="#fff" />
+                <Text style={styles.emptyTitle}>Please log in to view your account</Text>
+                <Text style={styles.emptySubtitle}>
+                    Sign in to see your balance, bets, and account settings.
+                </Text>
+                <TouchableOpacity style={styles.loginButton} onPress={openLoginModal}>
+                    <Text style={styles.loginButtonText}>Login</Text>
+                </TouchableOpacity>
             </View>
         );
     }
 
-    const displayName =
-        `${user?.first_name || ''} ${user?.last_name || ''}`.trim() ||
-        user?.username ||
-        'User';
-
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-            {/* HEADER */}
             <View style={styles.headerCard}>
                 <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
@@ -135,12 +291,9 @@ const ProfileScreen: React.FC = () => {
                     </Text>
                 </View>
                 <Text style={styles.nameText}>{displayName}</Text>
-                <Text style={styles.roleText}>
-                    {profileData?.phone_number || profileData?.msisdn || 'No phone'}
-                </Text>
+                <Text style={styles.roleText}>{phone}</Text>
             </View>
 
-            {/* QUICK STATS */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
                 <View style={styles.statsGrid}>
@@ -160,7 +313,6 @@ const ProfileScreen: React.FC = () => {
                 </View>
             </View>
 
-            {/* ACTION LINKS */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>More Actions</Text>
 
@@ -182,7 +334,24 @@ const ProfileScreen: React.FC = () => {
                 </View>
             </View>
 
-            {/* 🚪 LOGOUT BUTTON */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>18+ & Responsible Gaming</Text>
+
+                <View style={styles.linksContainer}>
+                    {policyLinks.map((item, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.linkCard}
+                            onPress={item.onPress}
+                        >
+                            <Icon name={item.icon} size={22} color="#fff" />
+                            <Text style={styles.linkText}>{item.label}</Text>
+                            <Icon name="chevron-right" size={22} color="#fff" />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Icon name="logout" size={26} color="#fff" />
                 <Text style={styles.logoutText}>LOGOUT</Text>
@@ -201,6 +370,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: theme.background,
     },
 
     loadingText: { marginTop: 12, color: '#fff' },
@@ -209,9 +379,39 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 24,
+        backgroundColor: theme.background,
     },
 
-    emptyTitle: { color: '#fff', fontSize: 18 },
+    emptyTitle: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
+        marginTop: 16,
+        textAlign: 'center',
+    },
+
+    emptySubtitle: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 14,
+        marginTop: 8,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+
+    loginButton: {
+        marginTop: 24,
+        backgroundColor: '#a71f66',
+        paddingHorizontal: 32,
+        paddingVertical: 14,
+        borderRadius: 10,
+    },
+
+    loginButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
+    },
 
     headerCard: {
         backgroundColor: 'rgba(255,255,255,0.1)',
@@ -234,7 +434,7 @@ const styles = StyleSheet.create({
     avatarText: { color: '#fff', fontSize: 24 },
 
     nameText: { color: '#fff', fontSize: 20, fontWeight: '700' },
-    roleText: { color: '#fff' },
+    roleText: { color: '#fff', marginTop: 4 },
 
     section: { marginBottom: 12 },
     sectionTitle: { color: '#fff', fontSize: 12, marginBottom: 8 },
@@ -249,8 +449,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    statValue: { color: '#fff', fontWeight: '700' },
-    statLabel: { color: '#fff' },
+    statValue: { color: '#fff', fontWeight: '700', fontSize: 11, textAlign: 'center' },
+    statLabel: { color: '#fff', marginTop: 4 },
 
     linksContainer: {
         backgroundColor: 'rgba(255,255,255,0.1)',
@@ -272,7 +472,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
     },
 
-    // 🚪 BIG LOGOUT BUTTON
     logoutButton: {
         marginTop: 20,
         backgroundColor: 'rgba(255,255,255,0.2)',

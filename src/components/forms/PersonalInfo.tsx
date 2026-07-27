@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Alert,
     Platform,
     KeyboardAvoidingView,
 } from "react-native";
@@ -17,6 +16,7 @@ import fetchCommonData from "../utils/fetchCommonData";
 import DropDownPicker from "react-native-dropdown-picker";
 import { renderDropdownItem } from "../../assets/styles/all";
 import { useFocusEffect } from "@react-navigation/native";
+import CustomAlert from "../utils/customAlert";
 
 interface PersonalInfoFormProps {
     onNext: (data: any) => void;
@@ -43,6 +43,24 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onNext, initialData
 
     const [showDatePicker, setShowDatePicker] = React.useState(false);
     const [showIdDateOfIssuePicker, setShowIdDateOfIssuePicker] = React.useState(false);
+    const [alertState, setAlertState] = React.useState({
+        visible: false,
+        title: "",
+        message: "",
+        type: "error" as "error" | "info" | "success",
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        type: "error" | "info" | "success" = "error"
+    ) => {
+        setAlertState({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertState((prev) => ({ ...prev, visible: false }));
+    };
 
     const handleChange = (field: string, value: string) => {
         setForm((prevForm) => ({ ...prevForm, [field]: value }));
@@ -84,7 +102,6 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onNext, initialData
         if (
             !form.firstName ||
             !form.lastName ||
-            !form.idNo ||
             !form.gender ||
             !form.dob ||
             !form.idDateOfIssue ||
@@ -93,13 +110,13 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onNext, initialData
             !form.maritalStatus ||
             !form.secondaryPhone
         ) {
-            Alert.alert("Missing Fields", "Please fill in all required fields.");
+            showAlert("Missing Fields", "Please fill in all required fields.");
             return;
         }
 
         // Check age requirement
         if (!isAtLeast18YearsOld(form.dob)) {
-            Alert.alert(
+            showAlert(
                 "Age Requirement",
                 "You must be at least 18 years old to register as a member."
             );
@@ -173,9 +190,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onNext, initialData
 
                 {/* ID No */}
                 <View>
-                    <Text style={globalStyles.label}>
-                        ID No. <Text style={styles.required}>*</Text>
-                    </Text>
+                    <Text style={globalStyles.label}>ID No.</Text>
                     <TextInput
                         style={[globalStyles.input, styles.input]}
                         value={form.idNo}
@@ -370,6 +385,14 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onNext, initialData
                     <Icon name="arrow-forward" size={16} color="#fff" />
                 </TouchableOpacity>
             </ScrollView>
+
+            <CustomAlert
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                onClose={hideAlert}
+            />
         </KeyboardAvoidingView>
     );
 };

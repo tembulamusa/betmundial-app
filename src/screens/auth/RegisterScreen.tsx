@@ -37,6 +37,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         msisdn: "",
         password: "",
         password2: "",
+        confirmedOver18: false,
         promo_code: promoCodeFromRoute,
     };
 
@@ -53,6 +54,10 @@ export default function RegisterScreen({ navigation, route }: any) {
 
         if (values.password2 !== values.password) {
             errors.password2 = "Passwords don't match";
+        }
+
+        if (!values.confirmedOver18) {
+            errors.confirmedOver18 = "You must confirm that you are 18 years or older";
         }
 
         return errors;
@@ -135,6 +140,7 @@ export default function RegisterScreen({ navigation, route }: any) {
                         errors,
                         handleChange,
                         handleSubmit,
+                        setFieldValue,
                     }) => (
                         <>
                             <View style={styles.fieldGroup}>
@@ -212,6 +218,47 @@ export default function RegisterScreen({ navigation, route }: any) {
                                 />
                             </View>
 
+                            <View style={styles.disclaimer}>
+                                <Text style={styles.disclaimerText}>
+                                    By registering for an account, you agree to our Terms of Use,
+                                    Privacy Policy and Responsible Gambling Policy.
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.ageWarningBox}
+                                    onPress={() => setFieldValue("confirmedOver18", !values.confirmedOver18)}
+                                    activeOpacity={0.8}
+                                >
+                                    <Icon name="gpp-bad" size={20} color="#dc2626" />
+                                    <View style={{ flex: 1, marginLeft: 10 }}>
+                                        <Text style={styles.ageWarningTitle}>18+ ONLY</Text>
+                                        <Text style={styles.ageWarningText}>
+                                            You must be 18 years and above to register.
+                                        </Text>
+                                        <Text style={styles.ageWarningText}>
+                                            Underage accounts will be permanently closed with immediate asset forfeiture.
+                                        </Text>
+                                        <View style={styles.ageConfirmRow}>
+                                            <View
+                                                style={[
+                                                    styles.checkbox,
+                                                    values.confirmedOver18 && styles.checkboxChecked,
+                                                ]}
+                                            >
+                                                {values.confirmedOver18 ? (
+                                                    <Icon name="check" size={16} color="#fff" />
+                                                ) : null}
+                                            </View>
+                                            <Text style={styles.ageConfirmText}>
+                                                I confirm that I am 18 years of age or older
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                                {errors.confirmedOver18 ? (
+                                    <Text style={styles.error}>{errors.confirmedOver18}</Text>
+                                ) : null}
+                            </View>
+
                             {submitError ? (
                                 <Text style={styles.submitError}>{submitError}</Text>
                             ) : null}
@@ -241,16 +288,6 @@ export default function RegisterScreen({ navigation, route }: any) {
                                     Have an account? Login here
                                 </Text>
                             </TouchableOpacity>
-
-                            <View style={styles.disclaimer}>
-                                <Text style={styles.disclaimerText}>
-                                    By registering for an account, you agree to our Terms of Use,
-                                    Privacy Policy and Responsible Gambling Policy.
-                                </Text>
-                                <Text style={styles.disclaimerText}>
-                                    You must be 18yrs and above in order to sign up.
-                                </Text>
-                            </View>
                         </>
                     )}
                 </Formik>
@@ -359,7 +396,8 @@ const styles = StyleSheet.create({
         marginTop: 18,
     },
     disclaimer: {
-        marginTop: 28,
+        marginTop: 8,
+        marginBottom: 16,
     },
     disclaimerText: {
         color: "rgba(255,255,255,0.7)",
@@ -367,5 +405,54 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 20,
         marginBottom: 10,
+    },
+    ageWarningBox: {
+        flexDirection: "row",
+        backgroundColor: "rgba(220,38,38,0.15)",
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: "#dc2626",
+        alignItems: "flex-start",
+    },
+    ageWarningTitle: {
+        color: "#dc2626",
+        fontSize: 16,
+        fontWeight: "700",
+        marginBottom: 4,
+    },
+    ageWarningText: {
+        color: "rgba(255,255,255,0.9)",
+        fontSize: 14,
+        fontWeight: "600",
+        lineHeight: 22,
+        marginBottom: 4,
+    },
+    ageConfirmRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 10,
+    },
+    ageConfirmText: {
+        flex: 1,
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
+        lineHeight: 20,
+    },
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: "rgba(255,255,255,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10,
+    },
+    checkboxChecked: {
+        backgroundColor: "#dc2626",
+        borderColor: "#dc2626",
     },
 });

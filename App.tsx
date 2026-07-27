@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useContext, Suspense, lazy, useMemo } from "react";
+import React, { useRef, useEffect, useState, useContext, Suspense, lazy, useMemo, useCallback } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -7,7 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import { theme } from "./src/theme";
-import Store, { Context, useAppDispatch } from "./src/context/store";
+import Store, { Context } from "./src/context/store";
 import { GlobalProvider } from "./src/context/GlobalContext";
 import { AuthProvider } from "./src/AuthContext";
 import { ConnectivityProvider } from "./src/context/ConnectivityContext";
@@ -33,18 +33,26 @@ import JackpotScreen from "./src/screens/home/JackpotScreen";
 import LiveScreen from "./src/screens/home/LiveScreen";
 import CasinoLaunchedGameScreen from "./src/components/casino/CasinoLaunchedGameScreen";
 import PromotionsScreen from "./src/screens/home/PromotionsScreen";
+import LicensingScreen from "./src/screens/home/LicensingScreen";
+import ResponsibleGamblingScreen from "./src/screens/home/ResponsibleGamblingScreen";
+import GettingHelpScreen from "./src/screens/home/GettingHelpScreen";
+import ContactUsScreen from "./src/screens/home/ContactUsScreen";
+import SelfExclusionInfoScreen from "./src/screens/home/SelfExclusionInfoScreen";
+import MinorsRestrictionsScreen from "./src/screens/home/MinorsRestrictionsScreen";
+import SelfAssessmentScreen from "./src/screens/home/SelfAssessmentScreen";
+import SupportForFriendsScreen from "./src/screens/home/SupportForFriendsScreen";
 
 // Lazy load heavy components
 const LazyHomeScreen = lazy(() => import("./src/screens/HomeScreen"));
 const LazyCasinoScreen = lazy(() => import("./src/screens/home/CasinoScreen"));
 const LazyJackpotScreen = lazy(() => import("./src/screens/home/JackpotScreen"));
-const LazyProfileScreen = lazy(() => import("./src/screens/home/ProfileScreen"));
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const CasinoStack = createNativeStackNavigator();
 const JackpotStack = createNativeStackNavigator();
+const AccountStack = createNativeStackNavigator();
 
 const TAB_BAR_HEIGHT = 60;
 
@@ -102,7 +110,6 @@ const PreloadWrapper = React.memo(function PreloadWrapper({ Component, name }: {
 const LazyHomeScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyHomeScreen} name="Sports" />);
 const LazyCasinoScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyCasinoScreen} name="Casino" />);
 const LazyJackpotScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyJackpotScreen} name="Jackpot" />);
-const LazyProfileScreenWrapper = React.memo(() => <PreloadWrapper Component={LazyProfileScreen} name="Account" />);
 
 /* ================= HOME STACK ================= */
 const HomeStackScreen = React.memo(function HomeStackScreen() {
@@ -118,7 +125,37 @@ const HomeStackScreen = React.memo(function HomeStackScreen() {
       <HomeStack.Screen name="SelfExcludeScreen" component={SelfExcludeScreen} />
       <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
       <HomeStack.Screen name="PromotionsScreen" component={PromotionsScreen} />
+      <HomeStack.Screen name="LicensingScreen" component={LicensingScreen} />
+      <HomeStack.Screen name="ResponsibleGamblingScreen" component={ResponsibleGamblingScreen} />
+      <HomeStack.Screen name="GettingHelpScreen" component={GettingHelpScreen} />
+      <HomeStack.Screen name="ContactUsScreen" component={ContactUsScreen} />
+      <HomeStack.Screen name="SelfExclusionInfoScreen" component={SelfExclusionInfoScreen} />
+      <HomeStack.Screen name="MinorsRestrictionsScreen" component={MinorsRestrictionsScreen} />
+      <HomeStack.Screen name="SelfAssessmentScreen" component={SelfAssessmentScreen} />
+      <HomeStack.Screen name="SupportForFriendsScreen" component={SupportForFriendsScreen} />
     </HomeStack.Navigator>
+  );
+});
+
+const AccountStackScreen = React.memo(function AccountStackScreen() {
+  return (
+    <AccountStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.background },
+      }}
+    >
+      <AccountStack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <AccountStack.Screen name="PromotionsScreen" component={PromotionsScreen} />
+      <AccountStack.Screen name="LicensingScreen" component={LicensingScreen} />
+      <AccountStack.Screen name="ResponsibleGamblingScreen" component={ResponsibleGamblingScreen} />
+      <AccountStack.Screen name="GettingHelpScreen" component={GettingHelpScreen} />
+      <AccountStack.Screen name="ContactUsScreen" component={ContactUsScreen} />
+      <AccountStack.Screen name="SelfExclusionInfoScreen" component={SelfExclusionInfoScreen} />
+      <AccountStack.Screen name="MinorsRestrictionsScreen" component={MinorsRestrictionsScreen} />
+      <AccountStack.Screen name="SelfAssessmentScreen" component={SelfAssessmentScreen} />
+      <AccountStack.Screen name="SupportForFriendsScreen" component={SupportForFriendsScreen} />
+    </AccountStack.Navigator>
   );
 });
 
@@ -162,7 +199,10 @@ function BetslipButton() {
 
 /* ================= MAIN TABS ================= */
 function MainTabs() {
-  const dispatch = useAppDispatch();
+  const [state, dispatch] = useContext(Context);
+  const openLoginModal = useCallback(() => {
+    dispatch({ type: "SET", key: "showloginmodal", payload: true });
+  }, [dispatch]);
 
   return (
     <MainLayout>
@@ -227,7 +267,20 @@ function MainTabs() {
             }}
           />
 
-          <Tab.Screen name="Account" component={LazyProfileScreenWrapper} />
+          <Tab.Screen
+            name="Account"
+            component={AccountStackScreen}
+            listeners={{
+              tabPress: (e) => {
+                dispatch({ type: "SET", key: "playType", payload: "account" });
+                if (!state?.user) {
+                  e.preventDefault();
+                  openLoginModal();
+                }
+              },
+            }}
+          />
+
         </Tab.Navigator>
 
         {/* ✅ FLOATING BETSLIP BUTTON */}
@@ -347,7 +400,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#020617",
+    backgroundColor: theme.background,
   },
 
   lazyLoadingText: {

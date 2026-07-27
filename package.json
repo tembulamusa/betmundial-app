@@ -3,7 +3,7 @@
   "version": "1.0.16",
   "private": true,
   "scripts": {
-    "android": "react-native run-android",
+    "android": "react-native run-android --active-arch-only",
     "ios": "react-native run-ios",
     "ios:bundle:prod": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/main.jsbundle --assets-dest build/ios-assets",
     "lint": "eslint .",
