@@ -72,6 +72,18 @@ def enableProguardInReleaseBuilds = true
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Release signing credentials live in android/keystore.properties, which is
+ * git-ignored (see android/.gitignore). Nothing secret is hardcoded here.
+ * If that file is missing, release builds will fail signing instead of
+ * silently falling back to a hardcoded password.
+ */
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -93,10 +105,12 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('upload-keystore.jks')
-            storePassword 'Tembula2017'
-            keyAlias 'upload'
-            keyPassword 'Tembula2017'
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['MYAPP_UPLOAD_STORE_FILE'])
+                storePassword keystoreProperties['MYAPP_UPLOAD_STORE_PASSWORD']
+                keyAlias keystoreProperties['MYAPP_UPLOAD_KEY_ALIAS']
+                keyPassword keystoreProperties['MYAPP_UPLOAD_KEY_PASSWORD']
+            }
         }
     }
     sourceSets {

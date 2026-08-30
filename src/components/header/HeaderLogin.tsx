@@ -1,176 +1,85 @@
-import React, { useState, memo, useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Modal,
-    SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { theme } from "../../theme";
 
 interface HeaderLoginProps {
     onLoginPress?: () => void;
 }
 
+/** Guest header — mirrors web top-login.js: Login + Register only */
 const HeaderLogin: React.FC<HeaderLoginProps> = ({ onLoginPress }) => {
     const navigation: any = useNavigation();
 
-    // ✅ LOCAL STATE (instead of global dispatch)
-    const [showLoginModal, setShowLoginModal] = useState(false);
-
     const handleLogin = useCallback(() => {
-        if (onLoginPress) {
-            onLoginPress();
-            return;
-        }
-
-        // ⚡ instant UI update (no global re-render)
-        setShowLoginModal(true);
+        onLoginPress?.();
     }, [onLoginPress]);
 
-    const closeModal = useCallback(() => {
-        setShowLoginModal(false);
-    }, []);
-
     return (
-        <>
-            <View style={styles.container}>
-                {/* LOGIN */}
-                <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={handleLogin}
-                >
-                    <Text style={styles.loginText}>Login</Text>
-                </TouchableOpacity>
+        <View style={styles.container}>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.85}>
+                <Text style={styles.loginText}>Login</Text>
+            </TouchableOpacity>
 
-                {/* REGISTER */}
-                <TouchableOpacity
-                    style={styles.registerButton}
-                    onPress={() =>
-                        navigation.navigate("Sports", {
-                            screen: "RegisterScreen",
-                        })
-                    }
-                >
-                    <Text style={styles.registerText}>Register</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* ✅ LOCAL MODAL */}
-            <Modal visible={showLoginModal} transparent animationType="slide">
-                <SafeAreaView style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Login Required</Text>
-
-                        <TouchableOpacity
-                            style={styles.modalButton}
-                            onPress={() => {
-                                closeModal();
-                                navigation.navigate("Sports", {
-                                    screen: "LoginScreen",
-                                });
-                            }}
-                        >
-                            <Text style={styles.modalButtonText}>
-                                Go to Login
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={closeModal}
-                        >
-                            <Text style={styles.closeText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
-            </Modal>
-        </>
+            <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() =>
+                    navigation.navigate("Sports", { screen: "RegisterScreen" })
+                }
+                activeOpacity={0.85}
+            >
+                <Text style={styles.registerText}>Register</Text>
+            </TouchableOpacity>
+        </View>
     );
 };
 
 export default memo(HeaderLogin);
 
-/* ================= STYLES ================= */
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         justifyContent: "flex-end",
         alignItems: "center",
-        paddingHorizontal: 4,
-        paddingVertical: 4,
+        flex: 1,
+        gap: 8,
     },
-
     loginButton: {
-        marginRight: 4,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: theme.accent,
+        minHeight: 32,
+        minWidth: 76,
         paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingHorizontal: 14,
         borderRadius: 6,
+        alignItems: "center",
+        justifyContent: "center",
     },
-
     loginText: {
         color: "#fff",
-        fontWeight: "500",
+        fontWeight: "700",
+        fontSize: 11,
         textTransform: "uppercase",
     },
-
     registerButton: {
-        backgroundColor: "#a71f66",
+        backgroundColor: "transparent",
+        minHeight: 32,
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 6,
-    },
-
-    registerText: {
-        color: "#fff",
-        fontWeight: "500",
-        textTransform: "uppercase",
-    },
-
-    /* MODAL */
-    modalContainer: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        borderWidth: 1,
+        borderColor: theme.accent,
+        alignItems: "center",
         justifyContent: "center",
-        alignItems: "center",
     },
-
-    modalContent: {
-        width: "85%",
-        backgroundColor: "#0c0c24",
-        padding: 20,
-        borderRadius: 10,
-    },
-
-    modalTitle: {
-        color: "#fff",
-        fontSize: 18,
+    registerText: {
+        color: theme.accent,
         fontWeight: "700",
-        marginBottom: 20,
-        textAlign: "center",
-    },
-
-    modalButton: {
-        backgroundColor: "#a71f66",
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-        marginBottom: 10,
-    },
-
-    modalButtonText: {
-        color: "#fff",
-        fontWeight: "600",
-    },
-
-    closeButton: {
-        padding: 10,
-        alignItems: "center",
-    },
-
-    closeText: {
-        color: "#aaa",
+        fontSize: 11,
+        textTransform: "uppercase",
     },
 });

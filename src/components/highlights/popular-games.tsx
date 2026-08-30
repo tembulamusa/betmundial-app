@@ -103,7 +103,7 @@ const PopularGames: React.FC = () => {
             /* ✅ LOGIN CHECK */
             const user = await getItem("user");
 
-            if (moneyType === 1 && !user?.token) {
+            if (moneyType === 1 && !(user?.token || user?.access_token)) {
                 dispatch({
                     type: "SET",
                     key: "showloginmodal",
@@ -168,6 +168,7 @@ const PopularGames: React.FC = () => {
                     params: {
                         provider: game.provider_name,
                         game: game.game_name,
+                        gameUrl: launchUrl,
                     },
                 });
 

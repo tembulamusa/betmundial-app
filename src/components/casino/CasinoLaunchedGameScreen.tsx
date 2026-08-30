@@ -7,7 +7,6 @@ import {
     ActivityIndicator,
     Alert,
     Linking,
-    InteractionManager
 } from "react-native";
 
 import { WebView } from "react-native-webview";
@@ -29,6 +28,7 @@ const CasinoLaunchedGameScreen = () => {
 
     const provider = route?.params?.provider;
     const gameName = route?.params?.game;
+    const initialGameUrl = route?.params?.gameUrl as string | undefined;
 
     const [gameUrl, setGameUrl] = useState<string | null>(null);
     const [bitvilleGame, setBitvilleGame] = useState<any>(null);
@@ -154,20 +154,26 @@ const CasinoLaunchedGameScreen = () => {
             return;
         }
 
-        setGameUrl(null);
-        setBitvilleGame(null);
-        setLoading(true);
-
         dispatch({
             type: "SET",
             key: "iscasinopage",
             payload: true
         });
 
+        if (initialGameUrl) {
+            setGameUrl(initialGameUrl);
+            setLoading(false);
+            return () => {
+                dispatch({ type: "DEL", key: "iscasinopage" });
+            };
+        }
+
+        setGameUrl(null);
+        setBitvilleGame(null);
+        setLoading(true);
+
         if (directLaunch.includes(gameName.toLowerCase())) {
-            InteractionManager.runAfterInteractions(() => {
-                launchDirectGame();
-            });
+            launchDirectGame();
         } else {
             const loadCasinoLaunch = async () => {
                 try {
@@ -195,14 +201,8 @@ const CasinoLaunchedGameScreen = () => {
                         return handleSessionExpired();
                     }
 
-                    // const blockedGames = ["aviator", "jetx", "aviatrix"];
-                    // if (blockedGames.includes(gameName?.toLowerCase())) {
-                    //     return openInAppBrowser(url);
-                    // }
-
                     setGameUrl(url);
 
-                    // ✅ MATCH WEB (FULL OBJECT)
                     if (
                         parsed?.aggregator?.toLowerCase() === "bitville" ||
                         parsed?.game?.aggregator?.toLowerCase() === "bitville"
@@ -214,20 +214,17 @@ const CasinoLaunchedGameScreen = () => {
                     console.log("STORAGE ERROR:", err);
                     handleSessionExpired();
                 } finally {
-                    setTimeout(() => setLoading(false), 100);
+                    setLoading(false);
                 }
             };
-            InteractionManager.runAfterInteractions(() => {
-                loadCasinoLaunch();
-            });
-
+            loadCasinoLaunch();
         }
 
         return () => {
             dispatch({ type: "DEL", key: "iscasinopage" });
         };
 
-    }, [gameName, provider]);
+    }, [gameName, provider, initialGameUrl]);
 
     /* ================= CLEANUP ================= */
     useEffect(() => {

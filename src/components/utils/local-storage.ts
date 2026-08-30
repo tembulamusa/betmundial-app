@@ -27,3 +27,14 @@ export const removeItem = async (key: string) => {
         console.error("AsyncStorage remove error:", e);
     }
 };
+
+/** Ensure both token fields exist for API auth checks */
+export const normalizeUser = (user: any) => {
+    if (!user) return user;
+    const token = user.token || user.access_token;
+    return {
+        ...user,
+        token,
+        access_token: user.access_token || user.token,
+    };
+};

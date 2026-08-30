@@ -48,85 +48,89 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
 
         setFetching(true);
 
-        const user = await getUser();
+        try {
+            const user = await getUser();
+            const hasToken = user?.token || user?.access_token;
 
-        let endpoint =
-            `${game?.aggregator ? game?.aggregator : game?.provider_name}` +
-            `/casino/game-url/mobile/${moneyType}/${game.game_id}`;
+            let endpoint =
+                `${game?.aggregator ? game?.aggregator : game?.provider_name}` +
+                `/casino/game-url/mobile/${moneyType}/${game.game_id}`;
 
-        if (
-            game?.aggregator &&
-            game?.aggregator?.toLowerCase() === "intouchvas"
-        ) {
-            endpoint = endpoint + `-${game?.provider_name}`;
-        }
+            if (
+                game?.aggregator &&
+                game?.aggregator?.toLowerCase() === "intouchvas"
+            ) {
+                endpoint = endpoint + `-${game?.provider_name}`;
+            }
 
-        if (moneyType === 1 && !user?.token) {
-            dispatch({
-                type: "SET",
-                key: "showloginmodal",
-                payload: true,
-            });
-            return;
-        }
-
-        const response = await makeRequest({
-            url: endpoint,
-            method: "GET",
-            apiVersion: "CasinoGameLaunch",
-        });
-        console.log("Game Launch Response:", response);
-        if (response?.status == 200
-            && !response.data?.tea_pot
-            && (response.data?.game_url || response.data?.gameUrl || response.data?.token)) {
-            const launchUrl = response.data?.game_url || response.data?.gameUrl || response.data?.token;
-            dispatch({
-                type: "SET",
-                key: "casinolaunch",
-                payload: { game: game, url: launchUrl },
-            });
-            await AsyncStorage.setItem(
-                "casinolaunch",
-                JSON.stringify({ game: game, url: launchUrl })
-            );
-
-            if (game?.aggregator?.toLowerCase() === "bitville") {
+            if (moneyType === 1 && !hasToken) {
                 dispatch({
                     type: "SET",
-                    key: "bitvilleGame",
-                    payload: response.data,
-                });
-            }
-
-            navigation.navigate("CasinoLaunchedGameScreen", {
-                provider: game?.provider_name.split(" ").join("-").toLowerCase(),
-                game: game?.game_name.split(" ").join("-").toLowerCase(),
-            });
-        } else {
-            if (response?.status === 403 || (game?.aggregator?.toLowerCase() === "bitville" &&
-                (response?.data?.token == null || response?.data?.token == "")
-            )) {
-                setAlertMessage({
-                    status: 403,
-                    message: "Please login again.",
-                });
-                dispatch({
-                    type: "DEL",
-                    key: "user",
-                });
-                await removeItem("user");
-                dispatch({
-                    type: "DEL",
                     key: "showloginmodal",
+                    payload: true,
                 });
-
-
-            } else {
-                setAlertMessage({
-                    status: 400,
-                    message: "Unable to launch Game",
-                });
+                return;
             }
+
+            const response = await makeRequest({
+                url: endpoint,
+                method: "GET",
+                apiVersion: "CasinoGameLaunch",
+            });
+
+            if (response?.status == 200
+                && !response.data?.tea_pot
+                && (response.data?.game_url || response.data?.gameUrl || response.data?.token)) {
+                const launchUrl = response.data?.game_url || response.data?.gameUrl || response.data?.token;
+                dispatch({
+                    type: "SET",
+                    key: "casinolaunch",
+                    payload: { game: game, url: launchUrl },
+                });
+                await AsyncStorage.setItem(
+                    "casinolaunch",
+                    JSON.stringify({ game: game, url: launchUrl })
+                );
+
+                if (game?.aggregator?.toLowerCase() === "bitville") {
+                    dispatch({
+                        type: "SET",
+                        key: "bitvilleGame",
+                        payload: response.data,
+                    });
+                }
+
+                navigation.navigate("CasinoLaunchedGameScreen", {
+                    provider: game?.provider_name.split(" ").join("-").toLowerCase(),
+                    game: game?.game_name.split(" ").join("-").toLowerCase(),
+                    gameUrl: launchUrl,
+                });
+            } else {
+                if (response?.status === 403 || (game?.aggregator?.toLowerCase() === "bitville" &&
+                    (response?.data?.token == null || response?.data?.token == "")
+                )) {
+                    setAlertMessage({
+                        status: 403,
+                        message: "Please login again.",
+                    });
+                    dispatch({
+                        type: "DEL",
+                        key: "user",
+                    });
+                    await removeItem("user");
+                    dispatch({
+                        type: "DEL",
+                        key: "showloginmodal",
+                    });
+                } else {
+                    setAlertMessage({
+                        status: 400,
+                        message: "Unable to launch Game",
+                    });
+                }
+            }
+        } finally {
+            setFetching(false);
         }
     };
 

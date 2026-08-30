@@ -63,7 +63,7 @@ const API_MAP: Record<ApiVersion, string> = {
 const getAuthToken = async (): Promise<string | null> => {
     try {
         const user = await getItem("user");
-        return user?.access_token || null; // ✅ FIXED
+        return user?.access_token || user?.token || null;
     } catch {
         return null;
     }
@@ -109,14 +109,15 @@ export const makeRequest = async <T = any>({
 
         // 🔐 Get token (priority: passed token > storage)
         const user = await getItem("user");
+        const authToken = token || user?.access_token || user?.token;
 
         const headers: Record<string, string> = {
             Accept: "application/json",
             "Content-Type": "application/json",
         };
 
-        if (user?.token) {
-            headers.Authorization = `Bearer ${user.token}`;
+        if (authToken) {
+            headers.Authorization = `Bearer ${authToken}`;
         }
 
         const requestOptions: RequestInit = {

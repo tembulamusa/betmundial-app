@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import {
     View,
     Image,
@@ -64,30 +64,29 @@ const CasinoCarousel: React.FC = () => {
     const [state, dispatch] = useContext(Context);
 
     const flatListRef = useRef<FlatList<CarouselBanner>>(null);
-    const [activeIndex, setActiveIndex] = useState<number>(0);
+    const activeIndexRef = useRef(0);
 
     const onViewableItemsChanged = useRef(
         ({ viewableItems }: { viewableItems: any[] }) => {
             if (viewableItems.length > 0) {
-                setActiveIndex(viewableItems[0].index ?? 0);
+                activeIndexRef.current = viewableItems[0].index ?? 0;
             }
         }
     ).current;
 
     useEffect(() => {
         const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % banners.length;
+            const nextIndex = (activeIndexRef.current + 1) % banners.length;
+            activeIndexRef.current = nextIndex;
 
-            flatListRef.current?.scrollToIndex({
-                index: nextIndex,
+            flatListRef.current?.scrollToOffset({
+                offset: nextIndex * width,
                 animated: true,
             });
-
-            setActiveIndex(nextIndex);
         }, 4000);
 
         return () => clearInterval(interval);
-    }, [activeIndex]);
+    }, []);
 
     const openCasinoProvider = async (providerName: string) => {
         const provider = state?.casinofilters?.providers?.find(

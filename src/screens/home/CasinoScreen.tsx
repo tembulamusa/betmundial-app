@@ -1,14 +1,16 @@
 import React from "react";
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from "react-native";
+import { StatusBar, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Casino from "../../components/casino/Casino";
+import { theme } from "../../theme";
 
 const CasinoScreen: React.FC = () => {
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor="#020617" />
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+            <StatusBar barStyle="light-content" backgroundColor={theme.background} />
+            <View style={styles.content}>
                 <Casino />
-            </ScrollView>
+            </View>
         </SafeAreaView>
     );
 };
@@ -18,10 +20,9 @@ export default React.memo(CasinoScreen);
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#020617",
+        backgroundColor: theme.background,
     },
-    scrollContainer: {
-        paddingBottom: 20,
-        // paddingHorizontal: 10,
+    content: {
+        flex: 1,
     },
 });

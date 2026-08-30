@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Context } from "../../context/store";
 import { CasinoIcon } from "../utils/CasinoIcons";
+import { theme } from "../../theme";
 
 interface Category {
     id: number;
@@ -185,8 +186,10 @@ export default React.memo(MobileCategoriesMenu);
 const styles = StyleSheet.create({
 
     container: {
-        backgroundColor: "rgba(255,255,255,0.1)",
-        paddingVertical: 4
+        backgroundColor: "rgba(255,255,255,0.08)",
+        paddingVertical: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(255,255,255,0.06)",
     },
 
     scroll: {
@@ -194,33 +197,37 @@ const styles = StyleSheet.create({
     },
 
     item: {
+        flexDirection: "row",
         alignItems: "center",
-        marginRight: 32,
-        paddingHorizontal: 10,
+        marginRight: 8,
+        paddingHorizontal: 12,
         paddingVertical: 8,
+        borderRadius: 8,
         borderBottomWidth: 2,
-        borderBottomColor: "transparent"
+        borderBottomColor: "transparent",
+        gap: 6,
     },
 
     icon: {
         width: 20,
         height: 20,
-        marginBottom: 4
     },
 
     name: {
         color: "#fff",
-        fontSize: 12,
-        textAlign: "center"
+        fontSize: 13,
+        fontWeight: "500",
+        textTransform: "lowercase",
     },
 
     activeName: {
-        color: "#a71f66",
-        fontWeight: "700"
+        color: theme.accent,
+        fontWeight: "700",
     },
 
     activeItem: {
-        borderBottomColor: "#a71f66"
-    }
+        borderBottomColor: theme.accent,
+        backgroundColor: "rgba(167,31,102,0.12)",
+    },
 
 });

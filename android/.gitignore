@@ -1,0 +1,5 @@
+# Signing secrets — never commit these.
+keystore.properties
+release.keystore
+upload-keystore.jks
+*.pem

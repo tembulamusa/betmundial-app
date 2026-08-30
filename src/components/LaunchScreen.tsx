@@ -178,12 +178,9 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: 'transparent',
-    borderRadius: 40,
     padding: 32,
     alignItems: 'center',
     minWidth: 300,
-    borderWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0)',
   },
   logoContainer: {
     marginBottom: 8,

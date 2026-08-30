@@ -1,30 +1,57 @@
-import React, { useState, useContext, useEffect, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useContext, useEffect, useCallback, useRef } from 'react';
+import {
+    View,
+    Text,
+    Image,
+    StyleSheet,
+    TouchableOpacity,
+    Modal,
+    TextInput,
+    ActivityIndicator,
+    useWindowDimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Context } from '../context/store';
 import HeaderNav from './common/HeaderNav';
 import HeaderUser from './common/HeaderUser';
 import HeaderLogin from './header/HeaderLogin';
+import Search from './header/Search';
+import MobileChat from './header/MobileChat';
 import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
-import { getItem, setItem } from './utils/local-storage';
+import { getItem, setItem, normalizeUser } from './utils/local-storage';
 import { normalizeKenyanPhoneNumber } from './utils/phone';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
+    const insets = useSafeAreaInsets();
     const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState<string | null>(null);
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginNotice, setLoginNotice] = useState<string | null>(null);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const { width: screenWidth } = useWindowDimensions();
+    const topBandRef = useRef<View>(null);
+    const [topBandOffsetX, setTopBandOffsetX] = useState(0);
+
+    const syncTopBandBleed = useCallback(() => {
+        topBandRef.current?.measureInWindow((x) => {
+            setTopBandOffsetX(x);
+        });
+    }, []);
+
+    useEffect(() => {
+        syncTopBandBleed();
+    }, [state?.user, searchOpen, syncTopBandBleed]);
+
     const clearGlobalLoginModalState = useCallback(() => {
         dispatch({ type: 'DEL', key: 'showloginmodal' });
         dispatch({ type: 'DEL', key: 'loginmodalprefill' });
         dispatch({ type: 'DEL', key: 'loginmodalmessage' });
     }, [dispatch]);
-    const [localUser, setLocalUser] = useState<any>(null);
 
-    // close modal
     const closeLoginModal = useCallback(() => {
         setIsLoginModalVisible(false);
         setLoginNotice(null);
@@ -39,18 +66,17 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         setLoginNotice(null);
         setIsLoginModalVisible(true);
     }, []);
-    /* ================= LOAD USER FAST ================= */
+
     useEffect(() => {
         const loadUser = async () => {
             const cached = await getItem("user");
-
             if (cached) {
-                dispatch({ type: 'SET', key: 'user', payload: cached });
+                dispatch({ type: 'SET', key: 'user', payload: normalizeUser(cached) });
             }
         };
-
         loadUser();
-    }, []);
+    }, [dispatch]);
+
     useEffect(() => {
         if (state?.showloginmodal) {
             setIsLoginModalVisible(true);
@@ -59,34 +85,38 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
     const handleLogin = async (formOverride?: { mobile: string; password: string }) => {
         const activeForm = formOverride || { mobile, password };
-        const normalizedMobile = normalizeKenyanPhoneNumber(activeForm.mobile);
 
         setLoginLoading(true);
         setLoginError(null);
 
         try {
-            const data = {
-                msisdn: mobile,
-                password: password,
-            };
             const response = await makeRequest({
                 url: '/auth/login',
                 method: 'POST',
                 apiVersion: 2,
-                data: data,
+                data: {
+                    msisdn: normalizeKenyanPhoneNumber(activeForm.mobile),
+                    password: activeForm.password,
+                },
             });
+
             if (response?.status == 200 || response.status == 201) {
-                if (response.data && response?.data?.data) {
-                    // Dispatch user to global state
-                    await setItem("user", response.data.data); // Save user data to local storage
-                    dispatch({ type: 'SET', key: 'user', payload: response.data?.data });
-                    // Close login modal
+                const payload = response.data?.data || response.data;
+                if (payload && (payload.access_token || payload.token)) {
+                    const user = normalizeUser(payload);
+                    await setItem("user", user);
+                    dispatch({ type: 'SET', key: 'user', payload: user });
                     closeLoginModal();
                 } else {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }
             } else {
-                setLoginError(response.result?.message || response?.error?.message || response?.error || 'Login failed');
+                setLoginError(
+                    response.result?.message ||
+                    response?.error?.message ||
+                    response?.error ||
+                    'Login failed'
+                );
             }
         } catch (err) {
             console.error('Login error:', err);
@@ -98,9 +128,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
     useEffect(() => {
         const prefill = state?.loginmodalprefill;
-        if (!prefill) {
-            return;
-        }
+        if (!prefill) return;
         setMobile(prefill?.mobile || '');
         setPassword(prefill?.password || '');
         setLoginError(null);
@@ -110,7 +138,6 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
     useEffect(() => {
         const prefill = state?.loginmodalprefill;
-
         if (
             isLoginModalVisible &&
             prefill?.autoLogin &&
@@ -121,40 +148,86 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             dispatch({
                 type: 'SET',
                 key: 'loginmodalprefill',
-                payload: {
-                    ...prefill,
-                    autoLogin: false,
-                },
+                payload: { ...prefill, autoLogin: false },
             });
-
-            handleLogin({
-                mobile: prefill.mobile,
-                password: prefill.password,
-            });
+            handleLogin({ mobile: prefill.mobile, password: prefill.password });
         }
     }, [isLoginModalVisible, state?.loginmodalprefill, loginLoading]);
 
-    return (
-        <View style={{ backgroundColor: theme.background }}>
-            <View style={styles.header}>
-                <View style={{ width: 120, justifyContent: "center" }}>
-                    <Image
-                        source={require('../assets/images/logo.png')}
-                        style={{ width: "100%", height: 50, resizeMode: "contain" }}
-                    />
-                </View>
+    const logoBandPad = state?.user ? 6 : 4;
 
-                <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    {state?.user
-                        ? <HeaderUser />
-                        : <HeaderLogin onLoginPress={openHeaderLoginModal} />
-                    }
+    return (
+        <View style={styles.headerRoot}>
+            <View
+                ref={topBandRef}
+                onLayout={syncTopBandBleed}
+                style={[
+                    styles.headerTopBand,
+                    state?.user && styles.headerTopBandLoggedIn,
+                    { paddingTop: insets.top + logoBandPad },
+                ]}
+            >
+                {state?.user ? (
+                    <View
+                        pointerEvents="none"
+                        style={[
+                            styles.headerTopBandBleed,
+                            {
+                                left: -topBandOffsetX,
+                                width: screenWidth,
+                            },
+                        ]}
+                    />
+                ) : null}
+                <View style={styles.headerInner}>
+                    <View
+                        style={[
+                            styles.headerRow,
+                            searchOpen && styles.headerRowExpanded,
+                            state?.user && !searchOpen && styles.headerRowLoggedIn,
+                        ]}
+                    >
+                        {!searchOpen && (
+                            <TouchableOpacity
+                                style={styles.logoWrap}
+                                onPress={() => navigation.navigate("Sports", { screen: "HomeMain" })}
+                                activeOpacity={0.9}
+                            >
+                                <Image
+                                    source={require('../assets/images/logo.png')}
+                                    style={styles.logo}
+                                />
+                            </TouchableOpacity>
+                        )}
+
+                        <View style={[styles.searchSlot, searchOpen && styles.searchSlotExpanded]}>
+                            <Search onActiveChange={setSearchOpen} />
+                            {!searchOpen && <MobileChat />}
+                        </View>
+                    </View>
                 </View>
             </View>
 
-            <HeaderNav />
+            {!searchOpen && (
+                <View
+                    style={[
+                        styles.headerInner,
+                        styles.mobileActionsRow,
+                        state?.user && styles.mobileActionsRowLoggedIn,
+                    ]}
+                >
+                    {state?.user ? (
+                        <HeaderUser />
+                    ) : (
+                        <HeaderLogin onLoginPress={openHeaderLoginModal} />
+                    )}
+                </View>
+            )}
 
-            {/* Login Modal */}
+            <HeaderNav
+                containerStyle={state?.user ? styles.headerNavLoggedIn : undefined}
+            />
+
             <Modal
                 visible={isLoginModalVisible}
                 transparent
@@ -169,7 +242,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
                         <TextInput
                             placeholder="Mobile / MSISDN"
-                            placeholderTextColor="#ccc"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={mobile}
                             onChangeText={setMobile}
@@ -177,17 +250,21 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                         />
                         <TextInput
                             placeholder="Password"
-                            placeholderTextColor="#ccc"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
                         />
 
-                        {loginNotice && <Text style={styles.noticeText}>{loginNotice}</Text>}
-                        {loginError && <Text style={styles.errorText}>{loginError}</Text>}
+                        {loginNotice ? <Text style={styles.noticeText}>{loginNotice}</Text> : null}
+                        {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
 
-                        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loginLoading}>
+                        <TouchableOpacity
+                            style={styles.loginButton}
+                            onPress={() => handleLogin()}
+                            disabled={loginLoading}
+                        >
                             {loginLoading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
@@ -195,10 +272,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                             )}
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={closeLoginModal}
-                        >
+                        <TouchableOpacity style={styles.closeButton} onPress={closeLoginModal}>
                             <Text style={styles.closeButtonText}>Cancel</Text>
                         </TouchableOpacity>
                     </View>
@@ -209,13 +283,89 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingBottom: 4, paddingTop: 12 },
-    logo: {
+    headerRoot: {
         width: "100%",
-        height: 60,
-        resizeMode: "contain"
+        alignSelf: "stretch",
+        backgroundColor: theme.background,
+        paddingBottom: 8,
+        overflow: "visible",
     },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,12,36,0.91)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    headerTopBand: {
+        width: "100%",
+        alignSelf: "stretch",
+        overflow: "visible",
+    },
+    headerTopBandLoggedIn: {
+        paddingBottom: 6,
+        marginBottom: 0,
+        overflow: "visible",
+    },
+    headerTopBandBleed: {
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        backgroundColor: "rgba(255, 255, 255, 0.15)",
+    },
+    headerInner: {
+        width: "100%",
+        paddingHorizontal: 10,
+    },
+    headerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        minHeight: 40,
+    },
+    headerRowLoggedIn: {
+        minHeight: 38,
+    },
+    headerRowExpanded: {
+        alignItems: "stretch",
+    },
+    logoWrap: {
+        flexShrink: 0,
+        justifyContent: "center",
+    },
+    logo: {
+        width: 130,
+        height: 36,
+        resizeMode: "contain",
+    },
+    searchSlot: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: 8,
+        minWidth: 0,
+    },
+    searchSlotExpanded: {
+        flex: 1,
+        alignItems: "stretch",
+    },
+    mobileActionsRow: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        width: "100%",
+        marginTop: 8,
+        paddingTop: 4,
+    },
+    mobileActionsRowLoggedIn: {
+        marginTop: 0,
+        paddingTop: 8,
+        paddingBottom: 8,
+    },
+    headerNavLoggedIn: {
+        marginTop: 0,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,12,36,0.91)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
     modalContent: {
         width: '100%',
         maxWidth: 350,
@@ -226,15 +376,59 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-    modalHeader: { backgroundColor: '#a71f66', paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-    input: { backgroundColor: '#1a1a2e', color: '#fff', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, marginHorizontal: 20, marginTop: 12 },
-    loginButton: { backgroundColor: '#a71f66', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginHorizontal: 20, marginTop: 16 },
-    loginButtonText: { color: '#fff', fontWeight: 'bold' },
-    closeButton: { marginTop: 10, alignItems: 'center', marginBottom: 16 },
-    closeButtonText: { color: '#a71f66', fontWeight: 'bold' },
-    noticeText: { color: '#86efac', marginTop: 10, textAlign: 'center', paddingHorizontal: 20 },
-    errorText: { color: '#F44336', marginTop: 4, textAlign: 'center' },
+    modalHeader: {
+        backgroundColor: theme.accent,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    input: {
+        backgroundColor: '#1a1a2e',
+        color: '#fff',
+        borderWidth: 1,
+        borderColor: '#333',
+        borderRadius: 8,
+        padding: 12,
+        marginHorizontal: 20,
+        marginTop: 12,
+    },
+    loginButton: {
+        backgroundColor: theme.accent,
+        borderRadius: 8,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginTop: 16,
+    },
+    loginButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    closeButton: {
+        marginTop: 10,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    closeButtonText: {
+        color: theme.accent,
+        fontWeight: 'bold',
+    },
+    noticeText: {
+        color: '#86efac',
+        marginTop: 10,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    errorText: {
+        color: '#F44336',
+        marginTop: 4,
+        textAlign: 'center',
+    },
 });
 
 export default CustomHeader;

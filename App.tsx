@@ -8,7 +8,6 @@ import Icon from "react-native-vector-icons/FontAwesome";
 
 import { theme } from "./src/theme";
 import Store, { Context } from "./src/context/store";
-import { GlobalProvider } from "./src/context/GlobalContext";
 import { AuthProvider } from "./src/AuthContext";
 import { ConnectivityProvider } from "./src/context/ConnectivityContext";
 import { SyncProvider, useSync } from "./src/context/SyncContext";
@@ -210,6 +209,10 @@ function MainTabs() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             header: (props) => <CustomHeader {...props} />,
+            headerStyle: {
+              backgroundColor: theme.background,
+              width: "100%",
+            },
             lazy: true,
             tabBarIcon: ({ color, size }) => {
               const icons = {
@@ -322,7 +325,7 @@ export default function App() {
       } catch (error) {
         console.error("[APP] Init error:", error);
       } finally {
-        setTimeout(() => setIsLaunching(false), 2000);
+        setIsLaunching(false);
       }
     };
 
@@ -334,13 +337,11 @@ export default function App() {
       <View style={styles.container}>
         <SyncProvider>
           <Store>
-            <GlobalProvider>
-              <ConnectivityProvider>
-                <AuthProvider>
-                  <RootNavigator navigationRef={navigationRef} />
-                </AuthProvider>
-              </ConnectivityProvider>
-            </GlobalProvider>
+            <ConnectivityProvider>
+              <AuthProvider>
+                <RootNavigator navigationRef={navigationRef} />
+              </AuthProvider>
+            </ConnectivityProvider>
           </Store>
         </SyncProvider>
 

@@ -73,3 +73,10 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Signing secrets & environment config — *.keystore was already covered above,
+# but .jks and .pem certs weren't, and neither was .env.
+*.jks
+*.pem
+keystore.properties
+.env

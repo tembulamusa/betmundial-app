@@ -8,7 +8,6 @@ import React, {
 } from "react";
 
 import {
-    InteractionManager,
     View,
     StyleSheet,
     NativeSyntheticEvent,
@@ -66,10 +65,12 @@ const HomeScreen: React.FC = () => {
     const [fetchError, setFetchError] = useState<string | null>(null);
 
     const [producers, setProducers] = useState<any[]>([]);
+    const fetchRequestId = useRef(0);
+    const lastUserTokenRef = useRef<string | null>(null);
 
     /* ================= FETCH ================= */
     const fetchData = async (controlText?: string, pageNo?: number) => {
-
+        const requestId = ++fetchRequestId.current;
         const isInitialFetch = !pageNo || pageNo === 1;
 
         if (isInitialFetch) setFetching(true);
@@ -87,10 +88,15 @@ const HomeScreen: React.FC = () => {
         let tab = state?.active_tab || "highlights";
         let method: "GET" | "POST" = "GET";
 
-        let endpoint =
-            "/sports/matches/pre-match/" +
-            (filtersport?.sport_id || allSportId || 79) +
-            `?page=${currentPageNo}&size=${limitSize}`;
+        const sportId = filtersport?.sport_id || allSportId || 79;
+        const isSoccer =
+            !filtersport || filtersport?.sport_name?.toLowerCase() === "soccer";
+
+        let endpoint = `/sports/matches/pre-match/${sportId}`;
+        if (!isSoccer && filtersport?.default_market) {
+            endpoint += `/${filtersport.default_market}`;
+        }
+        endpoint += `?page=${currentPageNo}&size=${limitSize}`;
 
         if (state?.filtercategory) {
             endpoint += "&category_id=" + state?.filtercategory?.category_id;
@@ -101,8 +107,15 @@ const HomeScreen: React.FC = () => {
         endpoint += "&tab=" + tab;
 
         if (state?.filtercompetition && controlText !== "fetchAll") {
-            endpoint =
-                `/sports/competitions/matches/${state?.filtercompetition?.competition_id}`;
+            if (controlText === "filtered") {
+                if (isSoccer || !filtersport) {
+                    endpoint = `/sports/competitions/matches/${state?.filtercompetition?.competition_id}`;
+                } else {
+                    endpoint =
+                        `/sports/matches/pre-match-sport/${sportId}/${state?.filtercompetition?.competition_id}/${filtersport?.default_market}` +
+                        `?page=${currentPageNo}&size=${limitSize}`;
+                }
+            }
         }
 
         let data: any = null;
@@ -136,11 +149,18 @@ const HomeScreen: React.FC = () => {
                 apiVersion: 2,
             });
 
+            if (requestId !== fetchRequestId.current) return;
+
             setFetchingCount(fetchcount);
 
             if ([200, 201].includes(res.status)) {
                 const result = res.data;
-                const newItems = result?.data?.items || result || [];
+                const payload = result?.data ?? result;
+                const newItems = Array.isArray(payload?.items)
+                    ? payload.items
+                    : Array.isArray(payload)
+                        ? payload
+                        : [];
 
                 if (isInitialFetch) {
                     setMatches(newItems);
@@ -148,13 +168,22 @@ const HomeScreen: React.FC = () => {
                     setMatches(prev => [...prev, ...newItems]);
                 }
 
-                setProducers(result?.producer_statuses || []);
+                setProducers(result?.producer_statuses || payload?.producer_statuses || []);
             } else {
-                if (isInitialFetch) setMatches([]);
+                if (isInitialFetch) {
+                    setMatches(prev => (prev.length ? prev : []));
+                }
                 setProducers([]);
                 setFetchError(res.error || `Request failed (${res.status})`);
             }
+        } catch (err) {
+            if (requestId !== fetchRequestId.current) return;
+            if (isInitialFetch) {
+                setMatches(prev => (prev.length ? prev : []));
+            }
+            setFetchError("Failed to load matches");
         } finally {
+            if (requestId !== fetchRequestId.current) return;
             if (isInitialFetch) setFetching(false);
             else setPaginationLoading(false);
         }
@@ -163,13 +192,13 @@ const HomeScreen: React.FC = () => {
     /* ================= EFFECTS ================= */
 
     useEffect(() => {
-        InteractionManager.runAfterInteractions(() => {
-            setPage(1);
-            fetchData(sportid ? "fetchAll" : "filtered", 1);
-            setFetchingCount(0);
-        });
+        setPage(1);
+        const fetchMode = state?.filtercompetition ? "filtered" : "fetchAll";
+        fetchData(fetchMode, 1);
+        setFetchingCount(0);
     }, [
         sportid,
+        state?.filtersport?.sport_id,
         state?.filtercategory,
         state?.filtercompetition,
         state?.active_tab,
@@ -177,10 +206,16 @@ const HomeScreen: React.FC = () => {
     ]);
 
     useEffect(() => {
+        const userToken = state?.user?.access_token || state?.user?.token;
+        if (!userToken || lastUserTokenRef.current === userToken) return;
+        lastUserTokenRef.current = userToken;
+        setPage(1);
+        fetchData("fetchAll", 1);
+    }, [state?.user?.access_token, state?.user?.token]);
+
+    useEffect(() => {
         if (page > 1) {
-            InteractionManager.runAfterInteractions(() => {
-                fetchData(undefined, page);
-            });
+            fetchData(undefined, page);
         }
     }, [page]);
 
@@ -235,6 +270,7 @@ const HomeScreen: React.FC = () => {
 
                 renderItem={() => (
                     <MatchList
+                        key={String(state?.filtersport?.sport_id || 79)}
                         socket={socket}
                         live={false}
                         matches={matches}

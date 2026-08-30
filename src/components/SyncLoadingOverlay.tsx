@@ -97,18 +97,14 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: 'transparent',
-    borderRadius: 40,
     padding: 32,
     alignItems: 'center',
     minWidth: 320,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   logo: {
     width: 80,
     height: 80,
     marginBottom: 20,
-    borderRadius: 40,
   },
   message: {
     color: '#FFFFFF',

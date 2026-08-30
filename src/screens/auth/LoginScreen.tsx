@@ -18,9 +18,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { globalStyles } from "../../styles";
 import makeRequest from "../../components/utils/makeRequest";
 import { AuthContext } from "../../AuthContext";
-import { useSync } from "../../context/SyncContext";
-import { initDatabase, hasShifts, hasMeasuringCans, saveOfflineCredentials, validateOfflineCredentials, hasOfflineCredentials as hasSQLiteOfflineCredentials } from "../../services/offlineDatabase";
-import { isSyncPendingAfterLogin, clearSyncPendingAfterLogin } from "../../services/offlineSync";
+import { initDatabase, saveOfflineCredentials, validateOfflineCredentials, hasOfflineCredentials as hasSQLiteOfflineCredentials } from "../../services/offlineDatabase";
 import { setItem } from "../../components/utils/local-storage";
 import { theme } from "../../theme";
 
@@ -32,7 +30,6 @@ export default function LoginScreen({ navigation }: any) {
     const [isOnline, setIsOnline] = useState(true);
     const [isOfflineMode, setIsOfflineMode] = useState(false);
     const { login } = useContext(AuthContext);
-    const { triggerSync } = useSync();
 
     // Monitor network connectivity
     useEffect(() => {
@@ -114,19 +111,6 @@ export default function LoginScreen({ navigation }: any) {
             await login(validation.token!);
             await AsyncStorage.setItem("user", JSON.stringify(validation.userData));
             await AsyncStorage.setItem("@betmundialApp:user_phone_number", phoneNumber);
-
-            // Check if sync is pending
-            const isSyncPending = isSyncPendingAfterLogin();
-            if (isSyncPending) {
-                clearSyncPendingAfterLogin();
-                setTimeout(() => {
-                    triggerSync().then((result) => {
-                        Alert.alert('Sync Complete', `Successfully synced ${result.success} collection(s).`);
-                    }).catch((error) => {
-                        Alert.alert('Sync Error', 'Failed to sync data. You can try again later.');
-                    });
-                }, 1000);
-            }
 
             // Navigate to dashboard
             navigation.reset({
@@ -224,51 +208,11 @@ export default function LoginScreen({ navigation }: any) {
                 // Store phone number for offline sync
                 await AsyncStorage.setItem("@betmundialApp:user_phone_number", phoneNumber);
 
-                // Check if this is first login (no shifts/measuring cans in database)
-                await initDatabase();
-                const shiftsExist = await hasShifts();
-                const measuringCansExist = await hasMeasuringCans();
-                const isFirstLogin = !shiftsExist || !measuringCansExist;
-
-                // Check if sync is pending from network restoration
-                const isSyncPending = isSyncPendingAfterLogin();
-
-                if (isSyncPending) {
-                    // Clear the pending flag
-                    clearSyncPendingAfterLogin();
-
-                    // Start sync automatically after login
-                    console.log('[LOGIN] Sync pending after login, starting sync...');
-                    setTimeout(() => {
-                        triggerSync().then((result) => {
-                            const successMessage = result.failed === 0
-                                ? `Successfully synced ${result.success} collection(s).`
-                                : `Synced ${result.success} collection(s), ${result.failed} failed.`;
-                            Alert.alert('Sync Complete', successMessage);
-                        }).catch((error) => {
-                            console.error('[LOGIN] Auto sync failed:', error);
-                            Alert.alert('Sync Error', 'Failed to sync data. You can try again from the sync button.');
-                        });
-                    }, 1000); // Small delay to ensure navigation completes
-                }
-
-                if (isFirstLogin) {
-                    // First login - redirect to Settings to fetch data
-                    console.log('[LOGIN] First login detected, redirecting to Settings');
-                    navigation.reset({
-                        index: 0,
-                        routes: [
-                            { name: "Home" },
-                            { name: "Home", params: { screen: "Settings" } }
-                        ],
-                    });
-                } else {
-                    // Regular login - go to Home
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: "Home" }],
-                    });
-                }
+                // Regular login - go to Home
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Home" }],
+                });
             } else {
                 Alert.alert("Login Failed", response?.message || "Invalid phone number or password.");
             }

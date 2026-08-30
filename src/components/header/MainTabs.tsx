@@ -12,7 +12,7 @@ import {
 
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Context } from "../../context/store";
-import { getItem } from "../utils/local-storage";
+import { getItem, setItem } from "../utils/local-storage";
 import { flagMap } from "../utils/FlagMap";
 import { makeRequest } from "../utils/makeRequest";
 
@@ -37,14 +37,42 @@ const MainTabs: React.FC<Props> = ({ tab, fetching = false }) => {
     const [activeTab, setActiveTab] = useState<string>(tab);
     const [topCompetitions, setTopCompetitions] = useState<Competition[]>([]);
 
-    const localSport = getItem("filtersport");
-
-
     useEffect(() => {
         if (state?.topcompetitions) {
             setTopCompetitions(state?.topcompetitions);
         }
     }, [state?.topcompetitions]);
+
+    useEffect(() => {
+        const fetchTopCompetitions = async () => {
+            const cachedSport = state?.filtersport || (await getItem("filtersport"));
+            const sportId = cachedSport?.sport_id || 79;
+
+            try {
+                const res = await makeRequest<any>({
+                    url: `/sports/competitions/${sportId}`,
+                    method: "GET",
+                    apiVersion: 2,
+                });
+
+                if ([200, 201].includes(res.status)) {
+                    const items =
+                        res.data?.data?.items || res.data?.items || [];
+                    dispatch({
+                        type: "SET",
+                        key: "topcompetitions",
+                        payload: items,
+                    });
+                    await setItem("topcompetitions", items);
+                    setTopCompetitions(items);
+                }
+            } catch (_) {
+                // ignore
+            }
+        };
+
+        fetchTopCompetitions();
+    }, [state?.filtersport?.sport_id, dispatch]);
 
     useEffect(() => {
         let top: any = getItem("topcompetitions");
@@ -174,10 +202,7 @@ const MainTabs: React.FC<Props> = ({ tab, fetching = false }) => {
                     style={styles.competitionItem}
                     onPress={() =>
                         navigation.navigate("Competition", {
-                            sportId:
-                                state?.filtersport?.sport_id ||
-                                localSport?.sport_id ||
-                                79
+                            sportId: state?.filtersport?.sport_id || 79,
                         })
                     }
                 >
