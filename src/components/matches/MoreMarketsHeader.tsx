@@ -52,6 +52,7 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
     }, []);
 
     useEffect(() => {
+        setScore(match?.score || "");
         handleGameSocket("listen", match?.parent_match_id);
         updateMatchTimeMinutesAndSeconds(match?.match_time);
 
@@ -79,6 +80,11 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
         );
     };
 
+    const liveTimeLabel =
+        matchTime?.minutes != null
+            ? `${matchTime.minutes}:${String(matchTime.seconds ?? 0).padStart(2, "0")}`
+            : match?.match_time;
+
     return (
         <>
             <View style={styles.header}>
@@ -91,9 +97,14 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
                 </TouchableOpacity>
             </View>
 
-            <MatchWidget parentMatchId={match?.parent_match_id} />
-
-            {/* <LivescoreFooter /> */}
+            <MatchWidget
+                parentMatchId={match?.parent_match_id}
+                homeTeam={match?.home_team}
+                awayTeam={match?.away_team}
+                score={score || match?.score}
+                matchTime={liveTimeLabel}
+                live={live}
+            />
         </>
     );
 };

@@ -1,8 +1,10 @@
 import React from "react";
-import { SafeAreaView, StatusBar, View, StyleSheet, Dimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { View, StyleSheet, Dimensions, StatusBar } from "react-native";
 import ConnectivityStatus from "../ConnectivityStatus";
 import ConnectivityToast from "../ConnectivityToast";
 import BetslipIndex from "../betslip/BetslipIndex";
+import PlaceBetDepositModal from "../betslip/PlaceBetDepositModal";
 import { theme } from "../../theme";
 
 type Props = { children: React.ReactNode };
@@ -10,30 +12,19 @@ type Props = { children: React.ReactNode };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function MainLayout({ children }: Props) {
-    const BETSLIP_HEIGHT = 80; // height of betslip footer
-
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-            <StatusBar barStyle="light-content" />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "left", "right"]}>
+            <StatusBar barStyle="light-content" translucent />
             <ConnectivityStatus />
             <ConnectivityToast />
 
-            {/* Main content */}
             <View style={styles.container}>{children}</View>
 
-            {/* Betslip footer overlaying bottom tabs */}
-            <View
-                style={{
-                    position: "absolute",
-                    bottom: 0, // at bottom of screen
-                    left: 0,
-                    width: SCREEN_WIDTH,
-                    // height: BETSLIP_HEIGHT,
-                    // zIndex: 999,
-                }}
-            >
+            <View style={styles.betslipOverlay}>
                 <BetslipIndex />
             </View>
+
+            <PlaceBetDepositModal />
         </SafeAreaView>
     );
 }
@@ -41,4 +32,11 @@ export default function MainLayout({ children }: Props) {
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     container: { flex: 1 },
+    betslipOverlay: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        width: SCREEN_WIDTH,
+        pointerEvents: "box-none",
+    },
 });

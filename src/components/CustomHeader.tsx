@@ -10,7 +10,6 @@ import {
     ActivityIndicator,
     useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Context } from '../context/store';
 import HeaderNav from './common/HeaderNav';
 import HeaderUser from './common/HeaderUser';
@@ -24,14 +23,13 @@ import { normalizeKenyanPhoneNumber } from './utils/phone';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
-    const insets = useSafeAreaInsets();
     const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState<string | null>(null);
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginNotice, setLoginNotice] = useState<string | null>(null);
-    const [searchOpen, setSearchOpen] = useState(false);
+    const searchOpen = Boolean(state?.searchopen);
     const { width: screenWidth } = useWindowDimensions();
     const topBandRef = useRef<View>(null);
     const [topBandOffsetX, setTopBandOffsetX] = useState(0);
@@ -82,6 +80,14 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             setIsLoginModalVisible(true);
         }
     }, [state?.showloginmodal]);
+
+    useEffect(() => {
+        if (!state?.sessionMessage) return;
+
+        setLoginNotice(state.sessionMessage);
+        setIsLoginModalVisible(true);
+        dispatch({ type: "DEL", key: "sessionMessage" });
+    }, [state?.sessionMessage, dispatch]);
 
     const handleLogin = async (formOverride?: { mobile: string; password: string }) => {
         const activeForm = formOverride || { mobile, password };
@@ -154,7 +160,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
         }
     }, [isLoginModalVisible, state?.loginmodalprefill, loginLoading]);
 
-    const logoBandPad = state?.user ? 6 : 4;
+    const logoBandPad = 6;
 
     return (
         <View style={styles.headerRoot}>
@@ -163,28 +169,26 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 onLayout={syncTopBandBleed}
                 style={[
                     styles.headerTopBand,
-                    state?.user && styles.headerTopBandLoggedIn,
-                    { paddingTop: insets.top + logoBandPad },
+                    styles.headerTopBandAccent,
+                    { paddingTop: logoBandPad },
                 ]}
             >
-                {state?.user ? (
-                    <View
-                        pointerEvents="none"
-                        style={[
-                            styles.headerTopBandBleed,
-                            {
-                                left: -topBandOffsetX,
-                                width: screenWidth,
-                            },
-                        ]}
-                    />
-                ) : null}
+                <View
+                    pointerEvents="none"
+                    style={[
+                        styles.headerTopBandBleed,
+                        {
+                            left: -topBandOffsetX,
+                            width: screenWidth,
+                        },
+                    ]}
+                />
                 <View style={styles.headerInner}>
                     <View
                         style={[
                             styles.headerRow,
                             searchOpen && styles.headerRowExpanded,
-                            state?.user && !searchOpen && styles.headerRowLoggedIn,
+                            !searchOpen && styles.headerRowCompact,
                         ]}
                     >
                         {!searchOpen && (
@@ -201,7 +205,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                         )}
 
                         <View style={[styles.searchSlot, searchOpen && styles.searchSlotExpanded]}>
-                            <Search onActiveChange={setSearchOpen} />
+                            <Search />
                             {!searchOpen && <MobileChat />}
                         </View>
                     </View>
@@ -209,13 +213,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
             </View>
 
             {!searchOpen && (
-                <View
-                    style={[
-                        styles.headerInner,
-                        styles.mobileActionsRow,
-                        state?.user && styles.mobileActionsRowLoggedIn,
-                    ]}
-                >
+                <View style={[styles.headerInner, styles.mobileActionsRow]}>
                     {state?.user ? (
                         <HeaderUser />
                     ) : (
@@ -224,9 +222,7 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                 </View>
             )}
 
-            <HeaderNav
-                containerStyle={state?.user ? styles.headerNavLoggedIn : undefined}
-            />
+            <HeaderNav containerStyle={styles.headerNavCompact} />
 
             <Modal
                 visible={isLoginModalVisible}
@@ -287,7 +283,7 @@ const styles = StyleSheet.create({
         width: "100%",
         alignSelf: "stretch",
         backgroundColor: theme.background,
-        paddingBottom: 8,
+        paddingBottom: 0,
         overflow: "visible",
     },
     headerTopBand: {
@@ -295,7 +291,7 @@ const styles = StyleSheet.create({
         alignSelf: "stretch",
         overflow: "visible",
     },
-    headerTopBandLoggedIn: {
+    headerTopBandAccent: {
         paddingBottom: 6,
         marginBottom: 0,
         overflow: "visible",
@@ -316,7 +312,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         minHeight: 40,
     },
-    headerRowLoggedIn: {
+    headerRowCompact: {
         minHeight: 38,
     },
     headerRowExpanded: {
@@ -348,15 +344,11 @@ const styles = StyleSheet.create({
         justifyContent: "flex-end",
         alignItems: "center",
         width: "100%",
-        marginTop: 8,
-        paddingTop: 4,
-    },
-    mobileActionsRowLoggedIn: {
         marginTop: 0,
         paddingTop: 8,
         paddingBottom: 8,
     },
-    headerNavLoggedIn: {
+    headerNavCompact: {
         marginTop: 0,
     },
     modalOverlay: {

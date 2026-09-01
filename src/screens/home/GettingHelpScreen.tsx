@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 16,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: theme.pageHeaderBackground,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.1)',
     },

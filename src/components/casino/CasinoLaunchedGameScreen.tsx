@@ -19,6 +19,7 @@ import { theme } from "../../theme";
 
 import InAppBrowser from "react-native-inappbrowser-reborn";
 import { getItem } from "../utils/local-storage";
+import { persistCasinoLaunch } from "../utils/casinoLaunch";
 
 const CasinoLaunchedGameScreen = () => {
 
@@ -29,6 +30,9 @@ const CasinoLaunchedGameScreen = () => {
     const provider = route?.params?.provider;
     const gameName = route?.params?.game;
     const initialGameUrl = route?.params?.gameUrl as string | undefined;
+    const pendingLaunch = route?.params?.pendingLaunch as
+        | { endpoint: string; game: any }
+        | undefined;
 
     const [gameUrl, setGameUrl] = useState<string | null>(null);
     const [bitvilleGame, setBitvilleGame] = useState<any>(null);
@@ -77,7 +81,7 @@ const CasinoLaunchedGameScreen = () => {
     };
 
     /* ================= FETCH GAME URL ================= */
-    const fetchGameUrl = async (endpoint: string) => {
+    const fetchGameUrl = async (endpoint: string, launchGame?: any) => {
         try {
             const res = await makeRequest({
                 url: endpoint,
@@ -98,21 +102,24 @@ const CasinoLaunchedGameScreen = () => {
                     return handleSessionExpired();
                 }
 
+                const gameMeta = launchGame || pendingLaunch?.game || data;
+                persistCasinoLaunch(
+                    dispatch,
+                    gameMeta,
+                    url,
+                    data?.aggregator?.toLowerCase() === "bitville" ? data : undefined
+                );
 
                 setGameUrl(url);
 
-                // ✅ MATCH WEB (FULL OBJECT)
                 if (data?.aggregator?.toLowerCase() === "bitville") {
-                    dispatch({
-                        type: "SET",
-                        key: "bitvilleGame",
-                        payload: data,
-                    });
                     setBitvilleGame(data);
                 } else {
                     setBitvilleGame(null);
                 }
 
+            } else if (res?.status === 403) {
+                return handleSessionExpired();
             } else {
                 Alert.alert("Error", "Failed to fetch game");
                 navigation.navigate("Casino");
@@ -172,7 +179,9 @@ const CasinoLaunchedGameScreen = () => {
         setBitvilleGame(null);
         setLoading(true);
 
-        if (directLaunch.includes(gameName.toLowerCase())) {
+        if (pendingLaunch?.endpoint) {
+            fetchGameUrl(pendingLaunch.endpoint, pendingLaunch.game);
+        } else if (directLaunch.includes(gameName.toLowerCase())) {
             launchDirectGame();
         } else {
             const loadCasinoLaunch = async () => {
@@ -224,7 +233,7 @@ const CasinoLaunchedGameScreen = () => {
             dispatch({ type: "DEL", key: "iscasinopage" });
         };
 
-    }, [gameName, provider, initialGameUrl]);
+    }, [gameName, provider, initialGameUrl, pendingLaunch?.endpoint]);
 
     /* ================= CLEANUP ================= */
     useEffect(() => {
@@ -233,7 +242,7 @@ const CasinoLaunchedGameScreen = () => {
             dispatch({ type: "DEL", key: "bitvilleGame" });
             AsyncStorage.multiRemove(["casinolaunch"]);
         };
-    }, [gameUrl]);
+    }, [dispatch]);
 
     /* ================= BITVILLE JS ================= */
     const getInjectedJS = () => {
@@ -278,8 +287,9 @@ const CasinoLaunchedGameScreen = () => {
             </View>
 
             {loading && (
-                <View>
+                <View style={styles.loadingWrap}>
                     <ActivityIndicator size="large" color="#fff" />
+                    <Text style={styles.loadingText}>Loading game...</Text>
                 </View>
             )}
             {gameUrl && (bitvilleGame ?
@@ -380,5 +390,16 @@ const styles = StyleSheet.create({
     error: {
         color: "#fff",
         textAlign: "center"
-    }
+    },
+    loadingWrap: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 12,
+    },
+    loadingText: {
+        color: "#fff",
+        fontSize: 14,
+        opacity: 0.85,
+    },
 });

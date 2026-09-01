@@ -1,19 +1,31 @@
-import React, { useRef, useEffect, useState, useContext, Suspense, lazy, useMemo, useCallback } from "react";
+import React, {
+    useRef,
+    useEffect,
+    useState,
+    useContext,
+    Suspense,
+    lazy,
+    useMemo,
+    useCallback,
+} from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import { theme } from "./src/theme";
 import Store, { Context } from "./src/context/store";
+import { useBetslipCount } from "./src/stores/betslipStore";
 import { AuthProvider } from "./src/AuthContext";
 import { ConnectivityProvider } from "./src/context/ConnectivityContext";
 import { SyncProvider, useSync } from "./src/context/SyncContext";
 
 import SyncLoadingOverlay from "./src/components/SyncLoadingOverlay";
 import LaunchScreen from "./src/components/LaunchScreen";
+import AppSessionSync from "./src/components/AppSessionSync";
+import BetslipHydrator from "./src/components/BetslipHydrator";
 import CustomHeader from "./src/components/CustomHeader";
 import MainLayout from "./src/components/layouts/MainLayout";
 import { initDatabase } from "./src/services/offlineDatabase";
@@ -179,11 +191,9 @@ const JackpotStackScreen = React.memo(function JackpotStackScreen() {
 
 /* ================= CENTER BETSLIP BUTTON ================= */
 function BetslipButton() {
-  const [state, dispatch] = useContext(Context);
+  const [, dispatch] = useContext(Context);
+  const count = useBetslipCount();
 
-  const count = useMemo(() => {
-    return Object.keys(state?.betslip || {}).length || 0;
-  }, [state?.betslip]);
   return (
     <TouchableOpacity
       style={styles.betslipButton}
@@ -199,9 +209,19 @@ function BetslipButton() {
 /* ================= MAIN TABS ================= */
 function MainTabs() {
   const [state, dispatch] = useContext(Context);
+  const insets = useSafeAreaInsets();
   const openLoginModal = useCallback(() => {
     dispatch({ type: "SET", key: "showloginmodal", payload: true });
   }, [dispatch]);
+
+  const tabBarStyle = useMemo(
+    () => ({
+      ...styles.tabBar,
+      height: TAB_BAR_HEIGHT + insets.bottom,
+      paddingBottom: insets.bottom,
+    }),
+    [insets.bottom]
+  );
 
   return (
     <MainLayout>
@@ -234,7 +254,7 @@ function MainTabs() {
             tabBarActiveTintColor: "rgba(255, 215, 0, 1)", // gold
             tabBarInactiveTintColor: "#ffffff",
 
-            tabBarStyle: styles.tabBar,
+            tabBarStyle,
             tabBarLabelStyle: styles.tabLabel,
           })}
         >
@@ -287,7 +307,7 @@ function MainTabs() {
         </Tab.Navigator>
 
         {/* ✅ FLOATING BETSLIP BUTTON */}
-        <View style={styles.betslipWrapper}>
+        <View style={[styles.betslipWrapper, { bottom: 18 + insets.bottom }]}>
           <BetslipButton />
         </View>
       </View>
@@ -337,6 +357,8 @@ export default function App() {
       <View style={styles.container}>
         <SyncProvider>
           <Store>
+            <AppSessionSync />
+            <BetslipHydrator />
             <ConnectivityProvider>
               <AuthProvider>
                 <RootNavigator navigationRef={navigationRef} />

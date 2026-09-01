@@ -14,6 +14,7 @@ import { getItem, setItem } from '../../components/utils/local-storage';
 import { logoutUser } from '../../components/utils/logout';
 import { Context } from '../../context/store';
 import { makeRequest } from '../../components/utils/makeRequest';
+import { fetchUserBalance } from '../../services/sessionSync';
 import { formatToFloat } from '../../components/utils/formatters';
 
 const ProfileScreen: React.FC = () => {
@@ -44,28 +45,9 @@ const ProfileScreen: React.FC = () => {
 
             if (memberId) {
                 try {
-                    const response = await makeRequest({
-                        url: `wallet-details-balance?owner=member&&member_id=${memberId}`,
-                        method: "GET",
-                    });
-
-                    const status = (response as any)?.status ?? (response as any)?.[0];
-                    const payload = (response as any)?.data ?? (response as any)?.[1];
-
-                    if ([200, 201].includes(status)) {
-                        nextUser = {
-                            ...nextUser,
-                            balance:
-                                payload?.data?.currentBalance ??
-                                payload?.currentBalance ??
-                                payload?.balance ??
-                                nextUser?.balance,
-                            bonus:
-                                payload?.data?.bonus ??
-                                payload?.bonus ??
-                                nextUser?.bonus ??
-                                nextUser?.bonus_balance,
-                        };
+                    const refreshed = await fetchUserBalance(nextUser);
+                    if (refreshed) {
+                        nextUser = refreshed;
                     }
                 } catch (error) {
                     console.warn("[ProfileScreen] Balance refresh failed", error);

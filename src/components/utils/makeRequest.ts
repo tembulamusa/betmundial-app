@@ -1,5 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
 import Config from "react-native-config";
 import { getItem } from "./local-storage";
 
@@ -141,13 +139,17 @@ export const makeRequest = async <T = any>({
         }
 
         if (!response.ok) {
+            const errorMessage =
+                parsedData?.message ||
+                parsedData?.error?.message ||
+                (typeof parsedData?.error === "string" ? parsedData.error : null) ||
+                parsedData?.result ||
+                "Something went wrong";
+
             return {
                 status: response.status,
-                data: null,
-                error:
-                    parsedData?.message ||
-                    parsedData?.error ||
-                    "Something went wrong",
+                data: parsedData,
+                error: errorMessage,
             };
         }
 

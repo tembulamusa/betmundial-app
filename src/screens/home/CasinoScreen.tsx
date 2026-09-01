@@ -7,7 +7,7 @@ import { theme } from "../../theme";
 const CasinoScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-            <StatusBar barStyle="light-content" backgroundColor={theme.background} />
+            <StatusBar barStyle="light-content" translucent />
             <View style={styles.content}>
                 <Casino />
             </View>

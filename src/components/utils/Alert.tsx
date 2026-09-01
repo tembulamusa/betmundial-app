@@ -1,28 +1,35 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 interface AlertProps {
     message?: {
         status?: number;
         message?: string;
-    };
+    } | null;
+    onDismiss?: () => void;
 }
 
-const Alert: React.FC<AlertProps> = ({ message }) => {
+const Alert: React.FC<AlertProps> = ({ message, onDismiss }) => {
     const [visibleMessage, setVisibleMessage] = useState(message);
 
-    if (!visibleMessage?.status) return null;
+    useEffect(() => {
+        setVisibleMessage(message);
+    }, [message]);
 
-    // Determine style based on status
-    const backgroundColor =
-        [200, 201].includes(visibleMessage.status) ? "#28a745" : "#dc3545"; // green or red
+    if (visibleMessage?.status == null) return null;
+
+    const isSuccess = [200, 201].includes(visibleMessage.status);
+    const backgroundColor = isSuccess ? "#469866" : "rgba(176, 0, 32, 0.92)";
 
     return (
         <View style={[styles.container, { backgroundColor }]}>
             <Text style={styles.message}>{visibleMessage.message}</Text>
             <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setVisibleMessage(undefined)}
+                onPress={() => {
+                    setVisibleMessage(undefined);
+                    onDismiss?.();
+                }}
             >
                 <Text style={styles.closeText}>×</Text>
             </TouchableOpacity>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer } from "react";
+import { createContext, useContext, useReducer, useMemo } from "react";
 import Reducer from './reducer'
 
 
@@ -11,10 +11,11 @@ export const DispatchContext = createContext(() => { });
 
 const Store = ({ children }) => {
     const [state, dispatch] = useReducer(Reducer, initialState);
+    const contextValue = useMemo(() => [state, dispatch], [state, dispatch]);
 
     return (
         <DispatchContext.Provider value={dispatch}>
-            <Context.Provider value={[state, dispatch]}>
+            <Context.Provider value={contextValue}>
                 {children}
             </Context.Provider>
         </DispatchContext.Provider>

@@ -45,7 +45,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ visible, onComplete }) =>
 
   return (
     <>
-      <StatusBar backgroundColor="#000C24" barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent />
       <Animated.View
         style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}
         onTouchEnd={onComplete}

@@ -1,6 +1,6 @@
 {
   "name": "betMundialApp",
-  "version": "1.0.16",
+  "version": "1.0.23",
   "private": true,
   "scripts": {
     "android": "react-native run-android --active-arch-only",

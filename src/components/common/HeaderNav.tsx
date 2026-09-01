@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     container: {
         width: "100%",
         backgroundColor: theme.mainTabsBackground,
-        marginTop: 4,
+        marginTop: 0,
     },
     scrollContent: {
         alignItems: "center",

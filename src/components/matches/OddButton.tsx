@@ -1,9 +1,9 @@
 import React, {
-    useContext,
-    useEffect,
-    useState,
-    useLayoutEffect,
+    useMemo,
     useCallback,
+    useState,
+    useEffect,
+    memo,
 } from "react";
 
 import {
@@ -13,13 +13,20 @@ import {
 } from "react-native";
 
 import {
-    addToSlip,
-    removeFromSlip,
-    addToJackpotSlip,
-    removeFromJackpotSlip,
+    applyAddToSlip,
+    applyRemoveFromSlip,
+    applyAddToJackpotSlip,
+    applyRemoveFromJackpotSlip,
+    persistBetslipSnapshot,
+    persistJackpotBetslipSnapshot,
 } from "../utils/betslip";
 
-import { Context } from "../../context/store";
+import { useAppDispatch } from "../../context/store";
+import {
+    betslipStore,
+    commitBetslipUpdate,
+    useSlipEntry,
+} from "../../stores/betslipStore";
 
 interface Props {
     match: any;
@@ -30,163 +37,78 @@ interface Props {
     marketKey?: string;
 }
 
+const clean = (str: string) =>
+    str.replace(/[^A-Za-z0-9\-]/g, "").replace(/-+/g, "-");
+
+const buildUcn = (match: any, mkt?: string, marketKey?: string) =>
+    clean(
+        String(match?.match_id ?? "") +
+        String(match?.odds?.sub_type_id ?? match?.sub_type_id ?? "") +
+        String(match?.[mkt || ""] ?? match?.odd_key ?? mkt ?? "draw") +
+        (marketKey !== undefined ? String(marketKey) : "")
+    );
+
 const OddButton: React.FC<Props> = ({
     match,
     mkt,
-    detail,
     live,
     jackpot,
     marketKey,
 }) => {
+    const dispatch = useAppDispatch();
+    const [pressedPicked, setPressedPicked] = useState<boolean | null>(null);
 
-    const [ucn, setUcn] = useState("");
-    const [picked, setPicked] = useState("");
-    const [oddValue, setOddValue] = useState<number | null>(null);
-    const [betslipKey, setBetslipKey] = useState("betslip");
+    const betslipKey = jackpot ? "jackpotbetslip" : "betslip";
+    const matchId = String(match?.match_id ?? "");
+    const ucn = useMemo(() => buildUcn(match, mkt, marketKey), [match, mkt, marketKey]);
+    const oddValue = match?.odd_value ?? null;
+    const specialBetValue = match?.special_bet_value || "";
 
-    const [state, dispatch] = useContext(Context);
+    const slipEntry = useSlipEntry(matchId, jackpot);
 
-    const reference = match.match_id + "_selected";
-
-    /* CLEAN STRING */
-
-    const clean = (str: string) => {
-        return str.replace(/[^A-Za-z0-9\-]/g, "").replace(/-+/g, "-");
-    };
-
-    /* JACKPOT SWITCH */
-
-    const updateBetslipKey = useCallback(() => {
-        if (jackpot) {
-            setBetslipKey("jackpotbetslip");
-        }
-    }, [jackpot]);
-
-    useEffect(() => {
-        updateBetslipKey();
-    }, [updateBetslipKey]);
-
-    /* SET ODD VALUE */
-
-    const updateOddValue = useCallback(() => {
-
-        if (!match) return;
-
-        const uc = clean(
-            match.match_id +
-            "" +
-            (match?.odds?.sub_type_id || match?.sub_type_id) +
-            (match?.[mkt || ""] || match?.odd_key || mkt || "draw")
+    const isPickedFromSlip = useMemo(() => {
+        if (!slipEntry) return false;
+        return (
+            slipEntry.ucn === ucn &&
+            String(slipEntry.special_bet_value ?? "") === String(specialBetValue)
         );
-
-        setUcn(uc);
-        setOddValue(match?.odd_value);
-
-    }, [match, mkt]);
-
-    useLayoutEffect(() => {
-        updateOddValue();
-    }, [updateOddValue]);
-
-    /* UPDATE PICKED STATE */
-
-    const updatePickedChoices = () => {
-
-        const betslip = state?.[betslipKey];
-
-        const uc = clean(
-            match.match_id +
-            "" +
-            (match?.odds?.sub_type_id || match?.sub_type_id) +
-            (match?.[mkt || ""] || match?.odd_key || mkt)
-        );
-
-        if (
-            betslip?.[match.match_id]?.match_id == match.match_id &&
-            uc == betslip?.[match.match_id]?.ucn &&
-            betslip?.[match.match_id]?.special_bet_value ==
-            match?.special_bet_value
-        ) {
-            setPicked("picked");
-        } else {
-            setPicked("");
-        }
-    };
+    }, [slipEntry, ucn, specialBetValue]);
 
     useEffect(() => {
-        updatePickedChoices();
-    }, [
-        state?.[betslipKey]?.[match?.match_id],
-        state?.betslip?.[match?.match_id],
-    ]);
+        setPressedPicked(null);
+    }, [isPickedFromSlip]);
 
-    useEffect(() => {
-        updatePickedChoices();
-    }, []);
+    const isPicked =
+        pressedPicked !== null ? pressedPicked : isPickedFromSlip;
 
-    /* MATCH PICKED */
-
-    const updateMatchPicked = useCallback(() => {
-
-        if (state?.[reference]) {
-            if (state?.[reference].startsWith("remove.")) {
-                setPicked("");
-            } else {
-                const uc = clean(
-                    match.match_id +
-                    "" +
-                    (match?.odds?.sub_type_id || match?.sub_type_id) +
-                    (match?.[mkt || ""] || match?.odd_key || mkt)
-                );
-
-                if (state?.[reference] == uc + match?.special_bet_value) {
-                    setPicked("picked");
-                } else {
-                    setPicked("");
-                }
-            }
-        }
-        const ucn = clean(
-            match.match_id +
-            "" +
-            (match?.odds?.sub_type_id || match?.sub_type_id) +
-            (match?.[mkt || ""] || match?.odd_key || mkt)
-        );
-        if (ucn !== state?.[betslipKey]?.[match?.match_id]?.ucn) {
-            setPicked("");
-        }
-
-
-    }, [state?.[betslipKey]?.[match.match_id]], state?.[betslipKey], state?.betslip, state?.[reference]);
-
-    useEffect(() => {
-        updateMatchPicked();
-    }, [updateMatchPicked]);
-
-    /* BUTTON CLICK */
-
-    const handlePress = async () => {
-
+    const handlePress = useCallback(() => {
         const mid = match.match_id;
-        const pmid = match.parent_match_id;
-        const stid = match.sub_type_id;
-        const sbv = match.special_bet_value || "";
-        const oddk = match.odd_key;
+        const currentSlip = betslipStore.getSlip(jackpot);
+        const removing = isPickedFromSlip;
 
-        const cstm = clean(
-            mid +
-            "" +
-            stid +
-            oddk +
-            (marketKey !== undefined ? marketKey : "")
-        );
+        setPressedPicked(!removing);
+
+        if (removing) {
+            const nextSlip = jackpot
+                ? applyRemoveFromJackpotSlip(currentSlip, mid)
+                : applyRemoveFromSlip(currentSlip, mid);
+
+            commitBetslipUpdate(dispatch, betslipKey, nextSlip);
+
+            if (jackpot) {
+                persistJackpotBetslipSnapshot(nextSlip);
+            } else {
+                persistBetslipSnapshot(nextSlip);
+            }
+            return;
+        }
 
         const slip = {
             match_id: mid,
-            parent_match_id: pmid,
-            special_bet_value: sbv,
-            sub_type_id: stid,
-            bet_pick: oddk,
+            parent_match_id: match.parent_match_id,
+            special_bet_value: specialBetValue,
+            sub_type_id: match.sub_type_id,
+            bet_pick: match.odd_key,
             odd_value: oddValue,
             home_team: match.home_team,
             away_team: match.away_team,
@@ -194,68 +116,43 @@ const OddButton: React.FC<Props> = ({
             odd_type: match?.name || match?.market_name,
             sport_name: match.sport_name,
             live: live ? 1 : 0,
-            ucn: cstm,
+            ucn,
             event_status: match?.status,
             market_active: match?.market_active,
             start_time: match?.start_time,
             producer_id: match?.producer_id,
         };
 
-        if (cstm == ucn) {
+        const nextSlip = jackpot
+            ? applyAddToJackpotSlip(currentSlip, slip)
+            : applyAddToSlip(currentSlip, slip);
 
-            let betslip;
+        commitBetslipUpdate(dispatch, betslipKey, nextSlip);
 
-            if (picked === "picked") {
-
-                setPicked("");
-
-                betslip =
-                    jackpot !== true
-                        ? await removeFromSlip(mid)
-                        : await removeFromJackpotSlip(mid);
-
-                dispatch({
-                    type: "SET",
-                    key: reference,
-                    payload: "remove." + cstm + sbv,
-                });
-
-            } else {
-
-                betslip =
-                    jackpot !== true
-                        ? await addToSlip(slip)
-                        : await addToJackpotSlip(slip);
-
-                dispatch({
-                    type: "SET",
-                    key: reference,
-                    payload: cstm + sbv,
-                });
-            }
-
-            dispatch({
-                type: "SET",
-                key: betslipKey,
-                payload: betslip,
-            });
-
-
+        if (jackpot) {
+            persistJackpotBetslipSnapshot(nextSlip);
+        } else {
+            persistBetslipSnapshot(nextSlip);
         }
-    };
-
-    /* UI */
+    }, [
+        betslipKey,
+        dispatch,
+        isPickedFromSlip,
+        jackpot,
+        live,
+        match,
+        oddValue,
+        specialBetValue,
+        ucn,
+    ]);
 
     return (
         <TouchableOpacity
             activeOpacity={0.9}
             onPress={handlePress}
-            style={[styles.button, picked === "picked" && styles.picked]}
+            style={[styles.button, isPicked && styles.picked]}
         >
-            <Text style={styles.label}>
-                {match.odd_key}
-            </Text>
-
+            <Text style={styles.label}>{match.odd_key}</Text>
             <Text style={styles.value}>
                 {oddValue ? Number(oddValue).toFixed(2) : "-"}
             </Text>
@@ -263,7 +160,7 @@ const OddButton: React.FC<Props> = ({
     );
 };
 
-export default OddButton;
+export default memo(OddButton);
 
 const styles = StyleSheet.create({
     button: {
@@ -276,19 +173,15 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginHorizontal: 2,
         paddingHorizontal: 4,
-
     },
-
     picked: {
         backgroundColor: "#a71f66",
     },
-
     label: {
         color: "#fff",
         fontSize: 12,
         fontWeight: "600",
     },
-
     value: {
         color: "#ffcc00",
         fontSize: 14,

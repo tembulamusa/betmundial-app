@@ -57,7 +57,7 @@ const SyncLoadingOverlay: React.FC<SyncLoadingOverlayProps> = ({
       onRequestClose={() => { }} // Prevent closing
       presentationStyle="overFullScreen"
     >
-      <StatusBar backgroundColor="#000C24" barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent />
       <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
         <CustomHeader scene={null} previous={null} navigation={null} />
         <View style={styles.contentContainer}>

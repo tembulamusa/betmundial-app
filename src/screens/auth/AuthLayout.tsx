@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: Props) {
             style={styles.imageBackground}
             resizeMode="cover"
         >
-            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+            <StatusBar translucent barStyle="light-content" />
             <LinearGradient
                 colors={[
                     "rgba(224, 247, 250, 0.1)", // very light top

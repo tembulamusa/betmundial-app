@@ -16,6 +16,7 @@ import { getItem } from "../../components/utils/local-storage";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
 import { Context } from "../../context/store";
+import { theme } from "../../theme";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 const mpesa = require("../../assets/images/mpesa.png");
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     },
 
     depositButton: {
-        backgroundColor: "#a71f66",
+        backgroundColor: theme.deposit,
         padding: 14,
         borderRadius: 8,
         alignItems: "center",
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
     },
 
     depositText: {
-        color: "#fff",
+        color: "#111",
         fontWeight: "bold"
     },
 

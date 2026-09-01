@@ -36,6 +36,7 @@ import socket from "../utils/SocketConnect";
 import { getItem, setItem, normalizeUser } from "../utils/local-storage";
 import { logoutUser } from "../utils/logout";
 import { makeRequest } from "../utils/makeRequest";
+import { fetchUserBalance, reconnectSocket } from "../../services/sessionSync";
 
 const { width } = Dimensions.get("window");
 
@@ -50,7 +51,7 @@ const ACCENT = {
     border: "rgba(255, 255, 255, 0.08)",
     muted: "#9a9aa8",
     text: "rgba(255, 255, 255, 0.85)",
-    gold: "#FFD700",
+    gold: theme.deposit,
 };
 
 const DRAWER_WIDTH = Math.min(380, width);
@@ -87,7 +88,6 @@ const HeaderUser = () => {
     const [showBonusTooltip, setShowBonusTooltip] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
-    const socketSubscribed = useRef<string | null>(null);
     const latestUserRef = useRef(user);
 
     useEffect(() => {
@@ -134,38 +134,9 @@ const HeaderUser = () => {
         const baseUser = latestUserRef.current;
         if (!baseUser) return;
 
-        const memberId = baseUser?.member_id || baseUser?.profile_id;
-        if (!memberId) return;
-
         try {
-            const response = await makeRequest({
-                url: `wallet-details-balance?owner=member&&member_id=${memberId}`,
-                method: "GET",
-            });
-
-            const status = (response as any)?.status ?? (response as any)?.[0];
-            const payload = (response as any)?.data ?? (response as any)?.[1];
-
-            if (![200, 201].includes(status)) return;
-
-            const currentBalance =
-                payload?.data?.currentBalance ??
-                payload?.currentBalance ??
-                payload?.balance ??
-                baseUser?.balance;
-
-            const currentBonus =
-                payload?.data?.bonus ??
-                payload?.bonus ??
-                baseUser?.bonus;
-
-            const nextUser = {
-                ...baseUser,
-                balance: currentBalance,
-                bonus: currentBonus,
-                token: baseUser?.token || baseUser?.access_token,
-                access_token: baseUser?.access_token || baseUser?.token,
-            };
+            const nextUser = await fetchUserBalance(baseUser);
+            if (!nextUser) return;
 
             dispatch({ type: "SET", key: "user", payload: nextUser });
             latestUserRef.current = nextUser;
@@ -274,23 +245,23 @@ const HeaderUser = () => {
 
         const event = `user#profile#${user.profile_id}`;
 
-        if (socketSubscribed.current === event) return;
-        socketSubscribed.current = event;
+        const subscribeProfile = () => {
+            socket.emit("user.profile", user.profile_id);
+        };
 
-        if (!socket.connected) socket.connect();
-
-        if (socket.connected) {
-            socket.emit('user.profile', user?.profile_id);
-        }
+        reconnectSocket(user.profile_id);
+        socket.on("connect", subscribeProfile);
 
         const handler = async (data: any) => {
             if (!data) return;
 
             const baseUser = latestUserRef.current || user;
+            const bonus = data.bonus ?? baseUser?.bonus ?? baseUser?.bonus_balance;
             const nextUser = {
                 ...baseUser,
                 balance: data.balance,
-                bonus: data.bonus,
+                bonus,
+                bonus_balance: bonus,
                 token: baseUser?.token || baseUser?.access_token,
                 access_token: baseUser?.access_token || baseUser?.token,
             };
@@ -303,10 +274,22 @@ const HeaderUser = () => {
         socket.on(event, handler);
 
         return () => {
+            socket.off("connect", subscribeProfile);
             socket.off(event, handler);
-            socketSubscribed.current = null;
         };
     }, [user?.profile_id, dispatch, persistUserState]);
+
+    useEffect(() => {
+        if (!user?.profile_id && !user?.member_id) return;
+
+        const interval = setInterval(() => {
+            if (!socket.connected) {
+                fetchLatestBalance();
+            }
+        }, 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [user?.profile_id, user?.member_id, fetchLatestBalance]);
 
     // Run a one-time balance refresh on launch when user is available
     useEffect(() => {
@@ -351,7 +334,7 @@ const HeaderUser = () => {
                     activeOpacity={0.85}
                 >
                     <LinearGradient
-                        colors={["#e6cf4c", "#FFC428"]}
+                        colors={[theme.deposit, theme.deposit]}
                         style={styles.depositBtn}
                     >
                         <FontAwesome name="money" size={12} color="#8d2585" />
@@ -510,7 +493,7 @@ const HeaderUser = () => {
                                 activeOpacity={0.85}
                             >
                                 <LinearGradient
-                                    colors={["#e6cf4c", "#FFC428"]}
+                                    colors={[theme.deposit, theme.deposit]}
                                     style={styles.actionDeposit}
                                 >
                                     <FontAwesome name="money" size={16} color="#8d2585" />
@@ -680,7 +663,7 @@ const styles = StyleSheet.create({
         minHeight: 30,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: "#e6cf4c",
+        borderColor: theme.deposit,
     },
     depositLabel: {
         color: "#111",
@@ -941,7 +924,7 @@ const styles = StyleSheet.create({
         minHeight: 46,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: "#e6cf4c",
+        borderColor: theme.deposit,
     },
     actionDepositText: {
         color: "#111",

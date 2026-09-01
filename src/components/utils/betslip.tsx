@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import {
     getItem,
     setItem,
@@ -8,28 +7,76 @@ import {
 type Slip = {
     match_id: string;
     bet_type?: number;
+    ucn?: string;
+    special_bet_value?: string;
     [key: string]: any;
 };
 
-export const addToSlip = async (slip: Slip) => {
+type SlipMap = Record<string, Slip>;
 
-    let current_slip = await getItem('betslip');
+let betslipPersistTimer: ReturnType<typeof setTimeout> | null = null;
+let jackpotPersistTimer: ReturnType<typeof setTimeout> | null = null;
 
-    if (!current_slip) {
-        current_slip = {};
+const schedulePersist = (key: "betslip" | "jackpotbetslip", slip: SlipMap) => {
+    const timerRef = key === "betslip" ? betslipPersistTimer : jackpotPersistTimer;
+
+    if (timerRef) {
+        clearTimeout(timerRef);
     }
 
-    current_slip[slip.match_id] = slip;
+    const timer = setTimeout(() => {
+        void setItem(key, slip);
+    }, 400);
 
-    await setItem('betslip', current_slip);
-    return current_slip;
+    if (key === "betslip") {
+        betslipPersistTimer = timer;
+    } else {
+        jackpotPersistTimer = timer;
+    }
+};
+
+export const applyAddToSlip = (current: SlipMap | null | undefined, entry: Slip): SlipMap => {
+    return { ...(current || {}), [entry.match_id]: entry };
+};
+
+export const applyRemoveFromSlip = (
+    current: SlipMap | null | undefined,
+    match_id: string
+): SlipMap => {
+    const next = { ...(current || {}) };
+    delete next[match_id];
+    return next;
+};
+
+export const applyAddToJackpotSlip = (current: SlipMap | null | undefined, entry: Slip): SlipMap => {
+    return { ...(current || {}), [entry.match_id]: entry };
+};
+
+export const applyRemoveFromJackpotSlip = (
+    current: SlipMap | null | undefined,
+    match_id: string
+): SlipMap => {
+    const next = { ...(current || {}) };
+    delete next[match_id];
+    return next;
+};
+
+export const persistBetslipSnapshot = (slip: SlipMap) => {
+    schedulePersist("betslip", slip);
+};
+
+export const persistJackpotBetslipSnapshot = (slip: SlipMap) => {
+    schedulePersist("jackpotbetslip", slip);
+};
+
+export const addToSlip = async (slip: Slip) => {
+    const current_slip = (await getItem('betslip')) || {};
+    return applyAddToSlip(current_slip, slip);
 };
 
 export const removeFromSlip = async (match_id: string) => {
-    const slip = await getBetslip() || {};
-    delete slip[match_id];
-    await setItem('betslip', slip);
-    return slip;
+    const slip = (await getBetslip()) || {};
+    return applyRemoveFromSlip(slip, match_id);
 };
 
 export const clearSlip = async () => {
@@ -45,28 +92,13 @@ export const getJackpotBetslip = async () => {
 };
 
 export const addToJackpotSlip = async (slip: Slip) => {
-    let current_slip = await getItem('jackpotbetslip');
-
-    if (current_slip) {
-        current_slip[slip.match_id] = slip;
-    } else {
-        current_slip = { [slip.match_id]: slip };
-    }
-
-    await setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
-
-    return current_slip;
+    const current_slip = (await getItem('jackpotbetslip')) || {};
+    return applyAddToJackpotSlip(current_slip, slip);
 };
 
 export const removeFromJackpotSlip = async (match_id: string) => {
-    let current_slip = await getItem('jackpotbetslip');
-
-    if (current_slip) {
-        delete current_slip[match_id];
-        await setItem('jackpotbetslip', current_slip, 1 * 60 * 60 * 1000);
-    }
-
-    return current_slip;
+    const current_slip = (await getItem('jackpotbetslip')) || {};
+    return applyRemoveFromJackpotSlip(current_slip, match_id);
 };
 
 export const clearJackpotSlip = async () => {

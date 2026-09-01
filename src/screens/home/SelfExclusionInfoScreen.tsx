@@ -76,20 +76,18 @@ const SelfExclusionInfoScreen: React.FC = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionSubtitle}>Activating Self-Exclusion</Text>
                     <Text style={styles.sectionText}>
-                        To activate self-exclusion or permanently close your account, please contact Customer Care. Identity verification may be required.
+                        You can activate self-exclusion directly from this app. Identity verification may be required for permanent closure.
                     </Text>
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionSubtitle}>Exclusion Periods Available</Text>
                     <View style={styles.optionsList}>
-                        <Text style={styles.optionItem}>• 24 hours</Text>
-                        <Text style={styles.optionItem}>• 7 days</Text>
-                        <Text style={styles.optionItem}>• 30 days</Text>
-                        <Text style={styles.optionItem}>• 90 days</Text>
+                        <Text style={styles.optionItem}>• 1 month</Text>
+                        <Text style={styles.optionItem}>• 3 months</Text>
                         <Text style={styles.optionItem}>• 6 months</Text>
                         <Text style={styles.optionItem}>• 1 year</Text>
-                        <Text style={styles.optionItem}>• Permanent closure</Text>
+                        <Text style={styles.optionItem}>• Indefinitely</Text>
                     </View>
                 </View>
 
@@ -128,7 +126,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 16,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: theme.pageHeaderBackground,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.1)',
     },

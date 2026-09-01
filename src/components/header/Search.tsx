@@ -1,4 +1,4 @@
-import React, { useContext, useState, useRef, useCallback, useEffect } from "react";
+import React, { useContext, useRef, useCallback, useEffect } from "react";
 import {
     View,
     Text,
@@ -19,17 +19,20 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
     const [state, dispatch] = useContext(Context);
     const navigation = useNavigation<any>();
 
-    const [searching, setSearching] = useState(false);
     const searchInputRef = useRef<TextInput>(null);
-
+    const isSearchOpen = Boolean(state?.searchopen);
     const isCasino = state?.playType === "casino";
 
     const setActive = useCallback(
         (active: boolean) => {
-            setSearching(active);
+            if (active) {
+                dispatch({ type: "SET", key: "searchopen", payload: true });
+            } else {
+                dispatch({ type: "DEL", key: "searchopen" });
+            }
             onActiveChange?.(active);
         },
-        [onActiveChange]
+        [dispatch, onActiveChange]
     );
 
     const updateSearchTerm = useCallback(
@@ -53,26 +56,24 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
     }, [dispatch, setActive]);
 
     useEffect(() => {
-        if (!searching) return;
+        if (!isSearchOpen) return;
         const timer = setTimeout(() => {
             searchInputRef.current?.focus();
         }, 100);
         return () => clearTimeout(timer);
-    }, [searching]);
+    }, [isSearchOpen, isCasino]);
 
-    const goSports = useCallback(() => {
-        dismissSearch();
-        navigation.navigate("Sports", { screen: "HomeMain" });
+    const switchToSports = useCallback(() => {
         dispatch({ type: "SET", key: "playType", payload: "sports" });
-    }, [dismissSearch, navigation, dispatch]);
+        navigation.navigate("Sports", { screen: "HomeMain" });
+    }, [dispatch, navigation]);
 
-    const goCasino = useCallback(() => {
-        dismissSearch();
-        navigation.navigate("Casino", { screen: "CasinoMain" });
+    const switchToCasino = useCallback(() => {
         dispatch({ type: "SET", key: "playType", payload: "casino" });
-    }, [dismissSearch, navigation, dispatch]);
+        navigation.navigate("Casino", { screen: "CasinoMain" });
+    }, [dispatch, navigation]);
 
-    if (!searching) {
+    if (!isSearchOpen) {
         return (
             <View style={styles.container}>
                 <TouchableOpacity
@@ -93,7 +94,11 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
                 <Icon name="search" size={13} color="rgba(255,255,255,0.6)" />
                 <TextInput
                     ref={searchInputRef}
-                    placeholder="Search teams, competitions, or game IDs"
+                    placeholder={
+                        isCasino
+                            ? "Search casino games"
+                            : "Search teams, competitions, or game IDs"
+                    }
                     placeholderTextColor="rgba(255,255,255,0.45)"
                     style={styles.input}
                     value={state?.searchterm || ""}
@@ -109,7 +114,7 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
             <View style={styles.toggleRow}>
                 <TouchableOpacity
                     style={[styles.toggleBtn, !isCasino && styles.toggleBtnActive]}
-                    onPress={goSports}
+                    onPress={switchToSports}
                 >
                     <Text style={[styles.toggleText, !isCasino && styles.toggleTextActive]}>
                         Sports
@@ -117,7 +122,7 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.toggleBtn, isCasino && styles.toggleBtnActive]}
-                    onPress={goCasino}
+                    onPress={switchToCasino}
                 >
                     <Text style={[styles.toggleText, isCasino && styles.toggleTextActive]}>
                         Casino

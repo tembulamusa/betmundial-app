@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
     View,
     Text,
@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import MatchRow from "./MatchRow";
 import ShimmerLoader from "../common/ShimmerLoader";
-import { Context } from "../../context/store";
 
 interface Match {
     match_id: string;
@@ -45,12 +44,6 @@ const MatchList: React.FC<Props> = ({
     scrollEventThrottle = 16,
     fetching = false
 }) => {
-    const [state] = React.useContext(Context);
-
-    useEffect(() => {
-        // keep your existing debug logic if needed
-    }, [state?.betslip, state?.jackpotbetslip]);
-
     /* ================= RENDER ITEM ================= */
     const renderItem = useCallback(
         ({ item }: { item: Match }) => {

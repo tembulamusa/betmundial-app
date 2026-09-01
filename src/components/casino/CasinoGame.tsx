@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback, useRef } from "react";
 import {
     View,
     Text,
@@ -7,13 +7,15 @@ import {
     TouchableOpacity,
 } from "react-native";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 
 import { Context } from "../../context/store";
-import { makeRequest } from "../utils/makeRequest";
 import Alert from "../utils/Alert";
-import { removeItem } from "../utils/local-storage";
+import {
+    buildCasinoLaunchEndpoint,
+    getCasinoLaunchNavParams,
+} from "../utils/casinoLaunch";
+
 interface Props {
     game: any;
 }
@@ -21,48 +23,21 @@ interface Props {
 const CasinoGame: React.FC<Props> = ({ game }) => {
     const [state, dispatch] = useContext(Context);
     const [alertMessage, setAlertMessage] = useState<any>(null);
-    const [fetching, setFetching] = useState(false);
     const [showButtons, setShowButtons] = useState(false);
+    const launchingRef = useRef(false);
 
     const navigation: any = useNavigation();
-    const route: any = useRoute();
-    const params = route?.params || {};
-    const filterType = params?.filterType;
-    const filterName = params?.filterName;
 
-    const shouldShowGame =
-        filterType?.toLowerCase() === "providers" && filterName !== null;
+    const launchGame = useCallback(
+        (moneyType = 1) => {
+            if (launchingRef.current) return;
 
-    /* GET USER */
-    const getUser = async () => {
-        const user = await AsyncStorage.getItem("user");
-        return user ? JSON.parse(user) : null;
-    };
-
-    /* LAUNCH GAME */
-    const launchGame = async (game: any, moneyType = 1) => {
-        if (game?.aggregator?.toLowerCase() === "suregames") {
-            navigation.navigate(game?.game_id.toLowerCase());
-            return;
-        }
-
-        setFetching(true);
-
-        try {
-            const user = await getUser();
-            const hasToken = user?.token || user?.access_token;
-
-            let endpoint =
-                `${game?.aggregator ? game?.aggregator : game?.provider_name}` +
-                `/casino/game-url/mobile/${moneyType}/${game.game_id}`;
-
-            if (
-                game?.aggregator &&
-                game?.aggregator?.toLowerCase() === "intouchvas"
-            ) {
-                endpoint = endpoint + `-${game?.provider_name}`;
+            if (game?.aggregator?.toLowerCase() === "suregames") {
+                navigation.navigate(game?.game_id.toLowerCase());
+                return;
             }
 
+            const hasToken = state?.user?.token || state?.user?.access_token;
             if (moneyType === 1 && !hasToken) {
                 dispatch({
                     type: "SET",
@@ -72,67 +47,25 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                 return;
             }
 
-            const response = await makeRequest({
-                url: endpoint,
-                method: "GET",
-                apiVersion: "CasinoGameLaunch",
+            launchingRef.current = true;
+            setShowButtons(false);
+
+            const endpoint = buildCasinoLaunchEndpoint(game, moneyType, true);
+
+            navigation.navigate("CasinoLaunchedGameScreen", {
+                ...getCasinoLaunchNavParams(game),
+                pendingLaunch: {
+                    endpoint,
+                    game,
+                },
             });
 
-            if (response?.status == 200
-                && !response.data?.tea_pot
-                && (response.data?.game_url || response.data?.gameUrl || response.data?.token)) {
-                const launchUrl = response.data?.game_url || response.data?.gameUrl || response.data?.token;
-                dispatch({
-                    type: "SET",
-                    key: "casinolaunch",
-                    payload: { game: game, url: launchUrl },
-                });
-                await AsyncStorage.setItem(
-                    "casinolaunch",
-                    JSON.stringify({ game: game, url: launchUrl })
-                );
-
-                if (game?.aggregator?.toLowerCase() === "bitville") {
-                    dispatch({
-                        type: "SET",
-                        key: "bitvilleGame",
-                        payload: response.data,
-                    });
-                }
-
-                navigation.navigate("CasinoLaunchedGameScreen", {
-                    provider: game?.provider_name.split(" ").join("-").toLowerCase(),
-                    game: game?.game_name.split(" ").join("-").toLowerCase(),
-                    gameUrl: launchUrl,
-                });
-            } else {
-                if (response?.status === 403 || (game?.aggregator?.toLowerCase() === "bitville" &&
-                    (response?.data?.token == null || response?.data?.token == "")
-                )) {
-                    setAlertMessage({
-                        status: 403,
-                        message: "Please login again.",
-                    });
-                    dispatch({
-                        type: "DEL",
-                        key: "user",
-                    });
-                    await removeItem("user");
-                    dispatch({
-                        type: "DEL",
-                        key: "showloginmodal",
-                    });
-                } else {
-                    setAlertMessage({
-                        status: 400,
-                        message: "Unable to launch Game",
-                    });
-                }
-            }
-        } finally {
-            setFetching(false);
-        }
-    };
+            setTimeout(() => {
+                launchingRef.current = false;
+            }, 400);
+        },
+        [dispatch, game, navigation, state?.user]
+    );
 
     /* AUTO HIDE ALERT */
     useEffect(() => {
@@ -162,12 +95,8 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
         return sport_image;
     };
 
-    // if (!shouldShowGame) return null;
-
     return (
         <View style={styles.container}>
-
-            {/* IMAGE CLICK AREA ONLY */}
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowButtons(!showButtons)}
@@ -178,21 +107,18 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                 />
             </TouchableOpacity>
 
-            {/* ALERT */}
             {alertMessage && (
                 <View style={styles.alert}>
                     <Alert message={alertMessage} />
                 </View>
             )}
 
-            {/* BUTTONS (NOT INSIDE IMAGE TOUCHABLE) */}
             {showButtons && (
                 <View style={styles.buttons} pointerEvents="box-none">
-
                     <TouchableOpacity
                         style={[styles.button, styles.playBtn]}
                         activeOpacity={0.7}
-                        onPress={() => launchGame(game, 1)}
+                        onPress={() => launchGame(1)}
                     >
                         <Text style={styles.buttonText}>Play</Text>
                     </TouchableOpacity>
@@ -201,17 +127,15 @@ const CasinoGame: React.FC<Props> = ({ game }) => {
                         <TouchableOpacity
                             style={[styles.button, styles.demoBtn]}
                             activeOpacity={0.7}
-                            onPress={() => launchGame(game, 0)}
+                            onPress={() => launchGame(0)}
                         >
                             <Text style={styles.buttonText}>Demo</Text>
                         </TouchableOpacity>
                     )}
-
                 </View>
             )}
 
             <Text style={styles.title}>{game?.game_name}</Text>
-
         </View>
     );
 };
@@ -223,7 +147,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         backgroundColor: "rgba(255,255,255,0.1)",
         borderRadius: 4,
-        // padding: 10,
     },
     image: {
         width: "100%",
@@ -264,8 +187,7 @@ const styles = StyleSheet.create({
     title: {
         color: "#fff",
         fontWeight: "600",
-        // marginTop: 8,
         textAlign: "center",
-        padding: 8
+        padding: 8,
     },
 });

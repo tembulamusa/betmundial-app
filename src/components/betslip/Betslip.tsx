@@ -5,7 +5,7 @@ import React, {
     useCallback,
     useMemo,
     useRef,
-    memo
+    memo,
 } from 'react';
 
 import {
@@ -14,22 +14,32 @@ import {
     FlatList,
     StyleSheet,
     Pressable,
-    ActivityIndicator
+    ActivityIndicator,
 } from 'react-native';
 
 import BetslipSubmitForm from './BetslipSubmitForm';
+import BetslipAlert from './BetslipAlert';
 import { Context } from '../../context/store';
+import { rebetSlip } from './betslipActions';
 
 import {
-    removeFromSlip,
-    removeFromJackpotSlip,
+    applyRemoveFromSlip,
+    applyRemoveFromJackpotSlip,
     getBetslip,
-    getJackpotBetslip
+    getJackpotBetslip,
+    persistBetslipSnapshot,
+    persistJackpotBetslipSnapshot,
 } from '../utils/betslip';
+import { betslipStore, commitBetslipUpdate } from '../../stores/betslipStore';
 
-const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
+const Betslip: React.FC<{
+    jackpot?: boolean;
+    jackpotData?: any;
+    dbWinMatrix?: Record<string, any>;
+}> = ({
     jackpot,
-    jackpotData
+    jackpotData,
+    dbWinMatrix,
 }) => {
 
     const [state, dispatch] = useContext(Context);
@@ -40,9 +50,8 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
     const [isLoading, setIsLoading] = useState(false);
 
     const mountedRef = useRef(true);
-    const loadedRef = useRef(false); // 🔥 prevents loop
+    const loadedRef = useRef(false);
 
-    /* ================= LOAD ONCE ================= */
     useEffect(() => {
         if (loadedRef.current) return;
 
@@ -57,12 +66,12 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
 
             const cleanSlip = slip || {};
 
-            // 🔥 ONLY update if different
             if (Object.keys(cleanSlip).length !== Object.keys(betslipsData).length) {
+                betslipStore.set(betslipKey, cleanSlip);
                 dispatch({
                     type: 'SET',
                     key: betslipKey,
-                    payload: cleanSlip
+                    payload: cleanSlip,
                 });
             }
 
@@ -78,36 +87,38 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
 
     }, [jackpot, betslipKey]);
 
-    /* ================= REMOVE ================= */
-    const handleRemove = useCallback(async (item: any) => {
+    const handleRemove = useCallback((item: any) => {
         if (!item) return;
 
+        const currentSlip = state?.[betslipKey] || {};
+        const nextSlip = jackpot
+            ? applyRemoveFromJackpotSlip(currentSlip, item.match_id)
+            : applyRemoveFromSlip(currentSlip, item.match_id);
+
+        commitBetslipUpdate(dispatch, betslipKey, nextSlip);
+
         if (jackpot) {
-            await removeFromJackpotSlip(item.match_id);
+            persistJackpotBetslipSnapshot(nextSlip);
         } else {
-            await removeFromSlip(item.match_id);
+            persistBetslipSnapshot(nextSlip);
         }
+    }, [jackpot, betslipKey, dispatch, state]);
 
-        const updatedSlip = jackpot
-            ? await getJackpotBetslip()
-            : await getBetslip();
+    const dismissPlaceBetMessage = useCallback(() => {
+        dispatch({ type: "DEL", key: "placebetmessage" });
+    }, [dispatch]);
 
-        dispatch({
-            type: 'SET',
-            key: betslipKey,
-            payload: updatedSlip || {}
-        });
+    const handleRebet = useCallback(async () => {
+        dispatch({ type: "DEL", key: "placebetmessage" });
+        await rebetSlip(state, dispatch);
+    }, [dispatch, state]);
 
-    }, [jackpot, betslipKey, dispatch]);
-
-    /* ================= DATA ================= */
     const data = useMemo(
         () => Object.values(betslipsData || {}).filter(Boolean),
         [betslipsData]
     );
 
-    /* ================= ITEM ================= */
-    const renderItem = useCallback(({ item }) => {
+    const renderItem = useCallback(({ item }: { item: any }) => {
         if (!item) return null;
 
         return (
@@ -145,53 +156,55 @@ const Betslip: React.FC<{ jackpot?: boolean; jackpotData?: any }> = ({
         );
     }, [handleRemove]);
 
-    /* ================= RENDER ================= */
     return (
         <View style={styles.container}>
-
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color="#a71f66" />
                     <Text style={styles.loadingText}>Loading betslip...</Text>
                 </View>
             ) : data.length === 0 ? (
-                <Text style={styles.empty}>No bets found</Text>
+                <Text style={styles.empty}>
+                    {state?.placebetmessage?.status != null
+                        ? "You have not selected any bet"
+                        : "No bets found"}
+                </Text>
             ) : (
                 <FlatList
                     data={data}
                     keyExtractor={(item) => `betslip-${item?.match_id}`}
                     renderItem={renderItem}
-                    initialNumToRender={5}
-                    maxToRenderPerBatch={5}
-                    windowSize={5}
-                    removeClippedSubviews
+                    scrollEnabled={false}
+                    initialNumToRender={10}
                 />
             )}
 
-            {/* ✅ ALWAYS RENDER FORM (fixes rebet visibility) */}
+            <BetslipAlert
+                message={state?.placebetmessage}
+                onDismiss={dismissPlaceBetMessage}
+                onRebet={handleRebet}
+            />
+
             <BetslipSubmitForm
                 jackpot={jackpot}
                 jackpotData={jackpotData}
+                dbWinMatrix={dbWinMatrix}
             />
-
         </View>
     );
 };
 
 export default memo(Betslip);
 
-
 const styles = StyleSheet.create({
     container: {
         borderRadius: 8,
     },
-
     empty: {
         color: '#999',
         textAlign: 'center',
         padding: 12
     },
-
     item: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -201,7 +214,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: 'rgba(255,255,255,0.2)'
     },
-
     teams: {
         color: '#fff',
         fontWeight: '600'
@@ -233,7 +245,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center'
     },
-    // 🔥 pressed state (blur/feedback effect)
     removeBtnPressed: {
         opacity: 0.4,
         transform: [{ scale: 0.9 }],
