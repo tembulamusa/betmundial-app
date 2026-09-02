@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Animated, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 
 interface WelcomeScreenProps {
   visible: boolean;
@@ -45,7 +45,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ visible, onComplete }) =>
 
   return (
     <>
-      <StatusBar barStyle="light-content" translucent />
       <Animated.View
         style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}
         onTouchEnd={onComplete}

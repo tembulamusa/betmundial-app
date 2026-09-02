@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, Modal, StyleSheet, Image, Animated, StatusBar } from 'react-native';
+import { View, Text, ActivityIndicator, Modal, StyleSheet, Image, Animated } from 'react-native';
 import CustomHeader from './CustomHeader';
 
 interface SyncLoadingOverlayProps {
@@ -57,7 +57,6 @@ const SyncLoadingOverlay: React.FC<SyncLoadingOverlayProps> = ({
       onRequestClose={() => { }} // Prevent closing
       presentationStyle="overFullScreen"
     >
-      <StatusBar barStyle="light-content" translucent />
       <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
         <CustomHeader scene={null} previous={null} navigation={null} />
         <View style={styles.contentContainer}>

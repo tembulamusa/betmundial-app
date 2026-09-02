@@ -13,6 +13,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SystemBars } from "react-native-edge-to-edge";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import { theme } from "./src/theme";
@@ -354,6 +355,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <SystemBars style="light" />
       <View style={styles.container}>
         <SyncProvider>
           <Store>

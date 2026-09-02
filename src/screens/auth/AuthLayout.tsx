@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ImageBackground, StatusBar } from "react-native";
+import { View, StyleSheet, ImageBackground } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 
 type Props = {
@@ -13,7 +13,6 @@ export default function AuthLayout({ children }: Props) {
             style={styles.imageBackground}
             resizeMode="cover"
         >
-            <StatusBar translucent barStyle="light-content" />
             <LinearGradient
                 colors={[
                     "rgba(224, 247, 250, 0.1)", // very light top

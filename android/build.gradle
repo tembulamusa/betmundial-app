@@ -35,3 +35,12 @@ allprojects {
         maven { url "https://jitpack.io" }
     }
 }
+
+subprojects { subproject ->
+    subproject.buildscript {
+        repositories {
+            google()
+            mavenCentral()
+        }
+    }
+}

@@ -1,4 +1,4 @@
-# React Native
+# React Native (required for bridge/reflection; framework stays in DEX)
 -keep,allowobfuscation @interface com.facebook.proguard.annotations.DoNotStrip
 -keep,allowobfuscation @interface com.facebook.proguard.annotations.KeepGettersAndSetters
 -keep @com.facebook.proguard.annotations.DoNotStrip class *
@@ -14,7 +14,10 @@
 -keep class com.facebook.jni.** { *; }
 -keep class com.facebook.soloader.** { *; }
 
-# react-native-config
+# App entry points (allow R8 to shrink unused members where possible)
+-keep class com.betmundial.MainApplication { *; }
+-keep class com.betmundial.MainActivity { *; }
+-keep class com.betmundial.SplashActivity { *; }
 -keep class com.betmundial.BuildConfig { *; }
 
 # Native methods

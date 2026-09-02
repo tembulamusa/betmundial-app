@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   Animated,
-  StatusBar,
   Easing,
   Image,
 } from 'react-native';
@@ -99,8 +98,6 @@ const LaunchScreen: React.FC<LaunchScreenProps> = ({ visible }) => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" translucent />
-
       <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
         <View style={styles.container}>
           {/* Logo */}

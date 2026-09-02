@@ -1,6 +1,6 @@
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, StyleSheet, Dimensions, StatusBar } from "react-native";
+import { View, StyleSheet, Dimensions } from "react-native";
 import ConnectivityStatus from "../ConnectivityStatus";
 import ConnectivityToast from "../ConnectivityToast";
 import BetslipIndex from "../betslip/BetslipIndex";
@@ -14,7 +14,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function MainLayout({ children }: Props) {
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "left", "right"]}>
-            <StatusBar barStyle="light-content" translucent />
             <ConnectivityStatus />
             <ConnectivityToast />
 

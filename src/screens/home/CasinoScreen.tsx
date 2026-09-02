@@ -1,5 +1,5 @@
 import React from "react";
-import { StatusBar, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Casino from "../../components/casino/Casino";
 import { theme } from "../../theme";
@@ -7,7 +7,6 @@ import { theme } from "../../theme";
 const CasinoScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-            <StatusBar barStyle="light-content" translucent />
             <View style={styles.content}>
                 <Casino />
             </View>

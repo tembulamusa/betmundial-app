@@ -1,6 +1,6 @@
 {
   "name": "betMundialApp",
-  "version": "1.0.24",
+  "version": "1.0.28",
   "private": true,
   "scripts": {
     "android": "react-native run-android --active-arch-only",
@@ -24,6 +24,7 @@
     "react": "19.1.0",
     "react-native": "0.81.1",
     "react-native-config": "^1.6.1",
+    "react-native-edge-to-edge": "^1.8.1",
     "react-native-gesture-handler": "^2.28.0",
     "react-native-inappbrowser-reborn": "^3.7.1",
     "react-native-linear-gradient": "^2.8.3",
