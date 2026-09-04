@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Context } from "../../context/store";
 import { getItem } from "../utils/local-storage";
+import { getStoredIpAddress } from "../../services/ipAddressSync";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Static Images
@@ -47,7 +48,6 @@ const FreeBet: React.FC = () => {
     const [freebet, setFreebet] = useState<FreeBetType | null>(null);
     const [freebetSlip, setFreeBetslip] = useState<any>(null);
     const [selectedOdd, setSelectedOdd] = useState<string | undefined>();
-    const [ipInfo, setIpInfo] = useState<string | undefined>();
     const [submitting, setSubmitting] = useState(false);
     const [alert, setAlert] = useState<{ status: number; message: string } | null>(null);
 
@@ -57,10 +57,6 @@ const FreeBet: React.FC = () => {
             if (loadedBetslip) setFreeBetslip(loadedBetslip);
         })();
 
-        fetch("https://api64.ipify.org?format=json")
-            .then((res) => res.json())
-            .then((data) => setIpInfo(data.ip))
-            .catch(() => setIpInfo("Error fetching IP"));
     }, []);
 
     useEffect(() => {
@@ -100,6 +96,7 @@ const FreeBet: React.FC = () => {
         if (!freebet) return;
         (async () => {
             const user = await getItem("user");
+            const ipAddress = await getStoredIpAddress();
             const slip = [
                 {
                     away_team: freebet.away_team,
@@ -129,14 +126,14 @@ const FreeBet: React.FC = () => {
                 bet_total_odds: 1,
                 bet_type: freebet.live ? "1" : "3",
                 channel_id: "mobile",
-                ip_address: ipInfo,
+                ip_address: ipAddress,
                 msisdn: user?.msisdn,
                 possible_win: 100,
                 profile_id: user?.profile_id,
                 slip: slip,
             });
         })();
-    }, [freebet, selectedOdd, ipInfo]);
+    }, [freebet, selectedOdd]);
 
     const fetchFreeBet = async () => {
         if (isLoading) return;

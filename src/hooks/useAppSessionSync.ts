@@ -8,6 +8,7 @@ import {
     handleTokenRefresh,
     syncSessionOnForeground,
 } from "../services/sessionSync";
+import { startIpAddressSync } from "../services/ipAddressSync";
 
 const TOKEN_REFRESH_INTERVAL_MS = 7 * 60 * 60 * 1000;
 
@@ -20,6 +21,8 @@ export function useAppSessionSync() {
     useEffect(() => {
         registerSessionDispatch(dispatch);
     }, [dispatch]);
+
+    useEffect(() => startIpAddressSync(), []);
 
     useEffect(() => {
         userRef.current = state?.user;

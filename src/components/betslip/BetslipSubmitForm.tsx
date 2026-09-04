@@ -27,6 +27,7 @@ import {
 } from "../utils/betslip";
 
 import { getItem, removeItem } from "../utils/local-storage";
+import { getStoredIpAddress } from "../../services/ipAddressSync";
 import { makeRequest } from "../utils/makeRequest";
 import { formatToFloat } from "../utils/formatters";
 import { theme } from "../../theme";
@@ -62,7 +63,6 @@ const BetslipSubmitForm: React.FC<Props> = ({
     const [useBonus, setUseBonus] = useState(false);
     const [showBonusTerms, setShowBonusTerms] = useState(false);
     const [bonusSettings, setBonusSettings] = useState({ percentage: 100 });
-    const [ipInfo, setIpInfo] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const showPlaceBetMessage = useCallback(
@@ -169,13 +169,6 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 });
             }
         });
-    }, []);
-
-    useEffect(() => {
-        fetch("https://api64.ipify.org?format=json")
-            .then((res) => res.json())
-            .then((data) => setIpInfo(data?.ip || null))
-            .catch(() => setIpInfo(null));
     }, []);
 
     const slipCountRef = useRef(Object.keys(state?.[betslipkey] || {}).length);
@@ -294,6 +287,8 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 (slip: any) => slip?.live === 1 || slip?.bet_type === 1
             );
 
+            const ipAddress = await getStoredIpAddress();
+
             const payload = {
                 bet_string: "mobile",
                 app_name: "mobile",
@@ -301,7 +296,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 stake_amount: jackpot ? jackpotData?.bet_amount : stake,
                 amount: jackpot ? jackpotData?.bet_amount : stake,
                 bet_total_odds: Float(calculations.totalOdds, 2),
-                ip_address: ipInfo,
+                ip_address: ipAddress,
                 channel_id: "mobile",
                 slip: cleanedSlip,
                 profile_id: user?.profile_id,
