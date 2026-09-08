@@ -93,15 +93,9 @@ export default function RegisterScreen({ navigation, route }: any) {
                 payload: values.password,
             });
             void setItem("regmsisdn", normalizedMsisdn);
-            dispatch({
-                type: "SET",
-                key: "loginmodalprefill",
-                payload: {
-                    mobile: normalizedMsisdn,
-                    password: values.password,
-                    autoLogin: false,
-                },
-            });
+            dispatch({ type: "DEL", key: "showloginmodal" });
+            dispatch({ type: "DEL", key: "loginmodalprefill" });
+            dispatch({ type: "DEL", key: "loginmodalmessage" });
             navigation.navigate("VerifyAccountScreen");
         } else {
             setSubmitError(response?.error || "Error making registration");
@@ -140,7 +134,9 @@ export default function RegisterScreen({ navigation, route }: any) {
                     }) => (
                         <>
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>Mobile Number</Text>
+                                <Text style={styles.label}>
+                                    Mobile Number <Text style={styles.required}>*</Text>
+                                </Text>
                                 <TextInput
                                     value={values.msisdn}
                                     style={styles.input}
@@ -153,7 +149,9 @@ export default function RegisterScreen({ navigation, route }: any) {
                             </View>
 
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>Password</Text>
+                                <Text style={styles.label}>
+                                    Password <Text style={styles.required}>*</Text>
+                                </Text>
                                 <View style={styles.passwordWrap}>
                                     <TextInput
                                         value={values.password}
@@ -178,7 +176,9 @@ export default function RegisterScreen({ navigation, route }: any) {
                             </View>
 
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>Repeat Password</Text>
+                                <Text style={styles.label}>
+                                    Repeat Password <Text style={styles.required}>*</Text>
+                                </Text>
                                 <View style={styles.passwordWrap}>
                                     <TextInput
                                         value={values.password2}
@@ -203,7 +203,10 @@ export default function RegisterScreen({ navigation, route }: any) {
                             </View>
 
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>Promo Code</Text>
+                                <Text style={styles.label}>
+                                    Promo Code
+                                    <Text style={styles.optional}> (optional)</Text>
+                                </Text>
                                 <TextInput
                                     value={values.promo_code}
                                     style={styles.input}
@@ -245,7 +248,8 @@ export default function RegisterScreen({ navigation, route }: any) {
                                                 ) : null}
                                             </View>
                                             <Text style={styles.ageConfirmText}>
-                                                I confirm that I am 18 years of age or older
+                                                I confirm that I am 18 years of age or older{" "}
+                                                <Text style={styles.required}>*</Text>
                                             </Text>
                                         </View>
                                     </View>
@@ -336,6 +340,15 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         fontSize: 14,
         fontWeight: "500",
+    },
+    required: {
+        color: "#f87171",
+        fontWeight: "700",
+    },
+    optional: {
+        color: "rgba(255,255,255,0.55)",
+        fontWeight: "400",
+        fontStyle: "italic",
     },
     input: {
         backgroundColor: "#1a1a2e",

@@ -9,12 +9,20 @@ import {
     ScrollView,
     AppState,
     AppStateStatus,
+    Modal,
+    Pressable,
 } from "react-native";
 import { Context } from "../../context/store";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { getItem, setItem, normalizeUser } from "../../components/utils/local-storage";
 import { normalizeKenyanPhoneNumber } from "../../components/utils/phone";
-import { startOtpCapture } from "../../services/otpCapture";
+import { startOtpCapture, type OtpSource } from "../../services/otpCapture";
+import {
+    emitOtpChannelSelection,
+    subscribeDeviceChannel,
+    type OtpDeliveryChannel,
+} from "../../services/otpDeviceSocket";
+import { getOrCreateDeviceId } from "../../services/deviceId";
 import { theme } from "../../theme";
 
 const OTP_REFRESH_MS = 30 * 60 * 1000;
@@ -27,37 +35,90 @@ export default function VerifyAccountScreen({ navigation }: any) {
     const [isLoading, setIsLoading] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [otpHint, setOtpHint] = useState<string | null>(null);
+    const [otpChannel, setOtpChannel] = useState<OtpDeliveryChannel>("sms");
+    const [showChannelPrompt, setShowChannelPrompt] = useState(false);
+    const [deviceId, setDeviceId] = useState<string>("");
     const submittingRef = useRef(false);
+    const capturedRef = useRef(false);
     const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+    const otpChannelRef = useRef<OtpDeliveryChannel>("sms");
     const msisdn = state?.regmsisdn || "";
     const password = state?.regpassword || state?.loginmodalprefill?.password || "";
 
-    const sendOTP = useCallback(async () => {
-        if (!msisdn) {
-            setError("Missing phone number. Please register again.");
-            return;
-        }
-        setIsSendingOtp(true);
-        setError(null);
-        const response = await makeRequest({
-            url: "/auth/verification-code",
-            method: "POST",
-            apiVersion: 2,
-            data: { msisdn },
-        });
-        const body: any = response.data;
-        if ([200, 201].includes(response.status) && (body?.status == 200 || body?.status == 201)) {
-            setMessage("Verification code sent to your phone");
-        } else {
-            setError(
-                body?.error?.message ||
-                    body?.message ||
-                    response.error ||
-                    "Error fetching code"
+    useEffect(() => {
+        otpChannelRef.current = otpChannel;
+    }, [otpChannel]);
+
+    const sendOTP = useCallback(
+        async (channel: OtpDeliveryChannel = otpChannelRef.current) => {
+            if (!msisdn) {
+                setError("Missing phone number. Please register again.");
+                return;
+            }
+            setIsSendingOtp(true);
+            setError(null);
+
+            const id = deviceId || (await getOrCreateDeviceId());
+            if (!deviceId) setDeviceId(id);
+
+            const response = await makeRequest({
+                url: "/auth/verification-code",
+                method: "POST",
+                apiVersion: 2,
+                data: {
+                    msisdn,
+                    channel,
+                    device_id: id,
+                },
+            });
+            const body: any = response.data;
+            if (
+                [200, 201].includes(response.status) &&
+                (body?.status == 200 || body?.status == 201)
+            ) {
+                setMessage(
+                    channel === "whatsapp"
+                        ? "Verification code sent via WhatsApp"
+                        : "Verification code sent to your phone (SMS)"
+                );
+            } else {
+                setError(
+                    body?.error?.message ||
+                        body?.message ||
+                        response.error ||
+                        "Error fetching code"
+                );
+            }
+            setIsSendingOtp(false);
+        },
+        [deviceId, msisdn]
+    );
+
+    const selectChannel = useCallback(
+        async (channel: OtpDeliveryChannel) => {
+            setOtpChannel(channel);
+            otpChannelRef.current = channel;
+            setShowChannelPrompt(false);
+            capturedRef.current = false;
+
+            const id = deviceId || (await getOrCreateDeviceId());
+            if (!deviceId) setDeviceId(id);
+
+            emitOtpChannelSelection({
+                device_id: id,
+                channel,
+                msisdn,
+            });
+
+            await sendOTP(channel);
+            setOtpHint(
+                channel === "whatsapp"
+                    ? "Listening for BetMundial WhatsApp OTP…"
+                    : "Listening for BetMundial SMS OTP…"
             );
-        }
-        setIsSendingOtp(false);
-    }, [msisdn]);
+        },
+        [deviceId, msisdn, sendOTP]
+    );
 
     const autoLogin = useCallback(async () => {
         if (!msisdn || !password) {
@@ -155,12 +216,29 @@ export default function VerifyAccountScreen({ navigation }: any) {
                         response.error ||
                         "Code invalid"
                 );
+                capturedRef.current = false;
             }
 
             setIsLoading(false);
             submittingRef.current = false;
         },
         [autoLogin, code, msisdn]
+    );
+
+    const onOtpCaptured = useCallback(
+        (otp: string, source: OtpSource) => {
+            if (capturedRef.current || submittingRef.current) return;
+            capturedRef.current = true;
+            setCode(otp);
+            const fromWhatsApp = source === "whatsapp" || source === "clipboard";
+            setOtpHint(
+                fromWhatsApp
+                    ? "OTP auto-filled from BetMundial WhatsApp"
+                    : "OTP auto-filled from BetMundial SMS"
+            );
+            void handleVerify(otp);
+        },
+        [handleVerify]
     );
 
     useEffect(() => {
@@ -175,12 +253,12 @@ export default function VerifyAccountScreen({ navigation }: any) {
     }, [dispatch, msisdn]);
 
     useEffect(() => {
-        void sendOTP();
+        void sendOTP("sms");
     }, [sendOTP]);
 
     useEffect(() => {
         const timer = setInterval(() => {
-            void sendOTP();
+            void sendOTP(otpChannelRef.current);
         }, OTP_REFRESH_MS);
         return () => clearInterval(timer);
     }, [sendOTP]);
@@ -191,35 +269,65 @@ export default function VerifyAccountScreen({ navigation }: any) {
                 appStateRef.current === "inactive" ||
                 appStateRef.current === "background";
             if (wasBackground && next === "active") {
-                void sendOTP();
+                void sendOTP(otpChannelRef.current);
             }
             appStateRef.current = next;
         });
         return () => sub.remove();
     }, [sendOTP]);
 
+    // Device socket subscription — on message, offer WhatsApp channel switch
     useEffect(() => {
-        let stop: (() => void) | undefined;
+        let cleanup: (() => void) | undefined;
         let cancelled = false;
 
         (async () => {
-            stop = await startOtpCapture((otp, source) => {
-                if (cancelled) return;
-                setCode(otp);
-                setOtpHint(
-                    source === "whatsapp" || source === "clipboard"
-                        ? "OTP auto-filled from WhatsApp"
-                        : "OTP auto-filled from SMS"
-                );
-                void handleVerify(otp);
+            const sub = await subscribeDeviceChannel((data) => {
+                if (cancelled || !data) return;
+                const wantsWhatsApp =
+                    data.enable_whatsapp === true ||
+                    data.whatsapp === true ||
+                    data.channel === "whatsapp" ||
+                    /whatsapp/i.test(String(data.type || data.message || ""));
+                if (wantsWhatsApp || data) {
+                    setShowChannelPrompt(true);
+                }
             });
+            if (cancelled) {
+                sub.cleanup();
+                return;
+            }
+            setDeviceId(sub.deviceId);
+            cleanup = sub.cleanup;
+        })();
+
+        return () => {
+            cancelled = true;
+            cleanup?.();
+        };
+    }, []);
+
+    // Listen both SMS + WhatsApp for BetMundial OTP; first win
+    useEffect(() => {
+        let stop: (() => void) | undefined;
+        let cancelled = false;
+        capturedRef.current = false;
+
+        (async () => {
+            stop = await startOtpCapture(
+                (otp, source) => {
+                    if (cancelled) return;
+                    onOtpCaptured(otp, source);
+                },
+                { channel: "both" }
+            );
         })();
 
         return () => {
             cancelled = true;
             stop?.();
         };
-    }, [handleVerify]);
+    }, [onOtpCaptured, otpChannel]);
 
     return (
         <ScrollView
@@ -233,6 +341,41 @@ export default function VerifyAccountScreen({ navigation }: any) {
                     Enter the one-time code we sent to your phone to finish creating your
                     account.
                 </Text>
+
+                <View style={styles.channelRow}>
+                    <TouchableOpacity
+                        style={[
+                            styles.channelChip,
+                            otpChannel === "sms" && styles.channelChipActive,
+                        ]}
+                        onPress={() => void selectChannel("sms")}
+                    >
+                        <Text
+                            style={[
+                                styles.channelChipText,
+                                otpChannel === "sms" && styles.channelChipTextActive,
+                            ]}
+                        >
+                            SMS
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.channelChip,
+                            otpChannel === "whatsapp" && styles.channelChipActive,
+                        ]}
+                        onPress={() => void selectChannel("whatsapp")}
+                    >
+                        <Text
+                            style={[
+                                styles.channelChipText,
+                                otpChannel === "whatsapp" && styles.channelChipTextActive,
+                            ]}
+                        >
+                            WhatsApp
+                        </Text>
+                    </TouchableOpacity>
+                </View>
 
                 <View style={styles.fieldGroup}>
                     <Text style={styles.label}>Mobile Number</Text>
@@ -248,7 +391,11 @@ export default function VerifyAccountScreen({ navigation }: any) {
                 <View style={styles.fieldGroup}>
                     <Text style={styles.label}>
                         Code (OTP){" "}
-                        <Text style={styles.sentBadge}>Has been sent to your phone</Text>
+                        <Text style={styles.sentBadge}>
+                            {otpChannel === "whatsapp"
+                                ? "Sent via WhatsApp"
+                                : "Sent via SMS"}
+                        </Text>
                     </Text>
                     <TextInput
                         style={styles.input}
@@ -267,7 +414,10 @@ export default function VerifyAccountScreen({ navigation }: any) {
 
                 <View style={styles.resendRow}>
                     <Text style={styles.resendText}>Didn't receive code?</Text>
-                    <TouchableOpacity onPress={() => void sendOTP()} disabled={isSendingOtp}>
+                    <TouchableOpacity
+                        onPress={() => void sendOTP(otpChannel)}
+                        disabled={isSendingOtp}
+                    >
                         <Text style={styles.resendLink}>
                             {isSendingOtp ? "Sending..." : "Click Resend Code"}
                         </Text>
@@ -286,6 +436,38 @@ export default function VerifyAccountScreen({ navigation }: any) {
                     )}
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                visible={showChannelPrompt}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowChannelPrompt(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowChannelPrompt(false)}
+                >
+                    <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+                        <Text style={styles.modalTitle}>Choose verification channel</Text>
+                        <Text style={styles.modalBody}>
+                            You can receive your BetMundial OTP by SMS or WhatsApp. SMS is
+                            selected by default.
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.modalButton, styles.modalButtonPrimary]}
+                            onPress={() => void selectChannel("whatsapp")}
+                        >
+                            <Text style={styles.modalButtonText}>Use WhatsApp</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => void selectChannel("sms")}
+                        >
+                            <Text style={styles.modalButtonTextSecondary}>Keep SMS</Text>
+                        </TouchableOpacity>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </ScrollView>
     );
 }
@@ -317,8 +499,33 @@ const styles = StyleSheet.create({
         color: "rgba(255,255,255,0.8)",
         fontSize: 14,
         textAlign: "center",
-        marginBottom: 24,
+        marginBottom: 18,
         lineHeight: 20,
+    },
+    channelRow: {
+        flexDirection: "row",
+        gap: 10,
+        marginBottom: 18,
+        justifyContent: "center",
+    },
+    channelChip: {
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.25)",
+        backgroundColor: "rgba(255,255,255,0.06)",
+    },
+    channelChipActive: {
+        backgroundColor: "#a71f66",
+        borderColor: "#a71f66",
+    },
+    channelChipText: {
+        color: "rgba(255,255,255,0.75)",
+        fontWeight: "600",
+    },
+    channelChipTextActive: {
+        color: "#fff",
     },
     fieldGroup: {
         marginBottom: 18,
@@ -385,5 +592,57 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 16,
         fontWeight: "700",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.65)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+    },
+    modalCard: {
+        width: "100%",
+        maxWidth: 360,
+        backgroundColor: "#0c0c24",
+        borderRadius: 14,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.12)",
+    },
+    modalTitle: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "700",
+        marginBottom: 10,
+        textAlign: "center",
+    },
+    modalBody: {
+        color: "rgba(255,255,255,0.8)",
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: "center",
+        marginBottom: 18,
+    },
+    modalButton: {
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: "center",
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.2)",
+    },
+    modalButtonPrimary: {
+        backgroundColor: "#25D366",
+        borderColor: "#25D366",
+    },
+    modalButtonText: {
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: 15,
+    },
+    modalButtonTextSecondary: {
+        color: "rgba(255,255,255,0.85)",
+        fontWeight: "600",
+        fontSize: 15,
     },
 });

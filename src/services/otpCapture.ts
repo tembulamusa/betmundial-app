@@ -3,7 +3,6 @@ import SmsRetriever from "react-native-sms-retriever";
 
 async function readClipboard(): Promise<string> {
     try {
-        // Prefer community clipboard if present; fall back to legacy RN Clipboard
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const community = require("@react-native-clipboard/clipboard").default;
         if (community?.getString) return await community.getString();
@@ -21,23 +20,23 @@ async function readClipboard(): Promise<string> {
 }
 
 export type OtpSource = "sms" | "whatsapp" | "clipboard" | "inbox";
+export type OtpChannel = "sms" | "whatsapp" | "both";
 
 export type OtpCaptureHandler = (otp: string, source: OtpSource) => void;
 
 const OTP_REGEX = /\b(\d{4,8})\b/;
-const BETMUNDIAL_HINT = /bet\s*mundial|betmundial|verification|otp|one[-\s]?time|code/i;
+/** Strict: only BetMundial-branded messages */
+const BETMUNDIAL_STRICT = /bet\s*mundial|betmundial/i;
 
 type StopFn = () => void;
 
-function extractOtp(text: string | null | undefined): string | null {
-    if (!text) return null;
-    if (!BETMUNDIAL_HINT.test(text) && !/\botp\b|\bcode\b|\bpin\b/i.test(text)) {
-        // Still accept a bare OTP-looking message that looks like a verification SMS
-        const bare = text.trim().match(OTP_REGEX);
-        if (bare && text.length <= 200) return bare[1];
-        return null;
-    }
-    const match = text.match(OTP_REGEX);
+export function isBetMundialMessage(text: string | null | undefined): boolean {
+    return !!text && BETMUNDIAL_STRICT.test(text);
+}
+
+export function extractBetMundialOtp(text: string | null | undefined): string | null {
+    if (!isBetMundialMessage(text)) return null;
+    const match = String(text).match(OTP_REGEX);
     return match?.[1] ?? null;
 }
 
@@ -49,8 +48,10 @@ async function requestSmsPermissions(): Promise<boolean> {
             PermissionsAndroid.PERMISSIONS.READ_SMS,
         ]);
         return (
-            result[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] === PermissionsAndroid.RESULTS.GRANTED ||
-            result[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED
+            result[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] ===
+                PermissionsAndroid.RESULTS.GRANTED ||
+            result[PermissionsAndroid.PERMISSIONS.READ_SMS] ===
+                PermissionsAndroid.RESULTS.GRANTED
         );
     } catch {
         return false;
@@ -62,7 +63,7 @@ async function startSmsRetriever(onOtp: OtpCaptureHandler): Promise<StopFn> {
     try {
         await SmsRetriever.startSmsRetriever();
         SmsRetriever.addSmsListener((event: { message?: string }) => {
-            const otp = extractOtp(event?.message);
+            const otp = extractBetMundialOtp(event?.message);
             if (otp) onOtp(otp, "sms");
             try {
                 SmsRetriever.removeSmsListener();
@@ -85,18 +86,17 @@ async function startSmsRetriever(onOtp: OtpCaptureHandler): Promise<StopFn> {
 async function startSmsBroadcastListener(onOtp: OtpCaptureHandler): Promise<StopFn> {
     if (Platform.OS !== "android") return () => undefined;
     try {
-        // Optional dependency — may be missing until native rebuild
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const SmsListener = require("react-native-android-sms-listener").default;
-        const subscription = SmsListener.addListener((message: { body?: string; originatingAddress?: string }) => {
-            const body = message?.body || "";
-            const from = message?.originatingAddress || "";
-            if (!BETMUNDIAL_HINT.test(body) && !BETMUNDIAL_HINT.test(from) && !extractOtp(body)) {
-                return;
+        const subscription = SmsListener.addListener(
+            (message: { body?: string; originatingAddress?: string }) => {
+                const body = message?.body || "";
+                const from = message?.originatingAddress || "";
+                if (!isBetMundialMessage(body) && !isBetMundialMessage(from)) return;
+                const otp = extractBetMundialOtp(body) || extractBetMundialOtp(`${from} ${body}`);
+                if (otp) onOtp(otp, "sms");
             }
-            const otp = extractOtp(body);
-            if (otp) onOtp(otp, "sms");
-        });
+        );
         return () => {
             try {
                 subscription?.remove?.();
@@ -121,7 +121,7 @@ async function pollSmsInbox(onOtp: OtpCaptureHandler): Promise<StopFn> {
             const SmsAndroid = require("react-native-get-sms-android");
             const filter = JSON.stringify({
                 box: "inbox",
-                maxCount: 12,
+                maxCount: 15,
                 indexFrom: 0,
             });
             SmsAndroid.list(
@@ -136,8 +136,8 @@ async function pollSmsInbox(onOtp: OtpCaptureHandler): Promise<StopFn> {
                         }>;
                         for (const msg of messages) {
                             const blob = `${msg.address || ""} ${msg.body || ""}`;
-                            if (!BETMUNDIAL_HINT.test(blob) && !extractOtp(msg.body || "")) continue;
-                            const otp = extractOtp(msg.body || "");
+                            if (!isBetMundialMessage(blob)) continue;
+                            const otp = extractBetMundialOtp(blob);
                             if (!otp) continue;
                             const key = `${msg.date || ""}:${otp}`;
                             if (key === lastSeen) continue;
@@ -151,7 +151,7 @@ async function pollSmsInbox(onOtp: OtpCaptureHandler): Promise<StopFn> {
                 }
             );
         } catch {
-            /* package / permission unavailable */
+            /* unavailable */
         }
     };
 
@@ -163,23 +163,17 @@ async function pollSmsInbox(onOtp: OtpCaptureHandler): Promise<StopFn> {
     };
 }
 
-/**
- * WhatsApp OTP: listen via notification module when available,
- * and also watch the clipboard when the app returns to foreground
- * (common when users copy a code from WhatsApp).
- */
 async function startWhatsAppCapture(onOtp: OtpCaptureHandler): Promise<StopFn> {
     const stops: StopFn[] = [];
 
-    // Clipboard poll (WhatsApp copy / share OTP)
     let lastClip: string | null = null;
     const readClip = async () => {
         try {
             const text = await readClipboard();
             if (!text || text === lastClip) return;
             lastClip = text;
-            const otp = extractOtp(text);
-            if (otp && text.length <= 64) onOtp(otp, "clipboard");
+            const otp = extractBetMundialOtp(text);
+            if (otp) onOtp(otp, "clipboard");
         } catch {
             /* ignore */
         }
@@ -195,16 +189,18 @@ async function startWhatsAppCapture(onOtp: OtpCaptureHandler): Promise<StopFn> {
         clearInterval(clipTimer);
     });
 
-    // Optional notification listener (WhatsApp notifications)
     try {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const RNAndroidNotificationListener = require("react-native-android-notification-listener");
         if (RNAndroidNotificationListener?.default) {
             const emitter = new NativeEventEmitter(
-                NativeModules.RNAndroidNotificationListener || NativeModules.NotificationListener
+                NativeModules.RNAndroidNotificationListener ||
+                    NativeModules.NotificationListener
             );
             const sub = emitter.addListener("notificationReceived", (event: any) => {
-                const app = String(event?.app || event?.package || event?.packageName || "").toLowerCase();
+                const app = String(
+                    event?.app || event?.package || event?.packageName || ""
+                ).toLowerCase();
                 const title = String(event?.title || "");
                 const text = String(event?.text || event?.bigText || event?.message || "");
                 const isWhatsApp =
@@ -212,7 +208,7 @@ async function startWhatsAppCapture(onOtp: OtpCaptureHandler): Promise<StopFn> {
                     /whatsapp/i.test(title) ||
                     /whatsapp/i.test(text);
                 if (!isWhatsApp) return;
-                const otp = extractOtp(`${title} ${text}`);
+                const otp = extractBetMundialOtp(`${title} ${text}`);
                 if (otp) onOtp(otp, "whatsapp");
             });
             stops.push(() => sub.remove());
@@ -224,24 +220,37 @@ async function startWhatsAppCapture(onOtp: OtpCaptureHandler): Promise<StopFn> {
     return () => stops.forEach((s) => s());
 }
 
+export type StartOtpCaptureOptions = {
+    /** Default `both` — first BetMundial OTP from SMS or WhatsApp wins */
+    channel?: OtpChannel;
+};
+
 /**
- * Start capturing OTPs from SMS (BetMundial) and WhatsApp-related sources.
- * Returns a cleanup function.
+ * Capture BetMundial OTPs only. Listens to SMS and/or WhatsApp depending on channel.
  */
-export async function startOtpCapture(onOtp: OtpCaptureHandler): Promise<StopFn> {
-    if (Platform.OS !== "android") {
-        // iOS: clipboard only
-        return startWhatsAppCapture(onOtp);
+export async function startOtpCapture(
+    onOtp: OtpCaptureHandler,
+    options: StartOtpCaptureOptions = {}
+): Promise<StopFn> {
+    const channel: OtpChannel = options.channel || "both";
+    const stops: StopFn[] = [];
+
+    if (channel === "sms" || channel === "both") {
+        if (Platform.OS === "android") {
+            await requestSmsPermissions();
+            stops.push(
+                ...(await Promise.all([
+                    startSmsRetriever(onOtp),
+                    startSmsBroadcastListener(onOtp),
+                    pollSmsInbox(onOtp),
+                ]))
+            );
+        }
     }
 
-    await requestSmsPermissions();
-
-    const stops = await Promise.all([
-        startSmsRetriever(onOtp),
-        startSmsBroadcastListener(onOtp),
-        pollSmsInbox(onOtp),
-        startWhatsAppCapture(onOtp),
-    ]);
+    if (channel === "whatsapp" || channel === "both") {
+        stops.push(await startWhatsAppCapture(onOtp));
+    }
 
     return () => stops.forEach((s) => s());
 }
