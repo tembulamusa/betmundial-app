@@ -108,6 +108,19 @@ const CustomHeader = ({ scene, previous, navigation }) => {
 
             if (response?.status == 200 || response.status == 201) {
                 const payload = response.data?.data || response.data;
+                const bodyResult = response.data?.result || response.result;
+                if (bodyResult == "User account not verified") {
+                    const normalized = normalizeKenyanPhoneNumber(activeForm.mobile);
+                    dispatch({ type: "SET", key: "regmsisdn", payload: normalized });
+                    dispatch({
+                        type: "SET",
+                        key: "regpassword",
+                        payload: activeForm.password,
+                    });
+                    closeLoginModal();
+                    navigation.navigate("Sports", { screen: "VerifyAccountScreen" });
+                    return;
+                }
                 if (payload && (payload.access_token || payload.token)) {
                     const user = normalizeUser(payload);
                     await setItem("user", user);
@@ -117,6 +130,19 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }
             } else {
+                const bodyResult = response.data?.result || response.result;
+                if (bodyResult == "User account not verified") {
+                    const normalized = normalizeKenyanPhoneNumber(activeForm.mobile);
+                    dispatch({ type: "SET", key: "regmsisdn", payload: normalized });
+                    dispatch({
+                        type: "SET",
+                        key: "regpassword",
+                        payload: activeForm.password,
+                    });
+                    closeLoginModal();
+                    navigation.navigate("Sports", { screen: "VerifyAccountScreen" });
+                    return;
+                }
                 setLoginError(
                     response.result?.message ||
                     response?.error?.message ||
@@ -268,6 +294,33 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                             )}
                         </TouchableOpacity>
 
+                        <TouchableOpacity
+                            style={styles.authLinkWrap}
+                            onPress={() => {
+                                closeLoginModal();
+                                navigation.navigate("Sports", {
+                                    screen: "ForgotPasswordScreen",
+                                });
+                            }}
+                        >
+                            <Text style={styles.authLink}>Forgot Password</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.registerLinkWrap}
+                            onPress={() => {
+                                closeLoginModal();
+                                navigation.navigate("Sports", {
+                                    screen: "RegisterScreen",
+                                });
+                            }}
+                        >
+                            <Text style={styles.registerPrompt}>
+                                Don't have an account?{" "}
+                                <Text style={styles.authLink}>Register now!</Text>
+                            </Text>
+                        </TouchableOpacity>
+
                         <TouchableOpacity style={styles.closeButton} onPress={closeLoginModal}>
                             <Text style={styles.closeButtonText}>Cancel</Text>
                         </TouchableOpacity>
@@ -409,6 +462,26 @@ const styles = StyleSheet.create({
     closeButtonText: {
         color: theme.accent,
         fontWeight: 'bold',
+    },
+    authLinkWrap: {
+        marginTop: 14,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    registerLinkWrap: {
+        marginTop: 12,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    authLink: {
+        color: theme.accent,
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    registerPrompt: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        textAlign: 'center',
     },
     noticeText: {
         color: '#86efac',

@@ -13,6 +13,7 @@ import { Formik } from "formik";
 import { Context } from "../../context/store";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
+import { setItem } from "../../components/utils/local-storage";
 import { theme } from "../../theme";
 
 export default function RegisterScreen({ navigation, route }: any) {
@@ -80,33 +81,28 @@ export default function RegisterScreen({ navigation, route }: any) {
             },
         });
 
-        dispatch({
-            type: "SET",
-            key: "regmsisdn",
-            payload: normalizedMsisdn,
-        });
-
         if ([200, 201, 204].includes(response.status)) {
+            dispatch({
+                type: "SET",
+                key: "regmsisdn",
+                payload: normalizedMsisdn,
+            });
+            dispatch({
+                type: "SET",
+                key: "regpassword",
+                payload: values.password,
+            });
+            void setItem("regmsisdn", normalizedMsisdn);
             dispatch({
                 type: "SET",
                 key: "loginmodalprefill",
                 payload: {
                     mobile: normalizedMsisdn,
                     password: values.password,
-                    autoLogin: true,
+                    autoLogin: false,
                 },
             });
-            dispatch({
-                type: "SET",
-                key: "loginmodalmessage",
-                payload: "Registration successful. Logging you in...",
-            });
-            dispatch({
-                type: "SET",
-                key: "showloginmodal",
-                payload: true,
-            });
-            navigation.navigate("HomeMain");
+            navigation.navigate("VerifyAccountScreen");
         } else {
             setSubmitError(response?.error || "Error making registration");
         }

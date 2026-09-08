@@ -3,6 +3,9 @@
     package="com.betmundial">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- OTP auto-fill from BetMundial SMS during account verification -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
 
     <!-- Not used by the betting app; strip if merged from dependencies -->
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />

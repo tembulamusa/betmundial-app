@@ -33,6 +33,8 @@ import { initDatabase } from "./src/services/offlineDatabase";
 
 import LoginScreen from "./src/screens/auth/LoginScreen";
 import RegisterScreen from "./src/screens/auth/RegisterScreen";
+import VerifyAccountScreen from "./src/screens/auth/VerifyAccountScreen";
+import ForgotPasswordScreen from "./src/screens/auth/ForgotPasswordScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import MatchAllMarketsScreen from "./src/screens/home/MatchAllMarketsScreen";
 import ProfileScreen from "./src/screens/home/ProfileScreen";
@@ -130,6 +132,8 @@ const HomeStackScreen = React.memo(function HomeStackScreen() {
       <HomeStack.Screen name="HomeMain" component={LazyHomeScreenWrapper} />
       <HomeStack.Screen name="LoginScreen" component={LoginScreen} />
       <HomeStack.Screen name="RegisterScreen" component={RegisterScreen} />
+      <HomeStack.Screen name="VerifyAccountScreen" component={VerifyAccountScreen} />
+      <HomeStack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
       <HomeStack.Screen name="MatchAllMarketsScreen" component={MatchAllMarketsScreen} />
       <HomeStack.Screen name="DepositScreen" component={DepositScreen} />
       <HomeStack.Screen name="WithdrawScreen" component={WithdrawScreen} />
