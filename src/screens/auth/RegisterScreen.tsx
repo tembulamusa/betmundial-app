@@ -219,8 +219,16 @@ export default function RegisterScreen({ navigation, route }: any) {
 
                             <View style={styles.disclaimer}>
                                 <Text style={styles.disclaimerText}>
-                                    By registering for an account, you agree to our Terms of Use,
-                                    Privacy Policy and Responsible Gambling Policy.
+                                    By registering for an account, you agree to our Terms of Use,{" "}
+                                    <Text
+                                        style={styles.inlineLink}
+                                        onPress={() =>
+                                            navigation.navigate("PrivacyPolicyScreen")
+                                        }
+                                    >
+                                        Privacy Policy
+                                    </Text>{" "}
+                                    and Responsible Gambling Policy.
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.ageWarningBox}
@@ -414,6 +422,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 20,
         marginBottom: 10,
+    },
+    inlineLink: {
+        color: theme.accent,
+        fontWeight: "700",
+        textDecorationLine: "underline",
     },
     ageWarningBox: {
         flexDirection: "row",

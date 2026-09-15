@@ -19,7 +19,6 @@ import {
     SafeAreaView,
     ScrollView,
     InteractionManager,
-    Alert,
 } from "react-native";
 
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -55,7 +54,6 @@ const ACCENT = {
 };
 
 const DRAWER_WIDTH = Math.min(380, width);
-const PROMO_WINS_COUNT = 0;
 
 /** Mirrors the web drawer's formatMsisdn() so phone numbers render the same way. */
 function formatMsisdn(msisdn?: string | null) {
@@ -72,9 +70,6 @@ function formatMsisdn(msisdn?: string | null) {
     }
     return String(msisdn);
 }
-
-const comingSoon = (title: string) =>
-    Alert.alert(title, `${title} will be available soon.`);
 
 const HeaderUser = () => {
     const [state, dispatch] = useContext(Context);
@@ -524,9 +519,8 @@ const HeaderUser = () => {
                                 />
                                 <DrawerItem
                                     icon={<FontAwesome name="gift" size={14} color={ACCENT.pink} />}
-                                    label="Promo Wins"
-                                    count={PROMO_WINS_COUNT}
-                                    onPress={() => comingSoon("Promo Wins")}
+                                    label="Affiliate"
+                                    onPress={() => goTo("AffiliateScreen")}
                                 />
                                 <DrawerItem
                                     icon={<MaterialIcons name="phone-iphone" size={16} color={ACCENT.pink} />}
@@ -552,7 +546,12 @@ const HeaderUser = () => {
                                 <DrawerItem
                                     icon={<MaterialIcons name="lock-outline" size={16} color={ACCENT.pink} />}
                                     label="Change Password"
-                                    onPress={() => comingSoon("Change Password")}
+                                    onPress={() => goTo("ForgotPasswordScreen")}
+                                />
+                                <DrawerItem
+                                    icon={<MaterialIcons name="privacy-tip" size={16} color={ACCENT.pink} />}
+                                    label="Privacy Policy"
+                                    onPress={() => goTo("PrivacyPolicyScreen")}
                                 />
                                 <DrawerItem
                                     icon={<MaterialIcons name="security" size={16} color={ACCENT.pink} />}

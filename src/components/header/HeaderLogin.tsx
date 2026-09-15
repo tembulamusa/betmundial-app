@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     },
     loginButton: {
         backgroundColor: theme.accent,
-        minHeight: 32,
-        minWidth: 76,
-        paddingVertical: 6,
-        paddingHorizontal: 14,
+        minHeight: 36,
+        minWidth: 120,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 6,
         alignItems: "center",
         justifyContent: "center",
@@ -62,14 +62,15 @@ const styles = StyleSheet.create({
     loginText: {
         color: "#fff",
         fontWeight: "700",
-        fontSize: 11,
+        fontSize: 12,
         textTransform: "uppercase",
     },
     registerButton: {
         backgroundColor: "transparent",
-        minHeight: 32,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        minHeight: 36,
+        minWidth: 120,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 6,
         borderWidth: 1,
         borderColor: theme.accent,
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
     registerText: {
         color: theme.accent,
         fontWeight: "700",
-        fontSize: 11,
+        fontSize: 12,
         textTransform: "uppercase",
     },
 });

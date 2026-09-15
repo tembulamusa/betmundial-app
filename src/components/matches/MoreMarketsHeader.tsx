@@ -95,6 +95,9 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
                     <Text style={styles.backIcon}>{"←"}</Text>
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
+                <Text style={styles.matchTitle} numberOfLines={1}>
+                    {match?.home_team || "Home"} - {match?.away_team || "Away"}
+                </Text>
             </View>
 
             <MatchWidget
@@ -115,15 +118,15 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 12,
         paddingHorizontal: 12,
-        // paddingBottom: 10,
-        backgroundColor: "#111",
+        paddingBottom: 8,
+        backgroundColor: "rgba(255,255,255,0.08)",
     },
 
     backRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 6,
-        backgroundColor: "#000",
+        marginBottom: 8,
+        backgroundColor: "rgba(0,0,0,0.35)",
         paddingHorizontal: 8,
         paddingVertical: 6,
         borderRadius: 6,
@@ -142,6 +145,14 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "700",
         lineHeight: 18,
+    },
+
+    matchTitle: {
+        color: "#fff",
+        fontSize: 15,
+        fontWeight: "700",
+        textAlign: "center",
+        marginBottom: 4,
     },
 
     teamRow: {

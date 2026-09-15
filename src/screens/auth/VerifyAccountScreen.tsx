@@ -7,8 +7,6 @@ import {
     ActivityIndicator,
     StyleSheet,
     ScrollView,
-    AppState,
-    AppStateStatus,
     Modal,
     Pressable,
 } from "react-native";
@@ -25,8 +23,6 @@ import {
 import { getOrCreateDeviceId } from "../../services/deviceId";
 import { theme } from "../../theme";
 
-const OTP_REFRESH_MS = 30 * 60 * 1000;
-
 export default function VerifyAccountScreen({ navigation }: any) {
     const [state, dispatch] = useContext(Context);
     const [code, setCode] = useState("");
@@ -40,7 +36,7 @@ export default function VerifyAccountScreen({ navigation }: any) {
     const [deviceId, setDeviceId] = useState<string>("");
     const submittingRef = useRef(false);
     const capturedRef = useRef(false);
-    const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+    const initialOtpSentRef = useRef(false);
     const otpChannelRef = useRef<OtpDeliveryChannel>("sms");
     const msisdn = state?.regmsisdn || "";
     const password = state?.regpassword || state?.loginmodalprefill?.password || "";
@@ -110,14 +106,13 @@ export default function VerifyAccountScreen({ navigation }: any) {
                 msisdn,
             });
 
-            await sendOTP(channel);
             setOtpHint(
                 channel === "whatsapp"
-                    ? "Listening for BetMundial WhatsApp OTP…"
-                    : "Listening for BetMundial SMS OTP…"
+                    ? "Listening for BetMundial WhatsApp OTP… Tap resend if you need a new code."
+                    : "Listening for BetMundial SMS OTP… Tap resend if you need a new code."
             );
         },
-        [deviceId, msisdn, sendOTP]
+        [deviceId, msisdn]
     );
 
     const autoLogin = useCallback(async () => {
@@ -252,29 +247,12 @@ export default function VerifyAccountScreen({ navigation }: any) {
         }
     }, [dispatch, msisdn]);
 
+    // Request OTP once when the screen has a phone number — never auto-refresh.
     useEffect(() => {
+        if (!msisdn || initialOtpSentRef.current) return;
+        initialOtpSentRef.current = true;
         void sendOTP("sms");
-    }, [sendOTP]);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            void sendOTP(otpChannelRef.current);
-        }, OTP_REFRESH_MS);
-        return () => clearInterval(timer);
-    }, [sendOTP]);
-
-    useEffect(() => {
-        const sub = AppState.addEventListener("change", (next) => {
-            const wasBackground =
-                appStateRef.current === "inactive" ||
-                appStateRef.current === "background";
-            if (wasBackground && next === "active") {
-                void sendOTP(otpChannelRef.current);
-            }
-            appStateRef.current = next;
-        });
-        return () => sub.remove();
-    }, [sendOTP]);
+    }, [msisdn, sendOTP]);
 
     // Device socket subscription — on message, offer WhatsApp channel switch
     useEffect(() => {
@@ -419,7 +397,7 @@ export default function VerifyAccountScreen({ navigation }: any) {
                         disabled={isSendingOtp}
                     >
                         <Text style={styles.resendLink}>
-                            {isSendingOtp ? "Sending..." : "Click Resend Code"}
+                            {isSendingOtp ? "Sending..." : "Click to resend code"}
                         </Text>
                     </TouchableOpacity>
                 </View>

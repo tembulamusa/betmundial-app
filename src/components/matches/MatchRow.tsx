@@ -1,15 +1,15 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert
+  Linking,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 import OddButton from "./OddButton";
-// import Alert from "../utils/Alert";
 
 interface Props {
   match: any;
@@ -17,8 +17,8 @@ interface Props {
   jackpot?: boolean;
 }
 
+/** Mobile match card — mirrors web `.mobile-match-card` layout */
 const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
-
   const navigation: any = useNavigation();
 
   const odds = match?.odds?.["1x2"]?.outcomes || [];
@@ -29,36 +29,88 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
         : `${match?.match_time}'`
       : "";
 
-  const openMatchDetails = () => {
-    if (jackpot) {
-      return;
-    }
+  const scoreParts = useMemo(() => {
+    const raw = String(match?.score ?? "");
+    if (!raw || !raw.includes(":")) return null;
+    const [home, away] = raw.split(":");
+    return { home: home?.trim() || "-", away: away?.trim() || "-" };
+  }, [match?.score]);
+
+  const sidebetsCount = Number(match?.sidebets) || 0;
+
+  const openMatchDetails = useCallback(() => {
+    if (jackpot) return;
     navigation.navigate("MatchAllMarketsScreen", {
       id: match?.match_id,
       live: live,
     });
-  };
+  }, [jackpot, live, match?.match_id, navigation]);
+
+  const openStats = useCallback(() => {
+    const parentId = match?.parent_match_id;
+    if (!parentId) return;
+    void Linking.openURL(
+      `https://s5.sir.sportradar.com/betmundialsmts/en/match/${parentId}`
+    );
+  }, [match?.parent_match_id]);
 
   return (
-    <View style={styles.row}>
-      <TouchableOpacity style={styles.teams} onPress={openMatchDetails}>
-        <Text style={styles.team}>{match?.home_team}</Text>
-        <Text style={styles.team}>{match?.away_team}</Text>
-      </TouchableOpacity>
+    <View style={styles.card}>
+      <View style={styles.metaRow}>
+        <Text style={styles.metaText} numberOfLines={1}>
+          {live
+            ? liveTime || match?.match_status || "LIVE"
+            : match?.start_time || "-"}
+          {"  "}
+          <Text style={styles.metaId}>ID: {match?.match_id || "-"}</Text>
+        </Text>
+      </View>
 
-      {live && (
-        <View style={styles.liveStatus}>
-          {liveTime ? (
-            <Text style={styles.liveTimeText}>
-              {liveTime}
-            </Text>
-          ) : null}
-          <Text style={styles.scoreText}>
-            {match?.score || "-"}
+      <View style={styles.midRow}>
+        <TouchableOpacity
+          style={styles.teams}
+          onPress={openMatchDetails}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.team} numberOfLines={1}>
+            {match?.home_team}
           </Text>
+          <Text style={styles.team} numberOfLines={1}>
+            {match?.away_team}
+          </Text>
+        </TouchableOpacity>
 
-        </View>
-      )}
+        {live && scoreParts ? (
+          <View style={styles.scoreCol}>
+            <Text style={styles.scoreText}>{scoreParts.home}</Text>
+            <Text style={styles.scoreText}>{scoreParts.away}</Text>
+          </View>
+        ) : null}
+
+        {!jackpot ? (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={openStats}
+              accessibilityLabel="Match statistics"
+              activeOpacity={0.85}
+            >
+              <Ionicons name="stats-chart" size={14} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.marketsBtn]}
+              onPress={openMatchDetails}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.marketsText}>{sidebetsCount}+</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.marketBar}>
+        <Text style={styles.marketLabel}>3 WAY</Text>
+      </View>
 
       <View style={styles.oddsRow}>
         {odds.map((odd: any) => {
@@ -69,44 +121,20 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
             outcome_id: odd?.outcome_id,
             special_bet_value: odd?.special_bet_value,
             sub_type_id: odd?.sub_type_id || match?.sub_type_id,
+            name: "1x2",
+            market_name: "1x2",
           };
 
           return (
-            <View
-              key={odd?.odd_key + "" + match?.match_id}
-              style={styles.button}
-            >
-              <OddButton
-                match={oddMatch}
-                mkt="odd_key"
-                live={live}
-              />
-            </View>
+            <OddButton
+              key={`${odd?.odd_key}-${odd?.outcome_id}-${match?.match_id}`}
+              match={oddMatch}
+              mkt="1x2"
+              live={live}
+              listing
+            />
           );
         })}
-      </View>
-
-      <View style={styles.bottomRow}>
-        <View style={styles.matchMeta}>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {match?.category || "-"} | {match?.competition_name || "-"}
-          </Text>
-          <Text style={styles.metaSubText}>
-            {match?.start_time || "-"}
-          </Text>
-        </View>
-
-        <View style={styles.bottomRight}>
-          <TouchableOpacity onPress={openMatchDetails}>
-            {match?.sidebets > 0 && !jackpot && (
-              <Text style={styles.moreMarkets}>
-                +{match?.sidebets || 0}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <Text style={styles.liveIcon}>📊</Text>
-        </View>
       </View>
     </View>
   );
@@ -115,95 +143,103 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
 export default MatchRow;
 
 const styles = StyleSheet.create({
-
-  row: {
+  card: {
     backgroundColor: "rgba(255,255,255,0.1)",
-    padding: 12,
-    marginBottom: 6,
-    borderRadius: 6,
+    paddingTop: 10,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    marginBottom: 8,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
   },
-
-  teams: {
+  metaRow: {
+    marginBottom: 6,
+  },
+  metaText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  metaId: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 10,
+  },
+  midRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
-
+  teams: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 6,
+  },
   team: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  liveStatus: {
-    position: "absolute",
-    right: 10,
-    top: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  scoreText: {
-    color: "#ffcc00",
-    fontWeight: "700",
-  },
-
-  liveTimeText: {
-    color: "#fff",
-    fontWeight: "700",
-    marginLeft: 8,
-  },
-
-  oddsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-
-  button: {
-    flex: 1,
-    minHeight: 48,
-    marginHorizontal: 2,
-  },
-
-  bottomRow: {
-    marginTop: 4,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  matchMeta: {
-    flex: 1,
-    flexDirection: "column",
-    alignItems: "flex-start",
-    paddingRight: 8,
-  },
-
-  metaText: {
-    color: "rgba(255,255,255,0.75)",
     fontSize: 12,
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 0.2,
+    lineHeight: 16,
   },
-
-  metaSubText: {
+  scoreCol: {
+    marginHorizontal: 4,
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  scoreText: {
+    color: "#FFB200",
+    fontWeight: "700",
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  actionBtn: {
+    minWidth: 36,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  marketsBtn: {
+    minWidth: 40,
+  },
+  marketsText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 14,
+  },
+  marketBar: {
+    backgroundColor: "rgba(10,22,45,0.69)",
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  marketLabel: {
     color: "#fff",
     fontSize: 11,
-    marginTop: 2,
     fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
-
-  bottomRight: {
-    flexDirection: "column",
-    alignItems: "center",
+  oddsRow: {
+    flexDirection: "row",
+    backgroundColor: "#0A162D",
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    overflow: "hidden",
+    gap: 1,
   },
-
-  moreMarkets: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-
-  liveIcon: {
-    fontSize: 14,
-  },
-
 });

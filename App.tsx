@@ -55,6 +55,8 @@ import SelfExclusionInfoScreen from "./src/screens/home/SelfExclusionInfoScreen"
 import MinorsRestrictionsScreen from "./src/screens/home/MinorsRestrictionsScreen";
 import SelfAssessmentScreen from "./src/screens/home/SelfAssessmentScreen";
 import SupportForFriendsScreen from "./src/screens/home/SupportForFriendsScreen";
+import AffiliateScreen from "./src/screens/home/AffiliateScreen";
+import PrivacyPolicyScreen from "./src/screens/home/PrivacyPolicyScreen";
 
 // Lazy load heavy components
 const LazyHomeScreen = lazy(() => import("./src/screens/HomeScreen"));
@@ -141,6 +143,8 @@ const HomeStackScreen = React.memo(function HomeStackScreen() {
       <HomeStack.Screen name="SelfExcludeScreen" component={SelfExcludeScreen} />
       <HomeStack.Screen name="LiveScreen" component={LiveScreen} />
       <HomeStack.Screen name="PromotionsScreen" component={PromotionsScreen} />
+      <HomeStack.Screen name="AffiliateScreen" component={AffiliateScreen} />
+      <HomeStack.Screen name="PrivacyPolicyScreen" component={PrivacyPolicyScreen} />
       <HomeStack.Screen name="LicensingScreen" component={LicensingScreen} />
       <HomeStack.Screen name="ResponsibleGamblingScreen" component={ResponsibleGamblingScreen} />
       <HomeStack.Screen name="GettingHelpScreen" component={GettingHelpScreen} />
@@ -163,6 +167,8 @@ const AccountStackScreen = React.memo(function AccountStackScreen() {
     >
       <AccountStack.Screen name="ProfileScreen" component={ProfileScreen} />
       <AccountStack.Screen name="PromotionsScreen" component={PromotionsScreen} />
+      <AccountStack.Screen name="AffiliateScreen" component={AffiliateScreen} />
+      <AccountStack.Screen name="PrivacyPolicyScreen" component={PrivacyPolicyScreen} />
       <AccountStack.Screen name="LicensingScreen" component={LicensingScreen} />
       <AccountStack.Screen name="ResponsibleGamblingScreen" component={ResponsibleGamblingScreen} />
       <AccountStack.Screen name="GettingHelpScreen" component={GettingHelpScreen} />
@@ -410,7 +416,7 @@ const styles = StyleSheet.create({
   },
 
   betslipButton: {
-    backgroundColor: "#e70654",
+    backgroundColor: theme.accent,
     width: 50,          // 🔽 smaller
     height: 50,         // 🔽 smaller
     borderRadius: 25,

@@ -84,6 +84,20 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
                 >
                     <Icon name="search" size={16} color="#fff" />
                 </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.affiliateBtn}
+                    onPress={() => {
+                        if (state?.user) {
+                            navigation.navigate("Sports", { screen: "AffiliateScreen" });
+                        } else {
+                            dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                        }
+                    }}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Affiliate"
+                >
+                    <Icon name="handshake-o" size={15} color="#fff" />
+                </TouchableOpacity>
             </View>
         );
     }
@@ -135,10 +149,22 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
 
 const styles = StyleSheet.create({
     container: {
+        flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
+        gap: 8,
     },
     searchBtn: {
+        width: 44,
+        height: 32,
+        borderRadius: 7,
+        backgroundColor: "rgba(167, 31, 102, 0.24)",
+        borderWidth: 1,
+        borderColor: "rgba(167, 31, 102, 0.35)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    affiliateBtn: {
         width: 44,
         height: 32,
         borderRadius: 7,

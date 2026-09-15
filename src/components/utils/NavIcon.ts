@@ -50,11 +50,17 @@ import GaelicHurlingIcon from "../../assets/images/colorsvgicons/gaelic hurling.
 import AviatrixIcon from "../../assets/images/casino/icons/Aviatrix.svg";
 import JetXIcon from "../../assets/images/casino/icons/JetX.svg";
 import CasinoIcon from "../../assets/images/casino/icons/casino.svg";
+import AffiliateIcon from "../../assets/images/colorsvgicons/affiliate.svg";
+import PromosIcon from "../../assets/images/colorsvgicons/promos.svg";
+import CrashIcon from "../../assets/images/colorsvgicons/crash.svg";
 
 export const icons: Record<string, any> = {
     home: HomeIcon,
     livescore: LiveIcon,
     jackpot: JackpotIcon,
+    affiliate: AffiliateIcon,
+    promos: PromosIcon,
+    crash: CrashIcon,
     aviator: AviatorIcon,
     soccer: SoccerIcon,
     basketball: BasketBallIcon,

@@ -256,6 +256,7 @@ const MarketRow: React.FC<MarketRowProps> = ({
                                         match={fullMatch}
                                         mkt={market_id}
                                         live={live}
+                                        detail
                                     />
                                 </View>
                             );

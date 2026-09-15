@@ -119,7 +119,8 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
         () => [
             { name: "Home", icon: "home.svg", link: "HomeScreen" },
             { name: "live", icon: "livescore.svg", link: "LiveScreen" },
-            { name: "jackpot", icon: "jackpot.svg", link: "JackpotScreen" },
+            { name: "jackpots", icon: "jackpot.svg", link: "JackpotScreen", badge: "hot" },
+            { name: "affiliate", icon: "affiliate.svg", link: "AffiliateScreen", badge: "hot" },
             {
                 name: "aviator",
                 icon: "aviator.svg",
@@ -153,8 +154,8 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
                 badge: "new",
             },
             { name: "casino", icon: "casino.svg", link: "CasinoScreen" },
-            { name: "Crash", icon: "casino.svg", link: "CasinoScreen", badge: "new" },
-            { name: "promotions", icon: "jackpot.svg", link: "PromotionsScreen" },
+            { name: "Crash", icon: "crash.svg", link: "CasinoScreen", badge: "new" },
+            { name: "promotions", icon: "promos.svg", link: "PromotionsScreen" },
             { name: "livescore", icon: "livescore.svg", link: "LiveScreen" },
         ],
         []
@@ -201,6 +202,15 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
                 return;
             }
 
+            if (item.link === "AffiliateScreen") {
+                if (!state?.user) {
+                    dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                    return;
+                }
+                navigation.navigate("Sports", { screen: "AffiliateScreen" });
+                return;
+            }
+
             if (item.link === "PromotionsScreen") {
                 navigation.navigate("Sports", { screen: "PromotionsScreen" });
                 navigateDeferred(() => {
@@ -233,7 +243,7 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
 
             navigation.navigate("Sports", { screen: item.link });
         },
-        [navigation, dispatch, navigateDeferred]
+        [navigation, dispatch, navigateDeferred, state?.user]
     );
 
     const onPressSportCategory = useCallback(

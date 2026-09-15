@@ -167,6 +167,11 @@ const ProfileScreen: React.FC = () => {
 
     const policyLinks = [
         {
+            label: "Privacy Policy",
+            icon: "privacy-tip",
+            onPress: () => navigation.navigate("PrivacyPolicyScreen"),
+        },
+        {
             label: "Licensing",
             icon: "gpp-good",
             onPress: () => navigation.navigate("LicensingScreen"),
@@ -223,6 +228,11 @@ const ProfileScreen: React.FC = () => {
             label: "My Bets",
             icon: "receipt-long",
             onPress: () => navigation.navigate("Sports", { screen: "MyBetsScreen" }),
+        },
+        {
+            label: "Affiliate",
+            icon: "handshake",
+            onPress: () => navigation.navigate("AffiliateScreen"),
         },
         {
             label: "Self Exclusion",
