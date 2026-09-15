@@ -17,7 +17,23 @@ interface Props {
   jackpot?: boolean;
 }
 
-/** Mobile match card — mirrors web `.mobile-match-card` layout */
+/** Format like web: `15/09/26 - 15:15` */
+const formatMatchStartTime = (startTime?: string) => {
+  if (!startTime) return "-";
+  const raw = String(startTime).trim();
+  const parsed = new Date(
+    raw.includes("T") || raw.includes("-") ? raw.replace(" ", "T") : raw
+  );
+  if (Number.isNaN(parsed.getTime())) return raw;
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = String(parsed.getFullYear()).slice(-2);
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} - ${hours}:${minutes}`;
+};
+
+/** Mobile match card — mirrors live web `.mobile-match-card` */
 const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
   const navigation: any = useNavigation();
 
@@ -38,6 +54,10 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
 
   const sidebetsCount = Number(match?.sidebets) || 0;
 
+  const metaLabel = live
+    ? liveTime || match?.match_status || "LIVE"
+    : formatMatchStartTime(match?.start_time);
+
   const openMatchDetails = useCallback(() => {
     if (jackpot) return;
     navigation.navigate("MatchAllMarketsScreen", {
@@ -56,15 +76,11 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
 
   return (
     <View style={styles.card}>
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText} numberOfLines={1}>
-          {live
-            ? liveTime || match?.match_status || "LIVE"
-            : match?.start_time || "-"}
-          {"  "}
-          <Text style={styles.metaId}>ID: {match?.match_id || "-"}</Text>
-        </Text>
-      </View>
+      <Text style={styles.metaText} numberOfLines={1}>
+        {metaLabel}
+        {" | ID: "}
+        {match?.match_id || "-"}
+      </Text>
 
       <View style={styles.midRow}>
         <TouchableOpacity
@@ -113,7 +129,7 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
       </View>
 
       <View style={styles.oddsRow}>
-        {odds.map((odd: any) => {
+        {odds.map((odd: any, index: number) => {
           const oddMatch = {
             ...match,
             odd_key: odd?.odd_key || odd?.name || odd?.label,
@@ -132,6 +148,7 @@ const MatchRow: React.FC<Props> = ({ match, live, jackpot }) => {
               mkt="1x2"
               live={live}
               listing
+              last={index === odds.length - 1}
             />
           );
         })}
@@ -152,28 +169,22 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 5,
     borderBottomRightRadius: 5,
   },
-  metaRow: {
-    marginBottom: 6,
-  },
   metaText: {
     color: "rgba(255,255,255,0.85)",
-    fontSize: 10,
-    lineHeight: 13,
-  },
-  metaId: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
+    marginBottom: 6,
   },
   midRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: 8,
   },
   teams: {
     flex: 1,
     minWidth: 0,
-    paddingRight: 6,
   },
   team: {
     color: "#fff",
@@ -181,7 +192,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textTransform: "uppercase",
     letterSpacing: 0.2,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   scoreCol: {
     marginHorizontal: 4,
@@ -205,7 +216,7 @@ const styles = StyleSheet.create({
     height: 22,
     paddingHorizontal: 6,
     borderRadius: 4,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
@@ -215,10 +226,10 @@ const styles = StyleSheet.create({
     minWidth: 40,
   },
   marketsText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 14,
+    color: "#FFD700",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 16,
   },
   marketBar: {
     backgroundColor: "rgba(10,22,45,0.69)",
@@ -236,10 +247,8 @@ const styles = StyleSheet.create({
   },
   oddsRow: {
     flexDirection: "row",
-    backgroundColor: "#0A162D",
     borderBottomLeftRadius: 6,
     borderBottomRightRadius: 6,
     overflow: "hidden",
-    gap: 1,
   },
 });

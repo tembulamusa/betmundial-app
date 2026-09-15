@@ -7,14 +7,16 @@ import {
     ActivityIndicator,
     StyleSheet,
     ScrollView,
+    Linking,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { Formik } from "formik";
 import { Context } from "../../context/store";
 import { makeRequest } from "../../components/utils/makeRequest";
 import { isValidKenyanPhoneNumber, normalizeKenyanPhoneNumber } from "../../components/utils/phone";
-import { setItem } from "../../components/utils/local-storage";
+import { getItem, setItem } from "../../components/utils/local-storage";
 import { theme } from "../../theme";
+import { RESPONSIBLE_GAMBLING_URL } from "../../constants/responsibleGambling";
 
 export default function RegisterScreen({ navigation, route }: any) {
     const [state, dispatch] = useContext(Context);
@@ -30,9 +32,36 @@ export default function RegisterScreen({ navigation, route }: any) {
         return promoName ? `${base}:${promoName}` : base;
     }, [promoName]);
 
+    const leaveRegister = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.navigate("HomeMain");
+        }
+    };
+
     useEffect(() => {
         dispatch({ type: "DEL", key: "showloginmodal" });
     }, [dispatch]);
+
+    // Already logged in → leave Register (web signup navigates home).
+    useEffect(() => {
+        let cancelled = false;
+        const redirectIfLoggedIn = async () => {
+            if (state?.user) {
+                leaveRegister();
+                return;
+            }
+            const cached = await getItem("user");
+            if (!cancelled && cached) {
+                leaveRegister();
+            }
+        };
+        void redirectIfLoggedIn();
+        return () => {
+            cancelled = true;
+        };
+    }, [state?.user]);
 
     const initialValues = {
         msisdn: "",
@@ -62,6 +91,58 @@ export default function RegisterScreen({ navigation, route }: any) {
         }
 
         return errors;
+    };
+
+    const isAccountAlreadyExistsResponse = (response: {
+        status?: number;
+        error?: string;
+        data?: any;
+    }) => {
+        if (response?.status === 409) return true;
+
+        const data = response?.data;
+        const parts = [
+            response?.error,
+            data?.message,
+            typeof data?.error === "string" ? data.error : data?.error?.message,
+            data?.result,
+            typeof data?.status === "string" ? data.status : null,
+        ]
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase());
+
+        const text = parts.join(" ");
+        if (!text) return false;
+
+        return (
+            text.includes("exist") ||
+            text.includes("already registered") ||
+            text.includes("already taken") ||
+            text.includes("duplicate") ||
+            (text.includes("already") &&
+                (text.includes("account") ||
+                    text.includes("user") ||
+                    text.includes("msisdn") ||
+                    text.includes("phone") ||
+                    text.includes("mobile") ||
+                    text.includes("number")))
+        );
+    };
+
+    const openLoginForExistingAccount = (msisdn: string, password: string) => {
+        dispatch({
+            type: "SET",
+            key: "loginmodalprefill",
+            payload: { mobile: msisdn, password, autoLogin: false },
+        });
+        dispatch({
+            type: "SET",
+            key: "loginmodalmessage",
+            payload: "Account already exists. Please login.",
+        });
+        dispatch({ type: "SET", key: "showloginmodal", payload: true });
+        // Leave Register so the user isn't stuck behind the login modal.
+        leaveRegister();
     };
 
     const submitRegistration = async (values: any) => {
@@ -97,6 +178,8 @@ export default function RegisterScreen({ navigation, route }: any) {
             dispatch({ type: "DEL", key: "loginmodalprefill" });
             dispatch({ type: "DEL", key: "loginmodalmessage" });
             navigation.navigate("VerifyAccountScreen");
+        } else if (isAccountAlreadyExistsResponse(response)) {
+            openLoginForExistingAccount(normalizedMsisdn, values.password);
         } else {
             setSubmitError(response?.error || "Error making registration");
         }
@@ -228,7 +311,16 @@ export default function RegisterScreen({ navigation, route }: any) {
                                     >
                                         Privacy Policy
                                     </Text>{" "}
-                                    and Responsible Gambling Policy.
+                                    and{" "}
+                                    <Text
+                                        style={styles.inlineLink}
+                                        onPress={() =>
+                                            Linking.openURL(RESPONSIBLE_GAMBLING_URL).catch(() => {})
+                                        }
+                                    >
+                                        Responsible Gambling Policy
+                                    </Text>
+                                    .
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.ageWarningBox}
@@ -290,6 +382,7 @@ export default function RegisterScreen({ navigation, route }: any) {
                                         key: "showloginmodal",
                                         payload: true,
                                     });
+                                    leaveRegister();
                                 }}
                             >
                                 <Text style={styles.loginLink}>

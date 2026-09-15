@@ -47,8 +47,10 @@ react {
     //   The hermes compiler command to run. By default it is 'hermesc'
     // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
     //
-    //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
-    // hermesFlags = ["-O", "-output-source-map"]
+    // Skip Hermes source-map output: compose-source-maps.js fails on this app's
+    // large inlined SVG assets (Unterminated string in JSON). Release AABs do
+    // not need packager+Hermes composed source maps.
+    hermesFlags = ["-O"]
 
     /* Autolinking */
     autolinkLibrariesWithApp()
@@ -94,8 +96,8 @@ android {
         applicationId "com.betmundial"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 28
-        versionName "1.0.28"
+        versionCode 29
+        versionName "1.0.29"
     }
     signingConfigs {
         debug {

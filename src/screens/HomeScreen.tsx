@@ -30,6 +30,7 @@ import { getItem } from "../components/utils/local-storage";
 import { makeRequest } from "../components/utils/makeRequest";
 import { theme } from "../theme";
 import HighlightsBoard from "../components/HighlightsBoard";
+import SiteFooter from "../components/common/SiteFooter";
 
 type RootStackParamList = {
     Home: {
@@ -292,9 +293,12 @@ const HomeScreen: React.FC = () => {
                 ListHeaderComponent={renderHeader}
 
                 ListFooterComponent={
-                    paginationLoading
-                        ? <ShimmerLoader count={3} height={50} marginVertical={8} />
-                        : null
+                    <>
+                        {paginationLoading ? (
+                            <ShimmerLoader count={3} height={50} marginVertical={8} />
+                        ) : null}
+                        <SiteFooter />
+                    </>
                 }
 
                 onEndReached={loadMore}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import socket from "../utils/SocketConnect";
 import MatchWidget from "../utils/MatchWidget";
 
@@ -9,10 +10,10 @@ interface Props {
     live?: boolean;
 }
 
+/** Match detail top — mirrors web `.match-detail-header` + Betradar LMT area */
 const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
     const [score, setScore] = useState<string>("");
     const [matchTime, setMatchTime] = useState<any>({});
-    const [matchStatus, setMatchStatus] = useState<string>("");
 
     const socketRef = useRef(socket);
     const socketEvent = useMemo(
@@ -27,16 +28,15 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
             navigation.goBack();
             return;
         }
-
         navigation.navigate("Sports", {
             screen: live ? "LiveScreen" : "HomeMain",
         });
     };
 
     const updateMatchTimeMinutesAndSeconds = (match_time: string) => {
-        setMatchTime((prevTime: any) => {
+        setMatchTime(() => {
             if (match_time) {
-                let [minutes, seconds] = match_time.split(":").map(Number);
+                const [minutes, seconds] = match_time.split(":").map(Number);
                 return { minutes, seconds };
             }
             return null;
@@ -46,8 +46,6 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
     const handleGameSocket = useCallback((type: string, gameId: string) => {
         if (type === "listen" && socketRef.current?.connected) {
             socketRef.current.emit("user.match.listen", gameId);
-        } else if (type === "leave" && matchStatus?.toLowerCase()?.trim() === "ended") {
-            // socketRef.current?.emit('user.match.leave', gameId);
         }
     }, []);
 
@@ -58,7 +56,6 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
 
         const handleSocketData = (data: any) => {
             setScore(data?.score);
-            setMatchStatus(data?.match_status);
             updateMatchTimeMinutesAndSeconds(data?.match_time);
         };
 
@@ -69,21 +66,13 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
         };
     }, [handleGameSocket, match, socketEvent]);
 
-    const LivescoreFooter = () => {
-        return (
-            <View style={styles.footer}>
-                <Text style={styles.footerItem}>Match</Text>
-                <Text style={styles.footerItem}>Head to head</Text>
-                <Text style={styles.footerItem}>Standings</Text>
-                <Text style={styles.footerItem}>Lineups</Text>
-            </View>
-        );
-    };
-
     const liveTimeLabel =
         matchTime?.minutes != null
             ? `${matchTime.minutes}:${String(matchTime.seconds ?? 0).padStart(2, "0")}`
             : match?.match_time;
+
+    const home = match?.home_team || "Home";
+    const away = match?.away_team || "Away";
 
     return (
         <>
@@ -91,19 +80,21 @@ const MoreMarketsHeader: React.FC<Props> = ({ match, live }) => {
                 <TouchableOpacity
                     style={styles.backRow}
                     onPress={handleBackPress}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
                 >
-                    <Text style={styles.backIcon}>{"←"}</Text>
+                    <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.7)" />
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
-                <Text style={styles.matchTitle} numberOfLines={1}>
-                    {match?.home_team || "Home"} - {match?.away_team || "Away"}
+                <Text style={styles.matchTitle} numberOfLines={2}>
+                    {home} - {away}
                 </Text>
             </View>
 
             <MatchWidget
                 parentMatchId={match?.parent_match_id}
-                homeTeam={match?.home_team}
-                awayTeam={match?.away_team}
+                homeTeam={home}
+                awayTeam={away}
                 score={score || match?.score}
                 matchTime={liveTimeLabel}
                 live={live}
@@ -116,90 +107,31 @@ export default React.memo(MoreMarketsHeader);
 
 const styles = StyleSheet.create({
     header: {
-        paddingTop: 12,
-        paddingHorizontal: 12,
-        paddingBottom: 8,
-        backgroundColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "#0f0f1f",
+        paddingTop: 20,
+        paddingHorizontal: 8,
+        paddingBottom: 14,
+        flexDirection: "row",
+        alignItems: "flex-start",
+        flexWrap: "wrap",
     },
-
     backRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 8,
-        backgroundColor: "rgba(0,0,0,0.35)",
-        paddingHorizontal: 8,
-        paddingVertical: 6,
-        borderRadius: 6,
-        alignSelf: "flex-start",
+        marginRight: 6,
+        opacity: 0.7,
+        paddingTop: 1,
     },
-
     backText: {
         color: "#fff",
-        marginLeft: 6,
         fontSize: 13,
-        opacity: 0.8,
+        marginLeft: 2,
     },
-
-    backIcon: {
-        color: "#fff",
-        fontSize: 18,
-        fontWeight: "700",
-        lineHeight: 18,
-    },
-
     matchTitle: {
         color: "#fff",
-        fontSize: 15,
-        fontWeight: "700",
-        textAlign: "center",
-        marginBottom: 4,
-    },
-
-    teamRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        width: "100%",
-    },
-
-    teamBlock: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-
-    teamJersey: {
-        fontSize: 18,
-        marginRight: 8,
-    },
-
-    teamName: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "600",
-    },
-
-    vsText: {
-        color: "#ccc",
-        fontSize: 12,
-        marginHorizontal: 8,
-    },
-
-    matchTitle: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "600",
-    },
-
-    footer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        paddingVertical: 10,
-        backgroundColor: "#1a1a1a",
-    },
-
-    footerItem: {
-        color: "#fff",
-        textTransform: "capitalize",
-        fontSize: 13,
+        fontSize: 16,
+        fontWeight: "400",
+        flex: 1,
+        lineHeight: 22,
     },
 });

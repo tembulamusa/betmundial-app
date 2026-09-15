@@ -84,12 +84,14 @@ const MobileChat: React.FC = () => {
 export default memo(MobileChat);
 
 const styles = StyleSheet.create({
+    /** Web `.mobile-chat-button--inline` */
     chatBtn: {
         minWidth: 52,
         minHeight: 26,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
+        overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
     },

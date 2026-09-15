@@ -14,6 +14,7 @@ import {
     ScrollView,
     TouchableOpacity,
     StyleSheet,
+    Linking,
     type StyleProp,
     type ViewStyle,
 } from "react-native";
@@ -25,6 +26,11 @@ import { CasinoIcon } from "../utils/CasinoIcons";
 import { makeRequest } from "../utils/makeRequest";
 import { getItem, setItem } from "../utils/local-storage";
 import { theme } from "../../theme";
+import {
+    AFFILIATE_LOGIN_REDIRECT,
+    openLoginWithRedirect,
+} from "../utils/loginRedirect";
+import { BETMUNDIAL_RESPONSIBLE_GAMBLING_URL } from "../../constants/responsibleGambling";
 
 type NavBadge = "hot" | "new";
 
@@ -40,6 +46,7 @@ type LinkItem = {
     name: string;
     icon: string;
     link?: string;
+    externalUrl?: string;
     custom?: boolean;
     provider?: string;
     gameName?: string;
@@ -156,6 +163,11 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
             { name: "casino", icon: "casino.svg", link: "CasinoScreen" },
             { name: "Crash", icon: "crash.svg", link: "CasinoScreen", badge: "new" },
             { name: "promotions", icon: "promos.svg", link: "PromotionsScreen" },
+            {
+                name: "responsible gambling",
+                icon: "app.svg",
+                externalUrl: BETMUNDIAL_RESPONSIBLE_GAMBLING_URL,
+            },
             { name: "livescore", icon: "livescore.svg", link: "LiveScreen" },
         ],
         []
@@ -204,7 +216,7 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
 
             if (item.link === "AffiliateScreen") {
                 if (!state?.user) {
-                    dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                    openLoginWithRedirect(dispatch, AFFILIATE_LOGIN_REDIRECT);
                     return;
                 }
                 navigation.navigate("Sports", { screen: "AffiliateScreen" });
@@ -216,6 +228,11 @@ const HeaderNav: React.FC<HeaderNavProps> = ({ containerStyle }) => {
                 navigateDeferred(() => {
                     dispatch({ type: "SET", key: "playType", payload: "sports" });
                 });
+                return;
+            }
+
+            if (item.externalUrl) {
+                Linking.openURL(item.externalUrl).catch(() => {});
                 return;
             }
 

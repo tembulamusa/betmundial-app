@@ -10,6 +10,10 @@ import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { Context } from "../../context/store";
 import { theme } from "../../theme";
+import {
+    AFFILIATE_LOGIN_REDIRECT,
+    openLoginWithRedirect,
+} from "../utils/loginRedirect";
 
 interface SearchProps {
     onActiveChange?: (active: boolean) => void;
@@ -77,26 +81,30 @@ const Search: React.FC<SearchProps> = ({ onActiveChange }) => {
         return (
             <View style={styles.container}>
                 <TouchableOpacity
-                    style={styles.searchBtn}
+                    style={styles.triggerHit}
                     onPress={showSearchBar}
                     activeOpacity={0.85}
                     accessibilityLabel="Open search"
                 >
-                    <Icon name="search" size={16} color="#fff" />
+                    <View style={styles.searchChip}>
+                        <Icon name="search" size={14} color="#fff" />
+                    </View>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.affiliateBtn}
+                    style={styles.triggerHit}
                     onPress={() => {
                         if (state?.user) {
                             navigation.navigate("Sports", { screen: "AffiliateScreen" });
                         } else {
-                            dispatch({ type: "SET", key: "showloginmodal", payload: true });
+                            openLoginWithRedirect(dispatch, AFFILIATE_LOGIN_REDIRECT);
                         }
                     }}
                     activeOpacity={0.85}
                     accessibilityLabel="Affiliate"
                 >
-                    <Icon name="handshake-o" size={15} color="#fff" />
+                    <View style={styles.affiliateChip}>
+                        <Icon name="handshake-o" size={14} color="#fff" />
+                    </View>
                 </TouchableOpacity>
             </View>
         );
@@ -152,25 +160,32 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
-        gap: 8,
+        gap: 2,
     },
-    searchBtn: {
+    /** Hit target matches web 44×44 trigger box */
+    triggerHit: {
         width: 44,
-        height: 32,
-        borderRadius: 7,
-        backgroundColor: "rgba(167, 31, 102, 0.24)",
-        borderWidth: 1,
-        borderColor: "rgba(167, 31, 102, 0.35)",
+        height: 44,
         alignItems: "center",
         justifyContent: "center",
     },
-    affiliateBtn: {
-        width: 44,
-        height: 32,
-        borderRadius: 7,
-        backgroundColor: "rgba(167, 31, 102, 0.24)",
+    /** Web mobile tools: transparent fill + magenta border, 34×28, radius 4 */
+    searchChip: {
+        width: 34,
+        height: 28,
+        borderRadius: 4,
+        backgroundColor: "transparent",
         borderWidth: 1,
-        borderColor: "rgba(167, 31, 102, 0.35)",
+        borderColor: "#a71f66",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    /** Web `.header-affiliate-trigger__icon` — solid brand purple */
+    affiliateChip: {
+        width: 34,
+        height: 28,
+        borderRadius: 4,
+        backgroundColor: "#a71f66",
         alignItems: "center",
         justifyContent: "center",
     },

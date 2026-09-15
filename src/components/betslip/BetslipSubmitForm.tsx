@@ -30,7 +30,6 @@ import { getItem, removeItem } from "../utils/local-storage";
 import { getStoredIpAddress } from "../../services/ipAddressSync";
 import { makeRequest } from "../utils/makeRequest";
 import { formatToFloat } from "../utils/formatters";
-import { theme } from "../../theme";
 import { calculateWinnings, Float } from "./betslipCalculations";
 import { commitBetslipUpdate } from "../../stores/betslipStore";
 import {
@@ -418,7 +417,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 ) : null}
 
                 <View style={styles.row}>
-                    <Text style={styles.label}>AMOUNT (KSH)</Text>
+                    <Text style={styles.label}>AMOUNT(ksh)</Text>
                     {jackpot ? (
                         <Text style={styles.value}>{jackpotData?.bet_amount}</Text>
                     ) : (
@@ -435,7 +434,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 </View>
 
                 {!jackpot && bonusBalance > 0 ? (
-                    <View style={styles.bonusRow}>
+                    <View style={styles.bonusRowBody}>
                         <Pressable
                             style={styles.useBonusRow}
                             onPress={() => setUseBonus((prev) => !prev)}
@@ -462,7 +461,7 @@ const BetslipSubmitForm: React.FC<Props> = ({
                     <View style={styles.row}>
                         <Text style={styles.label}>Excise Tax (0%)</Text>
                         <Text style={styles.value}>
-                            KSH {calculations.exciseTax.toFixed(2)}
+                            KSH. {calculations.exciseTax.toFixed(2)}
                         </Text>
                     </View>
                 ) : null}
@@ -473,15 +472,15 @@ const BetslipSubmitForm: React.FC<Props> = ({
                     <View style={styles.highlightRow}>
                         <Text style={styles.highlightLabel}>Bonus</Text>
                         <Text style={styles.highlightValue}>
-                            KES {formatNumber(calculations.bonus || 0)}
+                            KES. {formatNumber(calculations.bonus || 0)}
                         </Text>
                     </View>
                 ) : null}
 
                 <View style={styles.row}>
-                    <Text style={styles.winLabel}>Possible Win</Text>
+                    <Text style={styles.winLabel}>possible Win</Text>
                     <Text style={styles.winValue}>
-                        KSH{" "}
+                        KSH.{" "}
                         {formatNumber(
                             jackpot
                                 ? jackpotData?.jackpot_amount
@@ -524,42 +523,44 @@ const BetslipSubmitForm: React.FC<Props> = ({
                 onRequestClose={() => setShowBonusTerms(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
-                        <TouchableOpacity
-                            style={styles.modalClose}
-                            onPress={() => setShowBonusTerms(false)}
-                        >
-                            <Text style={styles.closeText}>×</Text>
-                        </TouchableOpacity>
+                    <View style={styles.modalShell}>
+                        <View style={styles.modalCard}>
+                            <TouchableOpacity
+                                style={styles.modalClose}
+                                onPress={() => setShowBonusTerms(false)}
+                            >
+                                <Text style={styles.closeText}>×</Text>
+                            </TouchableOpacity>
 
-                        <Text style={styles.modalTitle}>Bonus Terms</Text>
-                        <Text style={styles.modalText}>
-                            Bonus funds are subject to wagering requirements and expiry.
-                        </Text>
-
-                        {useBonus ? (
+                            <Text style={styles.modalTitle}>Bonus Terms</Text>
                             <Text style={styles.modalText}>
-                                At {bonusUsePercentage}% bonus usage, placing this KSh{" "}
-                                {formatNumber(stake)} bet will deduct{" "}
-                                <Text style={styles.goldText}>
-                                    KSh {formatNumber(bonusStakePortion)}
-                                </Text>{" "}
-                                from your bonus balance and KSh{" "}
-                                {formatNumber(balanceStakePortion)} from your real balance.
+                                Bonus funds are subject to wagering requirements and expiry.
                             </Text>
-                        ) : (
-                            <Text style={styles.modalText}>
-                                Tick "Use Bonus" to cover part of this stake from your bonus
-                                balance instead of your real balance.
-                            </Text>
-                        )}
 
-                        <TouchableOpacity
-                            style={styles.placeBtn}
-                            onPress={() => setShowBonusTerms(false)}
-                        >
-                            <Text style={styles.btnText}>Close</Text>
-                        </TouchableOpacity>
+                            {useBonus ? (
+                                <Text style={styles.modalText}>
+                                    At {bonusUsePercentage}% bonus usage, placing this KSh{" "}
+                                    {formatNumber(stake)} bet will deduct{" "}
+                                    <Text style={styles.goldText}>
+                                        KSh {formatNumber(bonusStakePortion)}
+                                    </Text>{" "}
+                                    from your bonus balance and KSh{" "}
+                                    {formatNumber(balanceStakePortion)} from your real balance.
+                                </Text>
+                            ) : (
+                                <Text style={styles.modalText}>
+                                    Tick "Use Bonus" to cover part of this stake from your bonus
+                                    balance instead of your real balance.
+                                </Text>
+                            )}
+
+                            <TouchableOpacity
+                                style={styles.placeBtn}
+                                onPress={() => setShowBonusTerms(false)}
+                            >
+                                <Text style={styles.btnText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -572,7 +573,7 @@ export default React.memo(BetslipSubmitForm);
 const styles = StyleSheet.create({
     container: {
         marginTop: 8,
-        borderRadius: 8,
+        borderRadius: 0,
         overflow: "hidden",
         backgroundColor: "rgba(255,255,255,0.15)",
     },
@@ -583,34 +584,35 @@ const styles = StyleSheet.create({
         borderBottomColor: "rgba(255,255,255,0.12)",
     },
     placeBetSection: {
-        backgroundColor: "rgba(255,255,255,0.05)",
+        backgroundColor: "rgba(0, 12, 36, 0.55)",
         paddingHorizontal: 12,
         paddingBottom: 12,
+        paddingTop: 4,
     },
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 14,
+        marginBottom: 12,
         gap: 12,
     },
     label: {
         color: "rgba(255,255,255,0.7)",
-        fontSize: 13,
-        textTransform: "uppercase",
+        fontSize: 12,
+        textTransform: "none",
         flex: 1,
     },
     value: {
         color: "#fff",
         fontWeight: "700",
-        fontSize: 14,
+        fontSize: 13,
     },
     stakeInput: {
         minWidth: 100,
         height: 30,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.35)",
-        borderRadius: 6,
+        borderRadius: 4,
         backgroundColor: "rgba(0,0,0,0.25)",
         color: "#fff",
         fontWeight: "700",
@@ -619,106 +621,117 @@ const styles = StyleSheet.create({
         paddingVertical: 0,
         textAlign: "right",
     },
-    bonusRow: {
+    bonusRowBody: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 14,
+        marginBottom: 12,
+        backgroundColor: "rgb(38, 48, 69)",
+        borderRadius: 6,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
     },
     useBonusRow: {
         flexDirection: "row",
         alignItems: "center",
         flex: 1,
-        gap: 8,
+        gap: 6,
     },
     checkbox: {
-        width: 18,
-        height: 18,
+        width: 16,
+        height: 16,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.6)",
-        borderRadius: 3,
+        borderRadius: 2,
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "transparent",
     },
     checkboxChecked: {
-        backgroundColor: "#e70654",
-        borderColor: "#e70654",
+        backgroundColor: "#a71f66",
+        borderColor: "#a71f66",
     },
     checkMark: {
         color: "#fff",
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: "700",
-        lineHeight: 14,
+        lineHeight: 12,
     },
     useBonusText: {
         color: "#fff",
         fontSize: 13,
+        fontWeight: "400",
         flexShrink: 1,
+        textTransform: "none",
     },
     goldText: {
         color: "rgba(255, 215, 0, 1)",
         fontWeight: "700",
     },
     termsLink: {
-        color: theme.accent,
+        color: "#a71f66",
         fontWeight: "600",
         fontSize: 13,
         marginLeft: 10,
         textDecorationLine: "underline",
         textDecorationStyle: "dotted",
-        textDecorationColor: theme.accent,
+        textDecorationColor: "#a71f66",
+        textTransform: "none",
     },
     highlightRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingVertical: 12,
+        paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: "rgba(255,255,255,0.08)",
-        marginBottom: 8,
+        marginBottom: 6,
     },
     highlightLabel: {
         color: "#fff",
         fontWeight: "600",
-        fontSize: 14,
+        fontSize: 13,
     },
     highlightValue: {
-        color: "#fff",
+        color: "rgba(255, 215, 0, 1)",
         fontWeight: "700",
-        fontSize: 14,
+        fontSize: 13,
     },
     winLabel: {
         color: "#fff",
-        fontSize: 14,
-        textTransform: "capitalize",
+        fontSize: 13,
+        textTransform: "none",
     },
     winValue: {
         color: "#fff",
         fontWeight: "700",
-        fontSize: 15,
+        fontSize: 14,
     },
     buttons: {
         flexDirection: "row",
         justifyContent: "space-between",
-        gap: 10,
-        marginTop: 8,
+        gap: 8,
+        marginTop: 6,
     },
     removeBtn: {
         flex: 1,
-        backgroundColor: "#444",
-        paddingVertical: 12,
-        borderRadius: 6,
-        alignItems: "center",
-    },
-    placeBtn: {
-        flex: 1,
-        backgroundColor: "#e70654",
-        paddingVertical: 12,
+        backgroundColor: "rgba(255,255,255,0.18)",
+        paddingVertical: 10,
+        paddingHorizontal: 6,
         borderRadius: 6,
         alignItems: "center",
         justifyContent: "center",
-        minHeight: 44,
+        minHeight: 40,
+    },
+    placeBtn: {
+        flex: 1,
+        backgroundColor: "#a71f66",
+        paddingVertical: 10,
+        paddingHorizontal: 6,
+        borderRadius: 6,
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 40,
     },
     placeBtnDisabled: {
         opacity: 0.6,
@@ -726,43 +739,60 @@ const styles = StyleSheet.create({
     btnText: {
         color: "#fff",
         fontWeight: "700",
-        fontSize: 13,
+        fontSize: 11,
+        letterSpacing: 0.3,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.65)",
+        backgroundColor: "rgba(0,0,0,0.55)",
         justifyContent: "center",
         padding: 20,
     },
+    modalShell: {
+        backgroundColor: "rgb(191, 194, 200)",
+        borderRadius: 8,
+        overflow: "hidden",
+        maxWidth: 360,
+        alignSelf: "center",
+        width: "100%",
+    },
     modalCard: {
-        backgroundColor: "#0c0c24",
-        borderRadius: 12,
+        backgroundColor: "rgba(0, 0, 0, 0.48)",
         padding: 20,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.1)",
+        position: "relative",
     },
     modalClose: {
         position: "absolute",
-        right: 12,
-        top: 8,
+        right: 10,
+        top: 10,
         zIndex: 2,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: "#d32f2f",
+        alignItems: "center",
+        justifyContent: "center",
     },
     closeText: {
         color: "#fff",
-        fontSize: 28,
+        fontSize: 18,
         fontWeight: "700",
-        lineHeight: 28,
+        lineHeight: 20,
+        marginTop: -1,
     },
     modalTitle: {
         color: "#fff",
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "700",
-        marginBottom: 12,
+        marginBottom: 10,
+        marginRight: 28,
+        textTransform: "none",
     },
     modalText: {
-        color: "rgba(255,255,255,0.85)",
+        color: "rgba(255,255,255,0.9)",
         fontSize: 14,
         lineHeight: 20,
-        marginBottom: 12,
+        marginBottom: 14,
+        textTransform: "none",
     },
 });

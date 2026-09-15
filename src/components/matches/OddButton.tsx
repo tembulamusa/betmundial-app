@@ -37,6 +37,8 @@ interface Props {
     marketKey?: string;
     /** Compact listing style (home match cards) */
     listing?: boolean;
+    /** Hide right seam (last cell in a row) */
+    last?: boolean;
 }
 
 const clean = (str: string) =>
@@ -118,6 +120,17 @@ const getMobileOddLabel = (match: any, mkt?: string) => {
     return match?.odd_key || "";
 };
 
+/** Mirrors web detail label: odd_key + optional special bet suffix */
+const getDetailOddLabel = (match: any) => {
+    const key = String(match?.odd_key || "").trim();
+    const special = String(match?.special_bet_value || "").trim();
+    if (!special) return key;
+    const specialTail = special.slice(special.lastIndexOf(":") + 1);
+    const stripped = special.replace(/^[+-]/, "");
+    if (key.toLowerCase().includes(stripped.toLowerCase())) return key;
+    return `${key} (${specialTail})`;
+};
+
 const OddButton: React.FC<Props> = ({
     match,
     mkt,
@@ -126,6 +139,7 @@ const OddButton: React.FC<Props> = ({
     jackpot,
     marketKey,
     listing,
+    last,
 }) => {
     const dispatch = useAppDispatch();
     const [pressedPicked, setPressedPicked] = useState<boolean | null>(null);
@@ -158,11 +172,7 @@ const OddButton: React.FC<Props> = ({
         pressedPicked !== null ? pressedPicked : isPickedFromSlip;
 
     const displayLabel = useMemo(() => {
-        if (detail) {
-            const key = match?.odd_key || "";
-            const special = match?.special_bet_value;
-            return special ? `${key} ${special}` : key;
-        }
+        if (detail) return getDetailOddLabel(match);
         return getMobileOddLabel(match, mkt);
     }, [detail, match, mkt]);
 
@@ -231,18 +241,23 @@ const OddButton: React.FC<Props> = ({
         ucn,
     ]);
 
+    const isCompact = listing || detail;
+
     return (
         <TouchableOpacity
             activeOpacity={0.9}
             onPress={handlePress}
             style={[
-                listing ? styles.listingButton : styles.button,
+                isCompact ? styles.compactButton : styles.button,
+                listing && styles.listingFill,
+                detail && styles.detailFill,
+                !last && isCompact && styles.seam,
                 isPicked && styles.picked,
             ]}
         >
             <Text
                 style={[
-                    listing ? styles.listingLabel : styles.label,
+                    isCompact ? styles.compactLabel : styles.label,
                     isPicked && styles.pickedText,
                 ]}
                 numberOfLines={1}
@@ -251,7 +266,7 @@ const OddButton: React.FC<Props> = ({
             </Text>
             <Text
                 style={[
-                    listing ? styles.listingValue : styles.value,
+                    isCompact ? styles.compactValue : styles.value,
                     isPicked && styles.pickedText,
                 ]}
             >
@@ -275,10 +290,9 @@ const styles = StyleSheet.create({
         marginHorizontal: 2,
         paddingHorizontal: 4,
     },
-    listingButton: {
+    compactButton: {
         flex: 1,
         minHeight: 40,
-        backgroundColor: "rgba(255,255,255,0.25)",
         borderRadius: 0,
         paddingVertical: 4,
         paddingHorizontal: 4,
@@ -286,8 +300,19 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 4,
     },
+    listingFill: {
+        backgroundColor: "rgba(255,255,255,0.2)",
+    },
+    detailFill: {
+        backgroundColor: "rgba(255,255,255,0.15)",
+    },
+    seam: {
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderRightColor: "rgba(255,255,255,0.08)",
+    },
     picked: {
         backgroundColor: "#a71f66",
+        borderRightColor: "transparent",
     },
     label: {
         color: "rgba(255,255,255,0.9)",
@@ -296,13 +321,14 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
         textAlign: "center",
     },
-    listingLabel: {
+    compactLabel: {
         color: "rgba(255,255,255,0.9)",
         fontSize: 10,
         fontWeight: "500",
         textTransform: "uppercase",
         textAlign: "center",
         lineHeight: 12,
+        letterSpacing: 0.2,
         maxWidth: "100%",
     },
     value: {
@@ -311,7 +337,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         marginTop: 2,
     },
-    listingValue: {
+    compactValue: {
         color: "#ffc428",
         fontSize: 15,
         fontWeight: "700",

@@ -20,6 +20,10 @@ import { theme } from '../theme';
 import { makeRequest } from './utils/makeRequest';
 import { getItem, setItem, normalizeUser } from './utils/local-storage';
 import { normalizeKenyanPhoneNumber } from './utils/phone';
+import {
+    clearLoginRedirect,
+    navigateLoginRedirect,
+} from './utils/loginRedirect';
 
 const CustomHeader = ({ scene, previous, navigation }) => {
     const [state, dispatch] = useContext<any>(Context);
@@ -125,7 +129,12 @@ const CustomHeader = ({ scene, previous, navigation }) => {
                     const user = normalizeUser(payload);
                     await setItem("user", user);
                     dispatch({ type: 'SET', key: 'user', payload: user });
+                    const next = state?.loginRedirect;
                     closeLoginModal();
+                    if (next) {
+                        clearLoginRedirect(dispatch);
+                        navigateLoginRedirect(navigation, next);
+                    }
                 } else {
                     setLoginError(response?.result || response?.error || 'Login failed');
                 }

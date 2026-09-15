@@ -6,7 +6,7 @@ import React, {
     useMemo,
     useRef,
     memo,
-} from 'react';
+} from "react";
 
 import {
     View,
@@ -15,12 +15,12 @@ import {
     StyleSheet,
     Pressable,
     ActivityIndicator,
-} from 'react-native';
+} from "react-native";
 
-import BetslipSubmitForm from './BetslipSubmitForm';
-import BetslipAlert from './BetslipAlert';
-import { Context } from '../../context/store';
-import { rebetSlip } from './betslipActions';
+import BetslipSubmitForm from "./BetslipSubmitForm";
+import BetslipAlert from "./BetslipAlert";
+import { Context } from "../../context/store";
+import { rebetSlip } from "./betslipActions";
 
 import {
     applyRemoveFromSlip,
@@ -29,22 +29,18 @@ import {
     getJackpotBetslip,
     persistBetslipSnapshot,
     persistJackpotBetslipSnapshot,
-} from '../utils/betslip';
-import { betslipStore, commitBetslipUpdate } from '../../stores/betslipStore';
+} from "../utils/betslip";
+import { betslipStore, commitBetslipUpdate } from "../../stores/betslipStore";
 
 const Betslip: React.FC<{
     jackpot?: boolean;
     jackpotData?: any;
     dbWinMatrix?: Record<string, any>;
-}> = ({
-    jackpot,
-    jackpotData,
-    dbWinMatrix,
-}) => {
-
+    betslipValidationData?: any;
+}> = ({ jackpot, jackpotData, dbWinMatrix }) => {
     const [state, dispatch] = useContext(Context);
 
-    const betslipKey = jackpot ? 'jackpotbetslip' : 'betslip';
+    const betslipKey = jackpot ? "jackpotbetslip" : "betslip";
     const betslipsData = state?.[betslipKey] || {};
 
     const [isLoading, setIsLoading] = useState(false);
@@ -66,10 +62,13 @@ const Betslip: React.FC<{
 
             const cleanSlip = slip || {};
 
-            if (Object.keys(cleanSlip).length !== Object.keys(betslipsData).length) {
+            if (
+                Object.keys(cleanSlip).length !==
+                Object.keys(betslipsData).length
+            ) {
                 betslipStore.set(betslipKey, cleanSlip);
                 dispatch({
-                    type: 'SET',
+                    type: "SET",
                     key: betslipKey,
                     payload: cleanSlip,
                 });
@@ -79,30 +78,32 @@ const Betslip: React.FC<{
             setIsLoading(false);
         };
 
-        loadSlip();
+        void loadSlip();
 
         return () => {
             mountedRef.current = false;
         };
-
     }, [jackpot, betslipKey]);
 
-    const handleRemove = useCallback((item: any) => {
-        if (!item) return;
+    const handleRemove = useCallback(
+        (item: any) => {
+            if (!item) return;
 
-        const currentSlip = state?.[betslipKey] || {};
-        const nextSlip = jackpot
-            ? applyRemoveFromJackpotSlip(currentSlip, item.match_id)
-            : applyRemoveFromSlip(currentSlip, item.match_id);
+            const currentSlip = state?.[betslipKey] || {};
+            const nextSlip = jackpot
+                ? applyRemoveFromJackpotSlip(currentSlip, item.match_id)
+                : applyRemoveFromSlip(currentSlip, item.match_id);
 
-        commitBetslipUpdate(dispatch, betslipKey, nextSlip);
+            commitBetslipUpdate(dispatch, betslipKey, nextSlip);
 
-        if (jackpot) {
-            persistJackpotBetslipSnapshot(nextSlip);
-        } else {
-            persistBetslipSnapshot(nextSlip);
-        }
-    }, [jackpot, betslipKey, dispatch, state]);
+            if (jackpot) {
+                persistJackpotBetslipSnapshot(nextSlip);
+            } else {
+                persistBetslipSnapshot(nextSlip);
+            }
+        },
+        [jackpot, betslipKey, dispatch, state]
+    );
 
     const dismissPlaceBetMessage = useCallback(() => {
         dispatch({ type: "DEL", key: "placebetmessage" });
@@ -118,43 +119,63 @@ const Betslip: React.FC<{
         [betslipsData]
     );
 
-    const renderItem = useCallback(({ item }: { item: any }) => {
-        if (!item) return null;
+    const renderItem = useCallback(
+        ({ item }: { item: any }) => {
+            if (!item) return null;
 
-        return (
-            <View style={styles.item}>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.teams}>
-                        {item.home_team} VS {item.away_team}
-                    </Text>
+            const oddLocked = Number(item.odd_value) === 1;
+            const marketLabel = item.odd_type || item.market_name || "Market";
+            const pickLabel = item.bet_pick || item.odd_key || "-";
 
-                    <Text style={styles.meta}>
-                        {item?.bet_type === 1 ? 'Live' : 'Pre-match'}
-                    </Text>
-
-                    <View style={styles.pickRow}>
-                        <Text style={styles.pick}>
-                            Pick — {item.bet_pick}
-                        </Text>
-
-                        <Text style={styles.oddValue}>
-                            {Number(item.odd_value).toFixed(2)}
-                        </Text>
-                    </View>
-                </View>
-
-                <Pressable
-                    onPress={() => handleRemove(item)}
-                    style={({ pressed }) => [
-                        styles.removeBtn,
-                        pressed && styles.removeBtnPressed
+            return (
+                <View
+                    style={[
+                        styles.item,
+                        item?.disable && styles.itemWarn,
+                        oddLocked && styles.itemLocked,
                     ]}
                 >
-                    <Text style={styles.removeText}>✕</Text>
-                </Pressable>
-            </View>
-        );
-    }, [handleRemove]);
+                    <View style={styles.itemBody}>
+                        <Text style={styles.teams} numberOfLines={2}>
+                            {item.home_team} - {item.away_team}
+                        </Text>
+
+                        <Text style={styles.meta}>
+                            {item?.bet_type === 1 || item?.live === 1
+                                ? "Live"
+                                : "Pre-match"}
+                            {item?.start_time ? ` · ${item.start_time}` : ""}
+                        </Text>
+
+                        <View style={styles.pickRow}>
+                            <Text style={styles.pick} numberOfLines={1}>
+                                {marketLabel}: {pickLabel}
+                            </Text>
+                            <Text style={styles.oddValue}>
+                                {Number(item.odd_value).toFixed(2)}
+                            </Text>
+                        </View>
+
+                        {item?.comment ? (
+                            <Text style={styles.comment}>{item.comment}</Text>
+                        ) : null}
+                    </View>
+
+                    <Pressable
+                        onPress={() => handleRemove(item)}
+                        style={({ pressed }) => [
+                            styles.removeBtn,
+                            pressed && styles.removeBtnPressed,
+                        ]}
+                        hitSlop={8}
+                    >
+                        <Text style={styles.removeText}>✕</Text>
+                    </Pressable>
+                </View>
+            );
+        },
+        [handleRemove]
+    );
 
     return (
         <View style={styles.container}>
@@ -164,11 +185,11 @@ const Betslip: React.FC<{
                     <Text style={styles.loadingText}>Loading betslip...</Text>
                 </View>
             ) : data.length === 0 ? (
-                <Text style={styles.empty}>
-                    {state?.placebetmessage?.status != null
-                        ? "You have not selected any bet"
-                        : "No bets found"}
-                </Text>
+                <View style={styles.emptyBox}>
+                    <Text style={styles.empty}>
+                        You have not selected any bet.
+                    </Text>
+                </View>
             ) : (
                 <FlatList
                     data={data}
@@ -198,71 +219,101 @@ export default memo(Betslip);
 
 const styles = StyleSheet.create({
     container: {
-        borderRadius: 8,
+        borderRadius: 0,
+    },
+    emptyBox: {
+        paddingVertical: 16,
+        paddingHorizontal: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: "rgba(255,255,255,0.15)",
+        marginBottom: 8,
     },
     empty: {
-        color: '#999',
-        textAlign: 'center',
-        padding: 12
+        color: "#fff",
+        textAlign: "center",
+        fontSize: 18,
+        fontWeight: "500",
+        paddingVertical: 8,
     },
     item: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "flex-start",
         paddingVertical: 10,
-        paddingHorizontal: 12,
-        marginBottom: 6,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)'
+        paddingHorizontal: 10,
+        marginBottom: 2,
+        backgroundColor: "rgba(255,255,255,0.08)",
+    },
+    itemWarn: {
+        opacity: 0.75,
+        borderLeftWidth: 3,
+        borderLeftColor: "#f29f7a",
+    },
+    itemLocked: {
+        backgroundColor: "#f29f7a",
+    },
+    itemBody: {
+        flex: 1,
+        minWidth: 0,
     },
     teams: {
-        color: '#fff',
-        fontWeight: '600'
+        color: "#fff",
+        fontWeight: "600",
+        fontSize: 13,
+        lineHeight: 18,
     },
     meta: {
-        paddingVertical: 4,
-        color: '#aaa',
-        fontSize: 12
+        paddingVertical: 3,
+        color: "rgba(255,255,255,0.55)",
+        fontSize: 11,
     },
     pickRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 4
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 2,
+        gap: 8,
     },
     pick: {
-        color: '#ccc',
-        fontSize: 14
+        color: "rgba(255,255,255,0.85)",
+        fontSize: 13,
+        flex: 1,
     },
     oddValue: {
-        color: '#ffcc00',
-        fontWeight: '700',
-        fontSize: 16
+        color: "#ffd700",
+        fontWeight: "700",
+        fontSize: 15,
+    },
+    comment: {
+        color: "#f29f7a",
+        fontSize: 11,
+        marginTop: 4,
     },
     removeBtn: {
         padding: 8,
         borderRadius: 6,
         marginLeft: 10,
-        justifyContent: 'center',
-        alignItems: 'center'
+        marginTop: -2,
+        justifyContent: "center",
+        alignItems: "center",
     },
     removeBtnPressed: {
         opacity: 0.4,
         transform: [{ scale: 0.9 }],
-        backgroundColor: 'rgba(255,0,0,0.1)'
+        backgroundColor: "rgba(255,0,0,0.1)",
     },
     removeText: {
-        color: '#de0808',
-        fontWeight: '700',
-        fontSize: 16
+        color: "#de0808",
+        fontWeight: "700",
+        fontSize: 16,
     },
     loadingContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 20
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 20,
     },
     loadingText: {
-        color: '#ccc',
+        color: "#ccc",
         marginTop: 8,
-        fontSize: 14
-    }
+        fontSize: 14,
+    },
 });

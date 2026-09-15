@@ -6,6 +6,7 @@ import {
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -16,6 +17,8 @@ import { Context } from '../../context/store';
 import { makeRequest } from '../../components/utils/makeRequest';
 import { fetchUserBalance } from '../../services/sessionSync';
 import { formatToFloat } from '../../components/utils/formatters';
+import ResponsibleGamblingNotice from '../../components/common/ResponsibleGamblingNotice';
+import { BETMUNDIAL_RESPONSIBLE_GAMBLING_URL } from '../../constants/responsibleGambling';
 
 const ProfileScreen: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -165,6 +168,10 @@ const ProfileScreen: React.FC = () => {
         },
     ];
 
+    const openResponsibleGambling = () => {
+        Linking.openURL(BETMUNDIAL_RESPONSIBLE_GAMBLING_URL).catch(() => {});
+    };
+
     const policyLinks = [
         {
             label: "Privacy Policy",
@@ -177,8 +184,13 @@ const ProfileScreen: React.FC = () => {
             onPress: () => navigation.navigate("LicensingScreen"),
         },
         {
-            label: "Responsible Gaming",
+            label: "Responsible Gambling",
             icon: "favorite",
+            onPress: openResponsibleGambling,
+        },
+        {
+            label: "Responsible Gaming Tips",
+            icon: "tips-and-updates",
             onPress: () => navigation.navigate("ResponsibleGamblingScreen"),
         },
         {
@@ -270,6 +282,7 @@ const ProfileScreen: React.FC = () => {
                 <TouchableOpacity style={styles.loginButton} onPress={openLoginModal}>
                     <Text style={styles.loginButtonText}>Login</Text>
                 </TouchableOpacity>
+                <ResponsibleGamblingNotice style={styles.emptyRgNotice} />
             </View>
         );
     }
@@ -329,6 +342,8 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>18+ & Responsible Gaming</Text>
 
+                <ResponsibleGamblingNotice style={styles.rgNotice} />
+
                 <View style={styles.linksContainer}>
                     {policyLinks.map((item, index) => (
                         <TouchableOpacity
@@ -338,7 +353,11 @@ const ProfileScreen: React.FC = () => {
                         >
                             <Icon name={item.icon} size={22} color="#fff" />
                             <Text style={styles.linkText}>{item.label}</Text>
-                            <Icon name="chevron-right" size={22} color="#fff" />
+                            <Icon
+                                name={item.label === "Responsible Gambling" ? "open-in-new" : "chevron-right"}
+                                size={22}
+                                color="#fff"
+                            />
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -405,6 +424,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 
+    emptyRgNotice: {
+        marginTop: 28,
+        width: '100%',
+    },
+
     headerCard: {
         backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: 20,
@@ -430,6 +454,7 @@ const styles = StyleSheet.create({
 
     section: { marginBottom: 12 },
     sectionTitle: { color: '#fff', fontSize: 12, marginBottom: 8 },
+    rgNotice: { marginBottom: 10 },
 
     statsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
 

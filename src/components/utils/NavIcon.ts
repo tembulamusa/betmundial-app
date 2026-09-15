@@ -53,6 +53,7 @@ import CasinoIcon from "../../assets/images/casino/icons/casino.svg";
 import AffiliateIcon from "../../assets/images/colorsvgicons/affiliate.svg";
 import PromosIcon from "../../assets/images/colorsvgicons/promos.svg";
 import CrashIcon from "../../assets/images/colorsvgicons/crash.svg";
+import AppIcon from "../../assets/images/colorsvgicons/app.svg";
 
 export const icons: Record<string, any> = {
     home: HomeIcon,
@@ -61,6 +62,7 @@ export const icons: Record<string, any> = {
     affiliate: AffiliateIcon,
     promos: PromosIcon,
     crash: CrashIcon,
+    app: AppIcon,
     aviator: AviatorIcon,
     soccer: SoccerIcon,
     basketball: BasketBallIcon,

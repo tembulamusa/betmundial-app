@@ -10,6 +10,12 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme';
+import ResponsibleGamblingNotice from '../../components/common/ResponsibleGamblingNotice';
+import {
+    RESPONSIBLE_GAMBLING_HELPLINE,
+    RESPONSIBLE_GAMBLING_TOLL_FREE,
+    RESPONSIBLE_GAMBLING_URL,
+} from '../../constants/responsibleGambling';
 
 const GettingHelpScreen: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -35,11 +41,37 @@ const GettingHelpScreen: React.FC = () => {
 
             {/* CONTENT */}
             <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+                <ResponsibleGamblingNotice style={styles.rgNotice} />
+
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>24/7 Counselling Support</Text>
                     <Text style={styles.sectionText}>
                         If you or someone you know may have a gambling problem, we strongly recommend seeking professional assistance.
                     </Text>
+                </View>
+
+                <View style={styles.supportCard}>
+                    <View style={styles.cardHeader}>
+                        <Icon name="favorite" size={24} color="#a71f66" />
+                        <Text style={styles.cardTitle}>Responsible Gambling Kenya</Text>
+                    </View>
+                    <Text style={styles.cardBody}>
+                        Helpline {RESPONSIBLE_GAMBLING_HELPLINE} · Toll-free {RESPONSIBLE_GAMBLING_TOLL_FREE}
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.linkButton}
+                        onPress={() => handleOpenLink(RESPONSIBLE_GAMBLING_URL)}
+                    >
+                        <Text style={styles.linkText}>Visit: responsiblegambling.or.ke</Text>
+                        <Icon name="open-in-new" size={18} color="#0ea5e9" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.phoneButton}
+                        onPress={() => handleCallPhone(`+254${RESPONSIBLE_GAMBLING_HELPLINE.slice(1)}`)}
+                    >
+                        <Icon name="phone" size={20} color="#fff" />
+                        <Text style={styles.phoneText}>{RESPONSIBLE_GAMBLING_HELPLINE}</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.supportCard}>
@@ -126,6 +158,9 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingBottom: 32,
     },
+    rgNotice: {
+        marginBottom: 20,
+    },
     section: {
         marginBottom: 24,
     },
@@ -164,6 +199,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         marginLeft: 12,
+    },
+    cardBody: {
+        color: 'rgba(255,255,255,0.75)',
+        fontSize: 13,
+        marginBottom: 12,
+        lineHeight: 18,
     },
     linkButton: {
         flexDirection: 'row',

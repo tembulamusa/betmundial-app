@@ -5,13 +5,20 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
+    Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../theme';
+import ResponsibleGamblingNotice from '../../components/common/ResponsibleGamblingNotice';
+import { RESPONSIBLE_GAMBLING_URL } from '../../constants/responsibleGambling';
 
 const ResponsibleGamblingScreen: React.FC = () => {
     const navigation = useNavigation<any>();
+
+    const openExternalHelp = () => {
+        Linking.openURL(RESPONSIBLE_GAMBLING_URL).catch(() => {});
+    };
 
     return (
         <View style={styles.container}>
@@ -26,6 +33,19 @@ const ResponsibleGamblingScreen: React.FC = () => {
 
             {/* CONTENT */}
             <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+                <ResponsibleGamblingNotice style={styles.rgNotice} />
+
+                <TouchableOpacity
+                    style={styles.externalCta}
+                    onPress={openExternalHelp}
+                    activeOpacity={0.8}
+                >
+                    <Icon name="open-in-new" size={20} color="#fff" />
+                    <Text style={styles.externalCtaText}>
+                        Open Responsible Gambling Kenya
+                    </Text>
+                </TouchableOpacity>
+
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Stay in Control – It's Only a Game</Text>
                     <Text style={styles.sectionText}>
@@ -83,8 +103,11 @@ const ResponsibleGamblingScreen: React.FC = () => {
 
                 <View style={styles.disclaimer}>
                     <Text style={styles.disclaimerText}>
-                        Remember: Gambling should only be for entertainment. If you feel that your gambling is becoming a problem, please seek professional help immediately.
+                        Remember: Gambling should only be for entertainment. If you feel that your gambling is becoming a problem, please seek professional help immediately at{' '}
                     </Text>
+                    <TouchableOpacity onPress={openExternalHelp}>
+                        <Text style={styles.disclaimerLink}>{RESPONSIBLE_GAMBLING_URL}</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </View>
@@ -119,6 +142,25 @@ const styles = StyleSheet.create({
     contentContainer: {
         padding: 16,
         paddingBottom: 32,
+    },
+    rgNotice: {
+        marginBottom: 12,
+    },
+    externalCta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: theme.accent,
+        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        marginBottom: 24,
+    },
+    externalCtaText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
     },
     section: {
         marginBottom: 24,
@@ -183,5 +225,12 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.8)',
         fontSize: 13,
         lineHeight: 20,
+    },
+    disclaimerLink: {
+        color: theme.accent,
+        fontSize: 13,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
+        marginTop: 6,
     },
 });

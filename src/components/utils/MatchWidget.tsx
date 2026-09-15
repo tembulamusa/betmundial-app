@@ -18,8 +18,14 @@ interface Props {
     live?: boolean;
 }
 
-const WIDGET_LOAD_TIMEOUT_MS = 12000;
+const WIDGET_CLIENT_ID = "d9d6a9c373db18dfdf63352e1c1d9321";
+const WIDGET_LOAD_TIMEOUT_MS = 15000;
+const WIDGET_BG = "#0f0f1f";
 
+/**
+ * Betradar LMT Premium area — mirrors web `match-widget.js` /
+ * `.match-widget-container` + SportPesa-style fallback team names.
+ */
 const MatchWidget: React.FC<Props> = ({
     parentMatchId,
     homeTeam,
@@ -66,83 +72,98 @@ const MatchWidget: React.FC<Props> = ({
         const matchId = String(parentMatchId ?? "");
 
         return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <style>
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            color: #fff;
-            min-height: 100%;
-          }
-          .widgets {
-            width: 100%;
-            min-height: 240px;
-          }
-          .sr-widget {
-            width: 100%;
-            min-height: 240px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="widgets">
-          <div class="sr-widget sr-widget-1"></div>
-        </div>
-        <script>
-          function post(type) {
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: type }));
-            }
-          }
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: ${WIDGET_BG};
+      color: #fff;
+      min-height: 100%;
+      overflow-x: hidden;
+    }
+    .widgets, .match-widget-container, #sr-widget, .sr-widget {
+      width: 100%;
+      min-height: 160px;
+      background: ${WIDGET_BG};
+    }
+    .sr-bb { width: 100% !important; }
+  </style>
+</head>
+<body>
+  <div class="widgets match-widget-container">
+    <div id="sr-widget" class="sr-widget"></div>
+  </div>
+  <script>
+    function post(type) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: type }));
+      }
+    }
 
-          function initWidget() {
-            var matchId = "${matchId}";
-            if (!matchId) {
-              post("widget_unavailable");
-              return;
-            }
+    function widgetHasContent(rootEl) {
+      if (!rootEl) return false;
+      return Boolean(
+        rootEl.querySelector(".sr-bb, .sr-lmt, iframe, canvas, svg") ||
+        (rootEl.childElementCount > 0 && (rootEl.textContent || "").trim().length > 0)
+      );
+    }
 
-            function addWidget() {
-              try {
-                window.SIR("addWidget", ".sr-widget-1", "match.lmtPlus", {
-                  streamToggle: "onPitchButton",
-                  layout: "double",
-                  detailedScoreboard: "disable",
-                  tabsPosition: "top",
-                  matchId: matchId
-                });
+    function initWidget() {
+      var matchId = "${matchId}";
+      if (!matchId) {
+        post("widget_unavailable");
+        return;
+      }
 
-                setTimeout(function () {
-                  var el = document.querySelector(".sr-widget-1");
-                  var hasContent = el && el.children && el.children.length > 0;
-                  post(hasContent ? "widget_loaded" : "widget_unavailable");
-                }, 7000);
-              } catch (err) {
+      function addWidget() {
+        try {
+          window.SIR("addWidget", "#sr-widget", "match.lmtPlus", {
+            matchId: isFinite(Number(matchId)) ? Number(matchId) : matchId,
+            enableVirtualised: true,
+            vlmtForce2d: false,
+            enableDataStream: true,
+            streamToggle: "onPitchButton",
+            layout: "double",
+            detailedScoreboard: "disable",
+            tabsPosition: "top",
+            onTrack: function (eventType, data) {
+              if (eventType === "error" || (eventType === "data_change" && data && data.error)) {
                 post("widget_error");
               }
             }
+          });
 
-            if (!window.SIR) {
-              var script = document.createElement("script");
-              script.src = "https://widgets.sir.sportradar.com/d9d6a9c373db18dfdf63352e1c1d9321/widgetloader";
-              script.async = true;
-              script.setAttribute("n", "SIR");
-              script.onload = addWidget;
-              script.onerror = function () { post("widget_error"); };
-              document.body.appendChild(script);
-            } else {
-              addWidget();
-            }
-          }
+          setTimeout(function () {
+            post(widgetHasContent(document.getElementById("sr-widget"))
+              ? "widget_loaded"
+              : "widget_unavailable");
+          }, 8000);
+        } catch (err) {
+          post("widget_error");
+        }
+      }
 
-          initWidget();
-        </script>
-      </body>
-      </html>
+      if (!window.SIR) {
+        var script = document.createElement("script");
+        script.src = "https://widgets.sir.sportradar.com/${WIDGET_CLIENT_ID}/widgetloader";
+        script.async = true;
+        script.setAttribute("n", "SIR");
+        script.onload = addWidget;
+        script.onerror = function () { post("widget_error"); };
+        document.body.appendChild(script);
+      } else {
+        addWidget();
+      }
+    }
+
+    initWidget();
+  </script>
+</body>
+</html>
     `;
     }, [parentMatchId]);
 
@@ -165,11 +186,6 @@ const MatchWidget: React.FC<Props> = ({
         [markLoaded, markUnavailable]
     );
 
-    const teamLine =
-        homeTeam && awayTeam
-            ? `${homeTeam} vs ${awayTeam}`
-            : homeTeam || awayTeam || "Match";
-
     const liveTimeLabel =
         matchTime && live
             ? `${matchTime}`.includes("'")
@@ -177,47 +193,33 @@ const MatchWidget: React.FC<Props> = ({
                 : `${matchTime}'`
             : "";
 
+    // Web SportPesa-style fallback: centered "Home - Away" (no "vs")
     if (!parentMatchId || status === "unavailable") {
         return (
             <View style={styles.fallback}>
-                <Text style={styles.fallbackTeams} numberOfLines={2}>
-                    {teamLine}
+                <Text style={styles.fallbackTeam} numberOfLines={3}>
+                    {homeTeam || "Home"}
                 </Text>
-                {(score || liveTimeLabel) ? (
-                    <View style={styles.fallbackMetaRow}>
+                <Text style={styles.fallbackSep}>-</Text>
+                <Text style={styles.fallbackTeam} numberOfLines={3}>
+                    {awayTeam || "Away"}
+                </Text>
+                {live && (score || liveTimeLabel) ? (
+                    <View style={styles.fallbackLiveMeta}>
                         {liveTimeLabel ? (
-                            <Text style={styles.fallbackMeta}>{liveTimeLabel}</Text>
+                            <Text style={styles.fallbackLiveText}>{liveTimeLabel}</Text>
                         ) : null}
                         {score ? (
                             <Text style={styles.fallbackScore}>{score}</Text>
                         ) : null}
                     </View>
                 ) : null}
-                <Text style={styles.fallbackNotice}>
-                    Live stats widget is not reachable right now.
-                </Text>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            <View style={styles.teamsBar}>
-                <Text style={styles.teamsBarText} numberOfLines={1}>
-                    {teamLine}
-                </Text>
-                {(score || liveTimeLabel) ? (
-                    <View style={styles.teamsBarMeta}>
-                        {liveTimeLabel ? (
-                            <Text style={styles.teamsBarMetaText}>{liveTimeLabel}</Text>
-                        ) : null}
-                        {score ? (
-                            <Text style={styles.teamsBarScore}>{score}</Text>
-                        ) : null}
-                    </View>
-                ) : null}
-            </View>
-
             <WebView
                 key={String(parentMatchId)}
                 originWhitelist={["*"]}
@@ -239,7 +241,7 @@ const MatchWidget: React.FC<Props> = ({
             {status === "loading" ? (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <Text style={styles.loadingText}>Loading live stats...</Text>
+                    <Text style={styles.loadingText}>Loading match centre...</Text>
                 </View>
             ) : null}
         </View>
@@ -250,80 +252,69 @@ export default MatchWidget;
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: 280,
         width: "100%",
-        backgroundColor: "#111",
+        minHeight: 160,
+        backgroundColor: WIDGET_BG,
+        overflow: "hidden",
     },
     webview: {
-        flex: 1,
-        minHeight: 240,
-        backgroundColor: "#111",
+        width: "100%",
+        minHeight: 280,
+        backgroundColor: WIDGET_BG,
     },
     webviewHidden: {
         opacity: 0,
         height: 0,
         minHeight: 0,
     },
-    teamsBar: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "rgba(255,255,255,0.08)",
-        gap: 4,
-    },
-    teamsBarText: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "700",
-    },
-    teamsBarMeta: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-    },
-    teamsBarMetaText: {
-        color: "#86efac",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    teamsBarScore: {
-        color: "#FFD700",
-        fontSize: 13,
-        fontWeight: "700",
-    },
     loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        top: 52,
+        minHeight: 160,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(17,17,17,0.92)",
+        backgroundColor: WIDGET_BG,
         gap: 8,
+        paddingVertical: 28,
     },
     loadingText: {
-        color: "rgba(255,255,255,0.75)",
+        color: "rgba(255,255,255,0.65)",
         fontSize: 12,
     },
     fallback: {
         width: "100%",
-        backgroundColor: "#111",
-        paddingHorizontal: 14,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "rgba(255,255,255,0.08)",
-        gap: 8,
-    },
-    fallbackTeams: {
-        color: "#fff",
-        fontSize: 15,
-        fontWeight: "700",
-        lineHeight: 20,
-    },
-    fallbackMetaRow: {
+        minHeight: 160,
+        backgroundColor: WIDGET_BG,
+        paddingHorizontal: 16,
+        paddingVertical: 24,
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
+        flexWrap: "wrap",
         gap: 10,
     },
-    fallbackMeta: {
+    fallbackTeam: {
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: "700",
+        lineHeight: 20,
+        letterSpacing: 0.1,
+        textAlign: "center",
+        maxWidth: "42%",
+    },
+    fallbackSep: {
+        color: "rgba(255,255,255,0.85)",
+        fontSize: 16,
+        fontWeight: "700",
+        lineHeight: 24,
+    },
+    fallbackLiveMeta: {
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        marginTop: 8,
+    },
+    fallbackLiveText: {
         color: "#86efac",
         fontSize: 12,
         fontWeight: "600",
@@ -332,11 +323,5 @@ const styles = StyleSheet.create({
         color: "#FFD700",
         fontSize: 14,
         fontWeight: "700",
-    },
-    fallbackNotice: {
-        color: "rgba(255,255,255,0.55)",
-        fontSize: 12,
-        lineHeight: 17,
-        marginTop: 2,
     },
 });

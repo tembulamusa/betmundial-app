@@ -1,43 +1,69 @@
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-    View,
-    Text,
-    StyleSheet,
     ScrollView,
+    StyleSheet,
+    Text,
     TouchableOpacity,
-    TextInput,
-    ActivityIndicator,
-    Share,
-    Alert,
+    View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { Context } from "../../context/store";
 import { makeRequest } from "../../components/utils/makeRequest";
-import { getItem, setItem, normalizeUser } from "../../components/utils/local-storage";
 import { theme } from "../../theme";
+import {
+    AFFILIATE_LOGIN_REDIRECT,
+    openLoginWithRedirect,
+} from "../../components/utils/loginRedirect";
+import {
+    AffiliateEarnModal,
+    AffiliateGetCodeModal,
+    AffiliateShareModal,
+    AffiliateTermsModal,
+} from "../../components/affiliate/AffiliateModals";
+import {
+    AffiliateCodeCard,
+    EarningsPanel,
+    HowItWorksSection,
+    LeaderboardPanel,
+    MembersPanel,
+    SupportFooter,
+    TrustBar,
+} from "../../components/affiliate/AffiliatePanels";
+import {
+    COMMISSIONS_ENDPOINT,
+    resolveReferralCount,
+} from "../../components/affiliate/affiliateHelpers";
 
-const HOW_IT_WORKS = [
-    { title: "Create", description: "Create your unique affiliate code.", icon: "edit" as const },
-    { title: "Share", description: "Share with friends and your network.", icon: "share" as const },
-    { title: "Earn", description: "Your friends play, you earn rewards.", icon: "card-giftcard" as const },
+const TAB_DETAIL = 0;
+const TAB_EARNINGS = 1;
+const TAB_MEMBERS = 2;
+
+const TABS = [
+    { key: TAB_DETAIL, label: "Detail", icon: "person" as const },
+    { key: TAB_EARNINGS, label: "My Earnings", icon: "emoji-events" as const },
+    { key: TAB_MEMBERS, label: "My Members", icon: "groups" as const },
 ];
 
 export default function AffiliateScreen() {
     const navigation = useNavigation<any>();
     const [state, dispatch] = useContext(Context);
     const user = state?.user;
-    const [promoCode, setPromoCode] = useState<string | null>(user?.promo_code || null);
-    const [customCode, setCustomCode] = useState("");
-    const [generating, setGenerating] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
-    const [stats, setStats] = useState<any>(null);
-    const [loadingStats, setLoadingStats] = useState(false);
+
+    const [activeTab, setActiveTab] = useState(TAB_DETAIL);
+    const [isLoading, setIsLoading] = useState(false);
+    const [commissions, setCommissions] = useState<any>(null);
+    const [promoCode, setPromoCode] = useState<string | null>(
+        user?.promo_code || null
+    );
+    const [getCodeOpen, setGetCodeOpen] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
+    const [earnOpen, setEarnOpen] = useState(false);
+    const [termsOpen, setTermsOpen] = useState(false);
 
     useEffect(() => {
         if (!user) {
-            dispatch({ type: "SET", key: "showloginmodal", payload: true });
+            openLoginWithRedirect(dispatch, AFFILIATE_LOGIN_REDIRECT);
         }
     }, [dispatch, user]);
 
@@ -45,82 +71,91 @@ export default function AffiliateScreen() {
         setPromoCode(user?.promo_code || null);
     }, [user?.promo_code]);
 
-    const loadStats = useCallback(async () => {
+    const loadCommissions = useCallback(async () => {
         if (!user) return;
-        setLoadingStats(true);
+        setIsLoading(true);
         const res = await makeRequest({
-            url: "/user/affiliate/stats",
+            url: COMMISSIONS_ENDPOINT,
             method: "GET",
             apiVersion: 2,
         });
-        if (res.status == 200) {
-            setStats((res.data as any)?.data || res.data);
+        setIsLoading(false);
+        if (res.status === 200) {
+            const data = (res.data as any)?.data ?? res.data ?? null;
+            setCommissions(data);
+            if (data?.promo_code) {
+                setPromoCode(String(data.promo_code));
+            }
         }
-        setLoadingStats(false);
     }, [user]);
 
     useEffect(() => {
-        void loadStats();
-    }, [loadStats]);
+        void loadCommissions();
+    }, [loadCommissions]);
 
-    const persistPromoCode = async (code: string) => {
-        setPromoCode(code);
-        const nextUser = normalizeUser({ ...(user || {}), promo_code: code });
-        await setItem("user", nextUser);
-        dispatch({ type: "SET", key: "user", payload: nextUser });
-    };
+    // Once per visit: open get-code modal when user has no code (matches web).
+    useEffect(() => {
+        if (!user) return;
+        if (user?.promo_code || promoCode) return;
+        setGetCodeOpen(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
+    }, []);
 
-    const createCode = async (auto: boolean) => {
-        if (!user) {
-            dispatch({ type: "SET", key: "showloginmodal", payload: true });
+    const totalReferrals = useMemo(
+        () => resolveReferralCount(commissions),
+        [commissions]
+    );
+
+    const handleOpenShare = useCallback(() => {
+        if (!promoCode) {
+            setActiveTab(TAB_DETAIL);
+            setGetCodeOpen(true);
             return;
         }
-        setGenerating(true);
-        setMessage(null);
-        const payload = auto
-            ? undefined
-            : { promo_code: customCode.trim(), code: customCode.trim() };
-        const res = await makeRequest({
-            url: "/user/promo-code",
-            method: "POST",
-            apiVersion: 2,
-            data: payload,
-        });
-        const body: any = res.data;
-        const created =
-            body?.promo_code ||
-            body?.data?.promo_code ||
-            body?.code ||
-            body?.data?.code ||
-            (!auto ? customCode.trim() : null);
+        setShareOpen(true);
+    }, [promoCode]);
 
-        if ((res.status == 200 || res.status == 201) && created) {
-            await persistPromoCode(String(created));
-            setMessage("Affiliate code created successfully");
-        } else {
-            setMessage(body?.message || body?.error || res.error || "Unable to create code");
-        }
-        setGenerating(false);
-    };
+    const handleRequestGetCode = useCallback(() => {
+        setGetCodeOpen(true);
+    }, []);
 
-    const shareCode = async () => {
-        if (!promoCode) return;
-        const url = `https://betmundial.com/signup?promo=${encodeURIComponent(promoCode)}`;
-        try {
-            await Share.share({
-                message: `Join BetMundial with my affiliate code ${promoCode}: ${url}`,
-                url,
-            });
-        } catch {
-            Alert.alert("Share", url);
-        }
-    };
+    const handleCodeCreated = useCallback(
+        (code: string) => {
+            setPromoCode(code);
+            void loadCommissions();
+        },
+        [loadCommissions]
+    );
 
-    const referrals =
-        stats?.total_referrals ??
-        stats?.referral_count ??
-        stats?.referrals?.length ??
-        0;
+    const hasCode = Boolean(promoCode);
+
+    if (!user) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.backBtn}
+                        onPress={() =>
+                            navigation.canGoBack()
+                                ? navigation.goBack()
+                                : navigation.navigate("Sports", {
+                                      screen: "HomeMain",
+                                  })
+                        }
+                    >
+                        <Icon name="arrow-back" size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Affiliate</Text>
+                    <View style={{ width: 36 }} />
+                </View>
+                <View style={styles.gated}>
+                    <Text style={styles.gatedText}>
+                        Sign in to open your Affiliate dashboard.
+                    </Text>
+                </View>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -130,7 +165,9 @@ export default function AffiliateScreen() {
                     onPress={() =>
                         navigation.canGoBack()
                             ? navigation.goBack()
-                            : navigation.navigate("Sports", { screen: "HomeMain" })
+                            : navigation.navigate("Sports", {
+                                  screen: "HomeMain",
+                              })
                     }
                 >
                     <Icon name="arrow-back" size={20} color="#fff" />
@@ -139,86 +176,129 @@ export default function AffiliateScreen() {
                 <View style={{ width: 36 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Your affiliate code</Text>
-                    {promoCode ? (
-                        <>
-                            <Text style={styles.codeValue}>{promoCode}</Text>
-                            <TouchableOpacity style={styles.primaryBtn} onPress={shareCode}>
-                                <FontAwesome name="share-alt" size={14} color="#fff" />
-                                <Text style={styles.primaryBtnText}>Share code</Text>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <>
-                            <Text style={styles.hint}>
-                                Create an automatic code or choose your own.
-                            </Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Custom code (optional)"
-                                placeholderTextColor="#94a3b8"
-                                value={customCode}
-                                autoCapitalize="characters"
-                                onChangeText={setCustomCode}
+            <View style={styles.tabs}>
+                {TABS.map((tab) => {
+                    const active = activeTab === tab.key;
+                    return (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[styles.tab, active && styles.tabActive]}
+                            onPress={() => setActiveTab(tab.key)}
+                        >
+                            <Icon
+                                name={tab.icon}
+                                size={14}
+                                color={active ? "#fff" : "rgba(255,255,255,0.55)"}
                             />
-                            <TouchableOpacity
-                                style={styles.primaryBtn}
-                                disabled={generating}
-                                onPress={() => void createCode(true)}
+                            <Text
+                                style={[
+                                    styles.tabText,
+                                    active && styles.tabTextActive,
+                                ]}
+                                numberOfLines={1}
                             >
-                                {generating ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.primaryBtnText}>Generate code</Text>
-                                )}
-                            </TouchableOpacity>
-                            {customCode.trim() ? (
-                                <TouchableOpacity
-                                    style={styles.secondaryBtn}
-                                    disabled={generating}
-                                    onPress={() => void createCode(false)}
-                                >
-                                    <Text style={styles.secondaryBtnText}>Use custom code</Text>
-                                </TouchableOpacity>
-                            ) : null}
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+
+            <ScrollView
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+            >
+                {activeTab === TAB_DETAIL ? (
+                    hasCode ? (
+                        <>
+                            <AffiliateCodeCard
+                                commissions={commissions}
+                                isLoading={isLoading}
+                                promoCode={promoCode}
+                                onOpenShare={handleOpenShare}
+                                onRequestGetCode={handleRequestGetCode}
+                                onOpenTerms={() => setTermsOpen(true)}
+                            />
+                            <LeaderboardPanel
+                                commissions={commissions}
+                                promoCode={promoCode}
+                                onRequestGetCode={handleRequestGetCode}
+                            />
+                            <HowItWorksSection
+                                referrals={totalReferrals}
+                                isLoading={isLoading}
+                                onOpenShare={handleOpenShare}
+                                onOpenEarn={() => setEarnOpen(true)}
+                            />
+                            <TrustBar />
                         </>
-                    )}
-                    {message ? <Text style={styles.message}>{message}</Text> : null}
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Referrals</Text>
-                    {loadingStats ? (
-                        <ActivityIndicator color={theme.accent} />
                     ) : (
-                        <Text style={styles.statValue}>{referrals}</Text>
-                    )}
-                    <Text style={styles.hint}>Friends who joined with your code</Text>
-                </View>
+                        <>
+                            <AffiliateCodeCard
+                                commissions={commissions}
+                                isLoading={isLoading}
+                                promoCode={promoCode}
+                                onOpenShare={handleOpenShare}
+                                onRequestGetCode={handleRequestGetCode}
+                                onOpenTerms={() => setTermsOpen(true)}
+                            />
+                            <HowItWorksSection
+                                referrals={totalReferrals}
+                                isLoading={isLoading}
+                                onOpenShare={handleOpenShare}
+                                onOpenEarn={() => setEarnOpen(true)}
+                                brief
+                            />
+                            <LeaderboardPanel
+                                commissions={commissions}
+                                promoCode={promoCode}
+                                onRequestGetCode={handleRequestGetCode}
+                            />
+                            <TrustBar />
+                        </>
+                    )
+                ) : null}
 
-                <Text style={styles.sectionTitle}>How it works</Text>
-                {HOW_IT_WORKS.map((step) => (
-                    <View key={step.title} style={styles.stepRow}>
-                        <View style={styles.stepIcon}>
-                            <Icon name={step.icon} size={18} color="#fff" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.stepTitle}>{step.title}</Text>
-                            <Text style={styles.hint}>{step.description}</Text>
-                        </View>
-                    </View>
-                ))}
+                {activeTab === TAB_EARNINGS ? (
+                    <EarningsPanel
+                        commissions={commissions}
+                        isLoading={isLoading}
+                        onOpenShare={handleOpenShare}
+                        promoCode={promoCode}
+                    />
+                ) : null}
 
-                <TouchableOpacity
-                    onPress={() =>
-                        navigation.navigate("Sports", { screen: "PrivacyPolicyScreen" })
-                    }
-                >
-                    <Text style={styles.link}>Privacy Policy</Text>
-                </TouchableOpacity>
+                {activeTab === TAB_MEMBERS ? (
+                    <MembersPanel
+                        commissions={commissions}
+                        isLoading={isLoading}
+                    />
+                ) : null}
+
+                <SupportFooter />
             </ScrollView>
+
+            <AffiliateGetCodeModal
+                show={getCodeOpen}
+                onHide={() => setGetCodeOpen(false)}
+                onCreated={handleCodeCreated}
+            />
+            <AffiliateShareModal
+                show={shareOpen}
+                onHide={() => setShareOpen(false)}
+                promoCode={promoCode}
+            />
+            <AffiliateEarnModal
+                show={earnOpen}
+                onHide={() => setEarnOpen(false)}
+                onOpenShare={handleOpenShare}
+                onOpenEarnings={() => setActiveTab(TAB_EARNINGS)}
+                onOpenTerms={() => setTermsOpen(true)}
+            />
+            <AffiliateTermsModal
+                show={termsOpen}
+                onHide={() => setTermsOpen(false)}
+            />
         </View>
     );
 }
@@ -242,85 +322,46 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255,255,255,0.08)",
     },
     title: { color: "#fff", fontSize: 18, fontWeight: "700" },
-    content: { padding: 16, paddingBottom: 40 },
-    card: {
-        backgroundColor: "rgba(255,255,255,0.08)",
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 14,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
-    },
-    cardTitle: { color: "#fff", fontWeight: "700", fontSize: 15, marginBottom: 10 },
-    codeValue: {
-        color: "#ffc428",
-        fontSize: 28,
-        fontWeight: "800",
-        letterSpacing: 1,
-        marginBottom: 12,
-    },
-    hint: { color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 18 },
-    input: {
-        backgroundColor: "#1a1a2e",
-        color: "#fff",
-        borderWidth: 1,
-        borderColor: "#333",
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginTop: 10,
-        marginBottom: 12,
-    },
-    primaryBtn: {
-        backgroundColor: theme.accent,
-        borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: "center",
+    tabs: {
         flexDirection: "row",
+        paddingHorizontal: 10,
+        paddingTop: 10,
+        paddingBottom: 4,
+        gap: 6,
+        backgroundColor: theme.background,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
         justifyContent: "center",
-        gap: 8,
-    },
-    primaryBtnText: { color: "#fff", fontWeight: "700" },
-    secondaryBtn: {
-        marginTop: 10,
+        gap: 4,
+        paddingVertical: 10,
         borderRadius: 10,
-        paddingVertical: 12,
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: theme.accent,
-    },
-    secondaryBtnText: { color: theme.accent, fontWeight: "700" },
-    message: { color: "#86efac", marginTop: 10, textAlign: "center" },
-    statValue: { color: "#ffc428", fontSize: 32, fontWeight: "800", marginBottom: 4 },
-    sectionTitle: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 16,
-        marginBottom: 10,
-        marginTop: 6,
-    },
-    stepRow: {
-        flexDirection: "row",
-        gap: 12,
-        alignItems: "center",
         backgroundColor: "rgba(255,255,255,0.06)",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 8,
+        borderBottomWidth: 2,
+        borderBottomColor: "transparent",
     },
-    stepIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: theme.accent,
+    tabActive: {
+        backgroundColor: "rgba(167,31,102,0.35)",
+        borderBottomColor: theme.accent,
+    },
+    tabText: {
+        color: "rgba(255,255,255,0.55)",
+        fontSize: 11,
+        fontWeight: "600",
+    },
+    tabTextActive: { color: "#fff", fontWeight: "800" },
+    content: { padding: 14, paddingBottom: 40 },
+    gated: {
+        flex: 1,
         alignItems: "center",
         justifyContent: "center",
+        padding: 24,
     },
-    stepTitle: { color: "#fff", fontWeight: "700", marginBottom: 2 },
-    link: {
-        color: theme.accent,
-        fontWeight: "700",
+    gatedText: {
+        color: "rgba(255,255,255,0.7)",
         textAlign: "center",
-        marginTop: 18,
+        fontSize: 14,
     },
 });

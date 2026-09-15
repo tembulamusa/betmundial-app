@@ -19,6 +19,7 @@ import {
     SafeAreaView,
     ScrollView,
     InteractionManager,
+    Linking,
 } from "react-native";
 
 import FontAwesome from "react-native-vector-icons/FontAwesome";
@@ -30,6 +31,8 @@ import LinearGradient from "react-native-linear-gradient";
 import { Context } from "../../context/store";
 import { formatToFloat } from "../utils/formatters";
 import ConfirmMpesaStatus from "./ConfirmMpesaStatus";
+import ResponsibleGamblingNotice from "./ResponsibleGamblingNotice";
+import { BETMUNDIAL_RESPONSIBLE_GAMBLING_URL } from "../../constants/responsibleGambling";
 import { theme } from "../../theme";
 import socket from "../utils/SocketConnect";
 import { getItem, setItem, normalizeUser } from "../utils/local-storage";
@@ -81,13 +84,34 @@ const HeaderUser = () => {
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [mpesaModalVisible, setMpesaModalVisible] = useState(false);
     const [showBonusTooltip, setShowBonusTooltip] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(width)).current;
+    const logoutSpin = useRef(new Animated.Value(0)).current;
     const latestUserRef = useRef(user);
 
     useEffect(() => {
         latestUserRef.current = user;
     }, [user]);
+
+    useEffect(() => {
+        if (!loggingOut) {
+            logoutSpin.stopAnimation();
+            logoutSpin.setValue(0);
+            return;
+        }
+
+        logoutSpin.setValue(0);
+        const loop = Animated.loop(
+            Animated.timing(logoutSpin, {
+                toValue: 1,
+                duration: 700,
+                useNativeDriver: true,
+            })
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [loggingOut, logoutSpin]);
 
     /**
      * Persist user data to AsyncStorage (and SQLite if credentials exist)
@@ -302,18 +326,41 @@ const HeaderUser = () => {
     }, [closeDrawer, navigation]);
 
     /* ================= LOGOUT ================= */
-    const logout = useCallback(async () => {
-        await logoutUser({
-            dispatch,
-            navigation,
-            beforeReset: closeDrawer,
-        });
-    }, [dispatch, closeDrawer, navigation]);
+    const logout = useCallback(() => {
+        if (loggingOut) return;
+        setLoggingOut(true);
+        setShowBonusTooltip(false);
+
+        // Keep drawer open with spinning icon so logout feels active, then exit.
+        setTimeout(() => {
+            Animated.timing(slideAnim, {
+                toValue: width,
+                duration: 180,
+                useNativeDriver: true,
+            }).start(() => {
+                setDrawerVisible(false);
+                void logoutUser({
+                    dispatch,
+                    navigation,
+                });
+            });
+        }, 650);
+    }, [dispatch, loggingOut, navigation, slideAnim]);
 
     if (!user) return null;
 
     const balance = formatToFloat(user?.balance || 0);
     const bonus = formatToFloat(user?.bonus ?? user?.bonus_balance ?? 0);
+    const logoutSpinStyle = {
+        transform: [
+            {
+                rotate: logoutSpin.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0deg", "360deg"],
+                }),
+            },
+        ],
+    };
 
     return (
         <>
@@ -554,6 +601,14 @@ const HeaderUser = () => {
                                     onPress={() => goTo("PrivacyPolicyScreen")}
                                 />
                                 <DrawerItem
+                                    icon={<MaterialIcons name="favorite" size={16} color={ACCENT.pink} />}
+                                    label="Responsible Gambling"
+                                    onPress={() => {
+                                        closeDrawer();
+                                        Linking.openURL(BETMUNDIAL_RESPONSIBLE_GAMBLING_URL).catch(() => {});
+                                    }}
+                                />
+                                <DrawerItem
                                     icon={<MaterialIcons name="security" size={16} color={ACCENT.pink} />}
                                     label="Exclude myself from betting"
                                     onPress={() => goTo("SelfExcludeScreen")}
@@ -562,10 +617,28 @@ const HeaderUser = () => {
                             </View>
                         </View>
 
+                        <ResponsibleGamblingNotice compact style={styles.rgNotice} />
+
                         {/* Logout */}
-                        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-                            <FontAwesome name="sign-out" size={16} color={ACCENT.pink} />
-                            <Text style={styles.logoutText}>Logout</Text>
+                        <TouchableOpacity
+                            style={[
+                                styles.logoutBtn,
+                                loggingOut && styles.logoutBtnDisabled,
+                            ]}
+                            onPress={logout}
+                            disabled={loggingOut}
+                            activeOpacity={0.7}
+                        >
+                            <Animated.View style={loggingOut ? logoutSpinStyle : undefined}>
+                                <FontAwesome
+                                    name={loggingOut ? "refresh" : "sign-out"}
+                                    size={16}
+                                    color={ACCENT.pink}
+                                />
+                            </Animated.View>
+                            <Text style={styles.logoutText}>
+                                {loggingOut ? "Logging out…" : "Logout"}
+                            </Text>
                         </TouchableOpacity>
                     </ScrollView>
                 </Animated.View>
@@ -1017,6 +1090,9 @@ const styles = StyleSheet.create({
     },
 
     /* Logout */
+    rgNotice: {
+        marginBottom: 14,
+    },
     logoutBtn: {
         flexDirection: "row",
         alignItems: "center",
@@ -1027,6 +1103,9 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: ACCENT.pink,
         backgroundColor: "transparent",
+    },
+    logoutBtnDisabled: {
+        opacity: 0.7,
     },
     logoutText: {
         color: ACCENT.pink,
